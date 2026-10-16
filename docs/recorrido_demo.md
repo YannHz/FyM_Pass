@@ -2,7 +2,7 @@
 
 ## Preparación
 
-1. Iniciar MySQL y los servidores con iniciar.bat o fish iniciar.fish. Para el teléfono utilizar --red auto o --red IP_PC.
+1. Iniciar MySQL y los servidores con `./iniciar.sh`. Para el teléfono utilizar --red auto o --red IP_PC.
 2. Entrar al resumen como administrador u operador. Revisar **Conexión del sistema**: API y base disponibles. La dirección Flutter se informa solo cuando la API escucha en una IPv4 privada concreta.
 3. Configurar el servidor en Flutter y comprobar /api/salud desde el teléfono. Si cambia la IP HTTP de Android, revisar network_security_config.xml y recompilar. El diagnóstico web no acredita conectividad del teléfono ni permisos del firewall.
 4. Utilizar exclusivamente cuentas demo. Revisar horarios y tolerancias antes de explicar puntualidad/tardanza; el QR usa la hora real del servidor. No cambiar el reloj de la PC para forzar resultados ni borrar registros para repetir la presentación.

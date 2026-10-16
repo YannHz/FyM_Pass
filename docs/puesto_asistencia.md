@@ -1,6 +1,6 @@
 # Puesto de asistencia y carné
 
-1. Inicia FyM Pass con `iniciar.bat` en Windows. Abre el navegador; el encargado inicia sesión.
+1. Inicia FyM Pass con `./iniciar.sh` en Linux. Abre el navegador; el encargado inicia sesión.
 2. Selecciona las modalidades en el panel y pulsa **Iniciar asistencia**. Permite la ventana emergente.
 3. En la nueva ventana verás el QR dinámico, la cámara o ambas. Si elegiste cámara, pulsa **Activar cámara** y acepta el permiso.
 4. El botón **Mi carné** permite presentar el QR de la propia cuenta. Para probar otras cuentas en la misma PC utiliza otro perfil de navegador o una ventana privada; las pestañas del mismo perfil comparten la sesión de usuario.

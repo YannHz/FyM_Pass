@@ -8,7 +8,7 @@ El backend separa acceso, marcado QR y gestión administrativa. Hay rutas para p
 
 ## Corrección del inicio
 
-La shell utilizada es fish. Se restauró `iniciar.fish` con un intérprete explícito y ejecución directa de Python; el README indica `fish iniciar.fish`. Se comprobó que resuelve la raíz desde otra carpeta, conserva los argumentos y devuelve el código de salida de Python. `iniciar.sh` queda disponible para Bash. El lanzador Python informa qué requisitos faltan y rechaza una IP mal formada sin mostrar una excepción interna.
+El inicio actual usa un único script ejecutable, `iniciar.sh`, para Linux. Resuelve la raíz del proyecto desde cualquier carpeta, valida requisitos y admite `--red auto`, `--red IP_PC` y `--sin-navegador`.
 
 ## Verificación y pendientes
 
@@ -19,7 +19,7 @@ La shell utilizada es fish. Se restauró `iniciar.fish` con un intérprete expl�
 - Los conflictos de Git mencionados en la revisión anterior ya estaban resueltos al comenzar esta corrección; no se crearon commits ni se modificó el índice.
 - Se instalaron dependencias web con `npm ci` y backend en `.venv` con `requirements.txt`; la comprobación backend no certifica las versiones exactas de `requirements.lock`.
 
-Para iniciar desde la raíz, ejecutar `fish iniciar.fish` o `./iniciar.fish`. El diagnóstico identifica la configuración que falte; la preparación de base y entorno está en el README principal.
+Para iniciar desde la raíz, ejecutar `./iniciar.sh`. El diagnóstico identifica la configuración que falte; la preparación de base y entorno está en el README principal.
 
 ## Corrección del lector y carga de cámara
 

@@ -30,24 +30,13 @@ ZKTeco es inventario/configuración; no hay integración física. La preplanilla
 
 ## Requisitos y primera instalación
 
-Python 3.11 o superior compatible con las dependencias, Node.js 22 LTS y npm. MySQL 8 o MariaDB 10.4 o superior. En esta PC se utiliza MariaDB de XAMPP. El arranque requiere MySQL activo y dependencias instaladas; no instala programas, no inicia MySQL con privilegios ni aplica migraciones automáticamente.
+Python 3.11 o superior compatible con las dependencias, Node.js 22 LTS y npm. MySQL 8 o MariaDB 10.4 o superior. El arranque requiere MySQL activo y dependencias instaladas; no instala programas, no inicia MySQL con privilegios ni aplica migraciones automáticamente.
 
-### Windows (PowerShell)
-
-Desde la raíz del clon:
-
-```powershell
-python -m venv backend/.venv
-backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.lock
-npm --prefix web ci
-Copy-Item backend/.env.example backend/.env
-```
-
-### Linux (fish)
+### Linux
 
 Instala Python, pip/venv, Node/npm y MySQL/MariaDB mediante tu distribución. No necesitas activar el entorno virtual:
 
-```fish
+```bash
 python3 -m venv backend/.venv
 backend/.venv/bin/python -m pip install -r backend/requirements.lock
 npm --prefix web ci
@@ -66,17 +55,11 @@ CREATE USER 'fym_pass'@'127.0.0.1' IDENTIFIED BY 'CAMBIAR_POR_CLAVE_LOCAL';
 GRANT ALL PRIVILEGES ON fym_pass.* TO 'fym_pass'@'127.0.0.1';
 ```
 
-Edita `backend/.env`: host `127.0.0.1`, puerto `3306`, base y usuario `fym_pass`, tu contraseña y `CLAVE_QR` aleatoria de al menos 32 caracteres. Para generarla sin compartirla: `python -c "import secrets; print(secrets.token_urlsafe(48))"` (en Linux, `python3`). Conserva la clave mientras quieras mantener válidos los carnés.
+Edita `backend/.env`: host `127.0.0.1`, puerto `3306`, base y usuario `fym_pass`, tu contraseña y `CLAVE_QR` aleatoria de al menos 32 caracteres. Para generarla sin compartirla: `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`. Conserva la clave mientras quieras mantener válidos los carnés.
 
 Desde `backend`, ejecuta estos tres comandos usando el Python correspondiente:
 
-```powershell
-.venv/Scripts/python.exe -m alembic upgrade head
-.venv/Scripts/python.exe -m aplicacion.datos_demo
-.venv/Scripts/python.exe -m aplicacion.horarios_demo
-```
-
-```fish
+```bash
 .venv/bin/python -m alembic upgrade head
 .venv/bin/python -m aplicacion.datos_demo
 .venv/bin/python -m aplicacion.horarios_demo
@@ -86,29 +69,23 @@ Las migraciones crean estructura y catálogos iniciales; las cuentas y horarios 
 
 ## Arrancar con un comando
 
-Windows: doble clic en `iniciar.bat`, o desde la raíz:
+Desde la raíz del proyecto, en Bash, fish o zsh:
 
-```powershell
-.\iniciar.bat
-.\iniciar.bat --red 192.168.1.100
+```bash
+./iniciar.sh
 ```
 
-Linux con fish:
+Para presentar también la aplicación Flutter por Wi-Fi, conecta primero la laptop a la misma red que el teléfono y ejecuta:
 
-```fish
-fish iniciar.fish
-fish iniciar.fish --red 192.168.1.100
+```bash
+./iniciar.sh --red auto
 ```
 
-Para las demostraciones con la laptop conectada al punto de acceso del teléfono:
+También puedes indicar la IPv4 privada de tu laptop con `./iniciar.sh --red 192.168.1.100`. Si usas otra carpeta de trabajo, ejecuta el script por su ruta absoluta. Consulta las opciones con `./iniciar.sh --help`.
 
-```fish
-fish iniciar_hotspot.fish
-```
+El único lanzador es `iniciar.sh` y requiere Bash y Python 3. Inicia API y web, verifica la conexión a MySQL y abre el navegador cuando los servicios están disponibles. `--sin-navegador` evita abrirlo. Mantén la terminal abierta; Ctrl+C detiene los servicios iniciados por el script. Los registros quedan en `.registros/backend.log` y `.registros/web.log`. Si los puertos 8000/5173 están ocupados, cierra la instancia anterior.
 
-Este lanzador detecta la IPv4 de la ruta de red activa al arrancar (equivale a `--red auto`). Conecta primero la laptop al Wi-Fi del teléfono y detén la instancia anterior con Ctrl+C. Usa en Flutter la dirección `API / Flutter` que muestra la terminal. Si el teléfono cambia la IP de la laptop, hay que actualizar el servidor en Flutter y revisar el permiso HTTP de Android. La detección no modifica el firewall ni garantiza una dirección fija; una VPN puede cambiar la ruta de red utilizada.
-
-Sustituye la IP de ejemplo por la de tu PC. Ambos lanzadores ejecutan el mismo `iniciar.py`, inician API y web, verifican la conexión a la base y mantienen la terminal abierta. Ctrl+C detiene únicamente los procesos creados por ese lanzador. `--sin-navegador` evita abrir el navegador. Los logs se guardan en `.registros/`. Si los puertos 8000/5173 están ocupados, cierra la instancia anterior; no se eliminan procesos ajenos.
+Usa en Flutter la dirección `API / Flutter` que muestra la terminal. Si cambia la IP de la laptop, actualiza el servidor en Flutter y revisa el permiso HTTP de Android. La detección automática depende de la ruta de red activa; una VPN puede cambiarla.
 
 La web está en `http://127.0.0.1:5173`; la documentación API en `http://IP_PC:8000/docs`. El modo red no configura el firewall; en Linux adapta las reglas al firewall de tu distribución y permite únicamente TCP 8000 desde la red local. MySQL no necesita exponerse.
 

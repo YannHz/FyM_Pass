@@ -1,49 +1,64 @@
-import { useEffect, useRef, useState } from 'react'
-import { SlidersHorizontal as IconoApariencia } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Moon as Luna, Sun as Sol } from 'lucide-react'
 
 type Tema = 'claro' | 'oscuro' | 'automatico'
 const clave = 'fym_tema'
-const claveTransparencia = 'fym_transparencia_reducida'
+const eventoTema = 'fym-cambio-tema'
+
 function leerTema(): Tema {
-  try { const valor = localStorage.getItem(clave); return valor === 'claro' || valor === 'oscuro' ? valor : 'automatico' }
-  catch { return 'automatico' }
+  try {
+    const valor = localStorage.getItem(clave)
+    return valor === 'claro' || valor === 'oscuro' ? valor : 'automatico'
+  } catch { return 'automatico' }
 }
-function leerTransparencia() {
-  try { return localStorage.getItem(claveTransparencia) === 'si' } catch { return false }
+
+function sistemaOscuro() {
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
 }
-function aplicarPreferencias() {
+
+function aplicarTema() {
   document.documentElement.dataset.tema = leerTema()
-  document.documentElement.dataset.transparencia = leerTransparencia() ? 'reducida' : 'normal'
+  delete document.documentElement.dataset.transparencia
 }
+
 export function iniciarTema() {
-  aplicarPreferencias()
+  aplicarTema()
   window.addEventListener('storage', evento => {
-    if ([clave, claveTransparencia, null].includes(evento.key)) aplicarPreferencias()
+    if (evento.key === clave || evento.key === null) aplicarTema()
   })
 }
+
 export function SelectorTema() {
-  const preferencias = useRef<HTMLDetailsElement>(null)
   const [tema, establecerTema] = useState<Tema>(leerTema)
-  const [transparenciaReducida, establecerTransparenciaReducida] = useState(leerTransparencia)
+  const [oscuroSistema, establecerOscuroSistema] = useState(sistemaOscuro)
   useEffect(() => {
-    const sincronizar = () => { establecerTema(leerTema()); establecerTransparenciaReducida(leerTransparencia()) }
+    const sincronizar = () => { aplicarTema(); establecerTema(leerTema()) }
+    const sincronizarLocal = () => establecerTema(document.documentElement.dataset.tema as Tema)
+    const preferencia = window.matchMedia?.('(prefers-color-scheme: dark)')
+    const sincronizarSistema = () => establecerOscuroSistema(sistemaOscuro())
     window.addEventListener('storage', sincronizar)
-    return () => window.removeEventListener('storage', sincronizar)
+    window.addEventListener(eventoTema, sincronizarLocal)
+    preferencia?.addEventListener('change', sincronizarSistema)
+    return () => {
+      window.removeEventListener('storage', sincronizar)
+      window.removeEventListener(eventoTema, sincronizarLocal)
+      preferencia?.removeEventListener('change', sincronizarSistema)
+    }
   }, [])
-  useEffect(() => {
-    const cerrarFuera = (evento: PointerEvent) => { if (evento.target instanceof Node && !preferencias.current?.contains(evento.target) && preferencias.current) preferencias.current.open = false }
-    const cerrarConTeclado = (evento: KeyboardEvent) => { if (evento.key === 'Escape' && preferencias.current?.open) { preferencias.current.open = false; preferencias.current.querySelector('summary')?.focus() } }
-    document.addEventListener('pointerdown', cerrarFuera)
-    document.addEventListener('keydown', cerrarConTeclado)
-    return () => { document.removeEventListener('pointerdown', cerrarFuera); document.removeEventListener('keydown', cerrarConTeclado) }
-  }, [])
-  return <details ref={preferencias} className="preferencias-visuales"><summary className="icono-boton" aria-label="Preferencias de apariencia" title="Preferencias de apariencia"><IconoApariencia size={20} aria-hidden="true" /></summary><div className="opciones-apariencia"><strong>A tu manera</strong><label>Apariencia<select value={tema} onChange={evento => {
-    const elegido = evento.target.value as Tema
-    establecerTema(elegido); document.documentElement.dataset.tema = elegido
+
+  const oscuro = tema === 'oscuro' || (tema === 'automatico' && oscuroSistema)
+  const etiqueta = oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
+  function alternarTema() {
+    const elegido = oscuro ? 'claro' : 'oscuro'
+    establecerTema(elegido)
+    document.documentElement.dataset.tema = elegido
     try { localStorage.setItem(clave, elegido) } catch {}
-  }}><option value="automatico">Según el sistema</option><option value="claro">Clara</option><option value="oscuro">Oscura</option></select></label><label className="opcion"><input type="checkbox" checked={transparenciaReducida} onChange={evento => {
-    const reducida = evento.target.checked
-    establecerTransparenciaReducida(reducida); document.documentElement.dataset.transparencia = reducida ? 'reducida' : 'normal'
-    try { localStorage.setItem(claveTransparencia, reducida ? 'si' : 'no') } catch {}
-  }} />Reducir transparencia</label><small>El movimiento se adapta a las preferencias de tu dispositivo.</small></div></details>
+    window.dispatchEvent(new Event(eventoTema))
+  }
+
+  return <button type="button" className="icono-boton selector-tema" onClick={alternarTema} aria-label={etiqueta} title={etiqueta}>
+    <span key={oscuro ? 'sol' : 'luna'} className="simbolo-tema" aria-hidden="true">
+      {oscuro ? <Sol size={20} /> : <Luna size={20} />}
+    </span>
+  </button>
 }
