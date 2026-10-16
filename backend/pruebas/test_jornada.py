@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from openpyxl import load_workbook
 import test_puesto as pruebas_puesto
 from aplicacion.models import Marcado, Auditoria
-from aplicacion.diagnostico import direccion_movil
+from aplicacion.modulos.diagnostico.servicios import direccion_movil
 
 
 class PruebasJornada(unittest.TestCase):
@@ -19,7 +19,7 @@ class PruebasJornada(unittest.TestCase):
     leer = pruebas_puesto.PruebasPuesto.leer
 
     def leer_en(self, qr, hora, evento=None):
-        with patch('aplicacion.asistencia.obtener_hora_utc', return_value=hora):
+        with patch('aplicacion.modulos.asistencia.servicios.obtener_hora_utc', return_value=hora):
             return self.leer(qr, evento)
 
     def test_recorrido_completo_de_jornada(self):
@@ -45,7 +45,7 @@ class PruebasJornada(unittest.TestCase):
         self.assertEqual(self.cliente.post('/api/asistencia/pausar', headers=encabezados).status_code, 200)
         self.assertEqual(self.leer(estudiante).status_code, 409)
         manual = {'persona_id': 1, 'tipo': 'entrada', 'fecha_hora': '2026-10-11T08:07:00', 'motivo': 'Contingencia durante la jornada', 'identificador_evento': str(uuid4())}
-        with patch('aplicacion.gestion.obtener_hora_utc', return_value=datetime(2026, 10, 11, 23)):
+        with patch('aplicacion.modulos.gestion.servicios.obtener_hora_utc', return_value=datetime(2026, 10, 11, 23)):
             guardado = self.cliente.post('/api/gestion/manual', json=manual, headers=encabezados)
             self.assertEqual(guardado.status_code, 200, guardado.text)
             self.assertEqual(self.cliente.post('/api/gestion/manual', json=manual, headers=encabezados).json()['id'], guardado.json()['id'])

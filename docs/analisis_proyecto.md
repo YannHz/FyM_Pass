@@ -12,7 +12,7 @@ El inicio actual usa un único script ejecutable, `iniciar.sh`, para Linux. Resu
 
 ## Verificación y pendientes
 
-- Las doce pruebas web y la compilación TypeScript/Vite pasaron.
+- Las dieciocho pruebas web y la compilación TypeScript/Vite pasaron.
 - Las 22 pruebas backend pasaron con una clave temporal de pruebas en el entorno. Las pruebas QR necesitan `CLAVE_QR` de al menos 32 caracteres; sin esa configuración responden 503. No se escribieron credenciales.
 - Tras cargar el lector bajo demanda, el paquete inicial mide aproximadamente 323 kB (100 kB gzip) y el lector separado 414 kB (109 kB gzip). La compilacion ya no muestra la advertencia de paquetes superiores a 500 kB.
 - Se completó el montaje local con MariaDB de XAMPP: base `fym_pass`, usuario dedicado, `.env` privado, cuatro migraciones aplicadas y cuentas/horarios demo. `alembic check` no detectó cambios pendientes. Se verificaron la web, la salud de la base por el proxy de Vite, el inicio de sesión de administrador y el catálogo administrativo con respuestas HTTP 200.
@@ -24,3 +24,7 @@ Para iniciar desde la raíz, ejecutar `./iniciar.sh`. El diagnóstico identifica
 ## Corrección del lector y carga de cámara
 
 El lector ya no memoriza códigos mientras está bloqueado por una confirmación. Una prueba reproduce el siguiente carné presentado durante el bloqueo y comprueba que se procese después sin retirarlo; también comprueba que mantenerlo no duplique la lectura. El lector ZXing se carga bajo demanda mediante React.lazy/Suspense desde el puesto y el carné, con indicación de carga. Los sonidos de confirmación se conservan.
+
+Actualización del 15/10/2026: se conserva iniciar.sh como único lanzador por decisión del usuario. El puesto mantiene pruebas separadas de renovación QR y de confirmaciones de tres segundos con cola. El botón de apariencia es luna/sol. Las referencias a configuraciones previas describen avances históricos.
+
+Reorganización del 16/10/2026: el backend se separó por capas en aplicacion/modulos; rutas HTTP, servicios y repositorios se verifican con el contrato anterior completo. Se mantienen los mismos pasos de presentación. La estructura actual se describe en docs/arquitectura.md.

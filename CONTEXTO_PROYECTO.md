@@ -1,12 +1,12 @@
 # Contexto y traspaso de FyM Pass
 
-Actualizado el **13 de octubre de 2026**, zona de referencia **America/Lima**. Este documento permite continuar el proyecto desde la ThinkPad sin disponer del historial del chat. Describe decisiones aceptadas, funcionamiento actual, verificaciones y límites. No contiene contraseñas ni claves.
+Actualizado el **16 de octubre de 2026**, zona de referencia **America/Lima**. Este documento permite continuar el proyecto desde la ThinkPad sin disponer del historial del chat. Describe decisiones aceptadas, funcionamiento actual, verificaciones y límites. No contiene contraseñas ni claves.
 
 ## 1. Punto de partida para el agente
 
-El usuario ya tiene una demo funcional de asistencia, web y Android, y desea pulirla antes de presentarla al instituto/profesor. No se pudo presentar en la fecha inicialmente prevista. La última tarea completada incorporó un diagnóstico de conexión al resumen y verificó una jornada completa mediante pruebas aisladas.
+El usuario ya tiene una demo funcional de asistencia, web y Android, y desea pulirla antes de presentarla al instituto/profesor. No se pudo presentar en la fecha inicialmente prevista. La demo fue presentada y aprobada por el personal de administración. La última tarea reorganizó el backend como monolito modular con arquitectura por capas, manteniendo el contrato de la API.
 
-**No empezar desde cero ni reemplazar el diseño actual.** Leer AGENTS.md en cada proyecto, inspeccionar Git y comprobar la instalación de la ThinkPad antes de proponer cambios. Hay trabajo reciente sin commit en la PC Windows: el clon remoto puede no incluirlo. El usuario todavía no ha autorizado un siguiente desarrollo concreto después de este traspaso.
+**No empezar desde cero ni reemplazar el diseño actual.** Leer AGENTS.md en cada proyecto, inspeccionar Git y comprobar la instalación de la ThinkPad antes de proponer cambios. El pull revisado incorporó 38ad631 sobre 9871255 y Git estaba limpio antes de esta actualización. Verificar siempre el estado real del clon. El usuario conserva iniciar.sh como único lanzador. Posteriormente autorizó la separación completa de rutas, reglas y persistencia del backend; está implementada en modulos/, compartido/ e infraestructura/.
 
 ### Orden recomendado al retomar
 
@@ -38,7 +38,7 @@ La PC principal estará encendida durante la jornada, desde aproximadamente 15 m
 
 En Linux las rutas serán las elegidas al clonar. No codificar dependencias de D: o C: en el código compartido. La carpeta `mobile/` del proyecto web solo tiene documentación: **no contiene la app Flutter**. Clonar también el proyecto móvil o acordar una reorganización con el usuario.
 
-El repositorio web ya tiene Git. El historial observado incluye el merge `011045d` relativo a `feat/demov3` y una eliminación de la copia `.agents/skills/apple-design`. No usar esto como prueba de la rama activa de un clon: consultar Git localmente.
+El repositorio web ya tiene Git. En esta copia, el historial observado es 9871255 (v1.0.5) seguido de 38ad631 (fix/ arreglo de rutas). No asumir una rama activa a partir del documento: consultar Git localmente.
 
 ## 4. Preferencias de desarrollo
 
@@ -50,7 +50,7 @@ El repositorio web ya tiene Git. El historial observado incluye el merge `011045
 - Textos de interfaz y documentación en español con ortografía normal.
 - Comentarios únicamente esenciales, sencillos, en minúsculas y sin tildes, con un espacio después del delimitador.
 - Diseño guiado por **apple-design**, adaptado a web y Material Android. La referencia original de la skill es `https://github.com/dickwu/apple-design-skill`.
-- No asumir que la ruta Windows de la skill en AGENTS.md existe en Linux. Buscar la instalación local; si se requiere instalarla, explicar ese requisito. La skill ya no está incluida como copia dentro del repositorio web.
+- No asumir que la ruta Windows de la skill en AGENTS.md existe en Linux. Buscar la instalación local; si se requiere instalarla, explicar ese requisito. El pull 38ad631 volvió a incluir la skill en .agents/skills/apple-design. La ruta personal Windows de AGENTS.md no es portable; en Linux comprobar la copia del repositorio o la instalación local.
 - Preservar los cambios visuales y de código que hizo el usuario. Evitar pedir confirmación para decisiones rutinarias ya autorizadas.
 - No publicar credenciales ni información real. No enviar mensajes a terceros ni publicar/desplegar sin autorización.
 
@@ -141,9 +141,9 @@ Las fotos se validan y recomprimen a JPEG con nombre aleatorio. Los XLSX protege
 
 El usuario hizo ajustes sobre el diseño inicial: superficies translúcidas y desenfoque, azul/índigo, botones redondeados, navegación inferior móvil con cuatro destinos (Resumen, Jornada, Gestión e Instituto) y transiciones de vista.
 
-La apariencia contempla claro, oscuro y sistema, con reducción de transparencia y respeto por reducción de movimiento/contraste cuando corresponde. Las preferencias se guardan localmente y se sincronizan entre ventanas.
+La apariencia utiliza un botón luna/sol que alterna claro y oscuro y guarda la elección. Si todavía no hay elección, respeta el sistema; después del clic no hay selector para regresar a automático. Sincroniza controles entre ventanas y dentro de la misma página. El control manual de reducción de transparencia se eliminó; comprobar las preferencias del sistema soportadas por CSS.
 
-Aunque anteriormente se pidió y se implementó un botón luna/sol, **el código actual del usuario usa un panel de preferencias de apariencia**. No revertirlo basándose en instrucciones antiguas. El CSS conserva estilos originales más capas posteriores; consolidarlo es un pendiente, no una modificación ya aprobada.
+**El control actual es el botón luna/sol**, restaurado en el pull 38ad631. No reintroducir el panel de preferencias anterior basándose en instrucciones históricas. El CSS conserva estilos originales más capas posteriores; consolidarlo es un pendiente, no una modificación ya aprobada.
 
 ## 10. Últimas correcciones completadas
 
@@ -193,7 +193,7 @@ Android permite HTTP solo para las entradas de `android/app/src/main/res/xml/net
 
 La opción --red auto detecta la ruta local de salida; con VPN o varios adaptadores comprobar que sea la red correcta y utilizar --red IP_PC si no lo es. No abrir MySQL a la red ni desactivar el firewall.
 
-Se autorizó una regla Windows persistente, limitada a Wi-Fi/IP/TCP 8000/subred local. El agente no confirmó su creación efectiva; posteriormente el usuario confirmó que salud abría desde el teléfono y la demo funcionaba. No asumir que esa regla existe en Linux. `habilitar_red.ps1` es exclusivamente Windows; configurar el firewall de Linux según distribución y red.
+Se autorizó una regla Windows persistente, limitada a Wi-Fi/IP/TCP 8000/subred local. El agente no confirmó su creación efectiva; posteriormente el usuario confirmó que salud abría desde el teléfono y la demo funcionaba. No asumir que esa regla existe en Linux. El archivo histórico habilitar_red.ps1 fue eliminado en el pull 38ad631. Configurar el firewall de Linux según distribución y red; no referenciarlo como herramienta disponible.
 
 ## 13. Instalación y arranque
 
@@ -218,20 +218,21 @@ Desde backend, para una base nueva:
 
 No ejecutar datos_demo sobre una base importada con cuentas existentes. Los preparadores crean cuentas aleatorias y horarios ficticios, no datos institucionales reales.
 
-### Lanzadores web/API
+### Lanzador actual web/API
+
+**Únicamente iniciar.sh**, por decisión explícita del usuario el 15/10/2026. No restaurar iniciar.py, iniciar.bat, iniciar_red.bat ni los lanzadores fish salvo nueva instrucción.
 
 ```fish
-fish iniciar.fish
-fish iniciar.fish --red auto
-fish iniciar_hotspot.fish
-fish iniciar.fish --red IP_PC --sin-navegador
+./iniciar.sh
+./iniciar.sh --red auto
+./iniciar.sh --red IP_PC --sin-navegador
 ```
 
-Windows: iniciar.bat con los mismos argumentos. Existe iniciar.sh para Bash. Todos llaman iniciar.py, que usa el Python del venv adecuado, establece FYM_API_URL para el proxy, inicia API y Vite, verifica MySQL y mantiene la terminal abierta. Ctrl+C detiene los procesos que creó. Si hay puertos ocupados, pide cerrar la instancia anterior y no mata procesos ajenos.
+Puede invocarse desde fish porque el script ejecutable declara Bash en su shebang; requiere Bash y Python 3. No ejecutarlo con `fish iniciar.sh` ni con `source`. Resuelve la raíz desde cualquier carpeta y usa backend/.venv/bin/python, por lo que el arranque soportado es Linux. No hay lanzador nativo Windows actualmente; es una decisión aceptada por el usuario, no un pendiente para restaurar.
 
-MySQL/MariaDB debe estar iniciado por XAMPP o como servicio Linux. El lanzador no lo instala ni lo arranca con privilegios. Si la base no responde, el arranque termina y cierra API/web. Logs en .registros/. Durante la última revisión local se encontró XAMPP MySQL apagado y se inició con su configuración existente; no inferir que seguirá activo en otra sesión.
+El script contiene el coordinador Python: inicia API/Vite, establece FYM_API_URL, verifica MySQL, admite --red auto/IP y --sin-navegador y finaliza los grupos de procesos que creó al cerrar. La prueba real Linux no se realizó desde este entorno Windows. En esta PC todavía se pueden ejecutar pruebas usando backend/.venv/Scripts/python.exe y npm; eso no acredita el arranque de iniciar.sh.
 
-Web: http://127.0.0.1:5173. API: puerto 8000, localhost o IP privada elegida. La web permanece en localhost incluso en modo red; Flutter llega directamente a la API.
+MySQL/MariaDB debe estar activo como servicio de Linux o mediante la instalación elegida. El lanzador no lo instala ni lo arranca con privilegios. Si no responde, termina y cierra API/web. Logs en .registros/. La web usa localhost:5173 y Flutter llega a la API en el puerto 8000 y la IP privada elegida.
 
 ## 14. Base y secretos
 
@@ -250,10 +251,10 @@ Las exclusiones de Git ya se verificaron para ambos proyectos. Se conservan lock
 
 ## 15. Verificación y límites de la evidencia
 
-Última verificación del avance web:
+Última verificación de la reorganización: 33 pruebas backend, 18 pruebas web y compilación. No equivale a una ejecución Linux:
 
-- **24 pruebas backend** correctas.
-- **15 pruebas frontend** correctas.
+- **33 pruebas backend** correctas.
+- **18 pruebas frontend** correctas.
 - TypeScript/Vite compilan correctamente; lector separado bajo demanda.
 - Diagnóstico revisado en navegador real: API y MariaDB disponibles, modo local informado correctamente y guía desplegada.
 - Diagnóstico de red probado en lógica aislada para IP privada y rechazo de direcciones inapropiadas; no se hizo una nueva prueba física Flutter en este avance.
@@ -279,33 +280,11 @@ npm --prefix web run build
 
 Desde Flutter: flutter analyze, flutter test y flutter build apk --debug. Android requiere SDK/JDK/NDK. No convertir resultados históricos en afirmaciones de una nueva ejecución aprobada.
 
-## 16. Trabajo local que debe llegar a la ThinkPad
+## 16. Estado Git y transferencia
 
-Al elaborar este documento, Git Windows mostraba modificaciones sin commit en:
+Antes de esta tarea, el pull 38ad631 estaba aplicado y Git limpio. Esta tarea modifica pruebas y documentación, sin crear commits ni hacer push. Consultar git status para conocer el trabajo pendiente: un clone solo trae lo confirmado y publicado.
 
-```text
-README.md
-backend/aplicacion/main.py
-docs/analisis_proyecto.md
-web/src/CarneVirtual.tsx
-web/src/LectorCamara.tsx
-web/src/PanelAdministrativo.tsx
-web/src/PuestoAsistencia.tsx
-web/src/index.css
-```
-
-Y archivos nuevos aún sin seguimiento:
-
-```text
-backend/aplicacion/diagnostico.py
-backend/pruebas/test_jornada.py
-docs/recorrido_demo.md
-web/src/DiagnosticoConexion.tsx
-web/src/DiagnosticoConexion.test.tsx
-web/src/LectorCamara.test.tsx
-```
-
-Este propio CONTEXTO_PROYECTO.md se añadió después de esa inspección. **Un git clone no traerá trabajo sin commit/push**. El usuario debe transferirlo o publicar los cambios que decida; ningún commit ni push fue realizado por el agente en las tareas recientes. Volver a comprobar el estado, pues esta lista es una fotografía del momento.
+La lista de archivos sin seguimiento del traspaso del 13/10 era histórica y ya no representa el estado actual. Diagnóstico, prueba de jornada y corrección de cámara estaban incorporados a la base revisada. El contexto se copia también al proyecto móvil para facilitar el traspaso; esa copia no cambia su código Flutter.
 
 ## 17. Pendientes y posibles siguientes mejoras
 
@@ -338,3 +317,30 @@ Web/backend: README.md, AGENTS.md, docs/arquitectura.md, docs/base_datos.md, doc
 Flutter: README.md, AGENTS.md y docs/guia_proyecto.md. Los documentos de revisiones anteriores pueden conservar cifras históricas; para el último avance usar esta sección de verificación y volver a ejecutar pruebas en la ThinkPad.
 
 **Meta al retomar:** reproducir y estabilizar esta demo funcional, preservar trabajo del usuario y continuar con la siguiente prioridad que él indique.
+
+## 19. Cambios de la revisión del 15/10/2026
+
+- Se acepta el lanzador Linux único iniciar.sh; se retiran recomendaciones antiguas de recuperar Windows/fish.
+- Se conserva la prueba que mantiene el QR visible al vencer y solo anima cuando llega otro código. Mostrarlo no extiende su vigencia: el backend conserva la validación de expiración.
+- Se recupera además la prueba de confirmaciones: identidad, avatar, rol, resultado, tres segundos exactos por persona y cola en orden. Ambas usan mocks aislados y limpieza entre casos.
+- El botón de tema actual es luna/sol; el puesto tiene ajustes para altura de pantalla y dos modalidades.
+- No hubo cambios funcionales de producción ni nuevas migraciones en esta tarea; se actualizaron pruebas y contexto.
+
+## 20. Separación por capas completada el 16/10/2026
+
+La demo fue aprobada por administración y el usuario autorizó organizar completamente el backend. La arquitectura ahora es **monolito modular con arquitectura por capas**. No son microservicios y no se promete un dominio hexagonal independiente del ORM.
+
+- aplicacion/main.py compone rutas y manejadores; config.py, database.py y models.py conservan sus nombres técnicos.
+- aplicacion/modulos/acceso, asistencia y gestion tienen rutas.py, esquemas.py, servicios.py y repositorio.py. Diagnóstico tiene rutas, servicios y repositorio porque no recibe formularios.
+- compartido/dependencias.py administra sesión y permisos HTTP. compartido/errores.py define errores sin FastAPI. compartido/codigos_qr.py comparte la firma QR. compartido/repositorio.py contiene operaciones y transacciones comunes.
+- infraestructura/fotos.py valida/recomprime/guarda en backend/archivos/fotos. infraestructura/reportes.py construye XLSX.
+- Los archivos antiguos acceso.py, asistencia.py, gestion.py y diagnostico.py de la raíz de aplicacion se eliminaron; no importar desde esas rutas. Usar los módulos nuevos y compartido/dependencias.py.
+- Servicios no importan FastAPI/SQLAlchemy ni construyen consultas; las consultas están en los repositorios. Se utilizan entidades ORM compartidas y repositorios concretos. Los scripts de preparación demo siguen siendo herramientas administrativas separadas.
+- Se preservaron puntos de commit/rollback, bloqueos, firmas, cookies y contratos. No se cambiaron frontend, Flutter, modelos ni migraciones. No hace falta reconstruir el APK por esta reorganización.
+- test_capas.py compara el OpenAPI completo con pruebas/contratos/openapi.json, capturado antes del cambio: 34 rutas y sus esquemas. Comprueba además límites de imports y reglas sin HTTP/base. test_integracion_capas.py cubre fotos temporales, permisos, rollback y salud/cache.
+- Las pruebas que controlan la hora ahora parchean aplicacion.modulos.asistencia.servicios o gestion.servicios. No restaurar los imports antiguos para hacer pasar pruebas.
+- Último resultado: 33 pruebas backend y 18 frontend; compilación web. Se comprueba Alembic contra el servicio local cuando está disponible; no inferir una ejecución en Linux a partir de estas pruebas Windows.
+- Consultar docs/arquitectura.md para la estructura actual. Las descripciones previas de archivos raíz en este documento son históricas y quedan sustituidas por esta sección.
+- No se hicieron commits ni push. Conservar también los cambios locales previos de pruebas/documentación del 15/10. No restaurar scripts eliminados ni modificar secretos por conveniencia.
+
+Comprobación final de esta reorganización: alembic check contra MariaDB local no detectó cambios; GET /api/salud y /api/salud/base-datos devolvieron 200, y las rutas protegidas sin sesión devolvieron 401. Se conservan 33 pruebas backend y 18 web correctas.

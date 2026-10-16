@@ -29,10 +29,14 @@ Desde backend, ejecutar el Python del entorno con `-m unittest discover -s prueb
 
 Desde web, `npm test` cubre diagnóstico disponible, caída exclusiva de base, caída total, reintento y copia de dirección, además de confirmaciones, sonidos y lectura tras bloqueo. `npm run build` verifica TypeScript y compilación.
 
-Última comprobación de este avance: 24 pruebas backend y 15 frontend correctas. El test de jornada integra API, persistencia y Excel; la lectura física de cámara y Flutter se comprueba desde los dispositivos y no se simula como una prueba física aprobada.
+Última comprobación de este avance: 33 pruebas backend y 18 frontend correctas. El test de jornada integra API, persistencia y Excel; la lectura física de cámara y Flutter se comprueba desde los dispositivos y no se simula como una prueba física aprobada.
 
 ## Diagnóstico de conexión
 
 El resumen verifica cada 30 segundos y mediante **Comprobar conexión**. Muestra API y MySQL/MariaDB por separado y conserva la hora de última comprobación en Lima. Cuando se detecta una base caída, la configuración de red autenticada también puede no estar disponible porque la sesión requiere base de datos.
 
 La ruta autenticada /api/diagnostico/conexion informa la dirección de escucha del servidor sin revelar claves o configuración de MySQL. No se presenta localhost, 0.0.0.0, IP pública o IP sin red como dirección utilizable desde el móvil. El botón Copiar dirección permite llevar la URL a Flutter. Estos estados no configuran el firewall ni publican el sistema en internet.
+
+Actualización del 15/10/2026: se conserva iniciar.sh como único lanzador por decisión del usuario. El puesto mantiene pruebas separadas de renovación QR y de confirmaciones de tres segundos con cola. El botón de apariencia es luna/sol. Las referencias a configuraciones previas describen avances históricos.
+
+Reorganización del 16/10/2026: el backend se separó por capas en aplicacion/modulos; rutas HTTP, servicios y repositorios se verifican con el contrato anterior completo. Se mantienen los mismos pasos de presentación. La estructura actual se describe en docs/arquitectura.md.

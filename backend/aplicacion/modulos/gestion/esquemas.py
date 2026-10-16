@@ -1,0 +1,97 @@
+from datetime import date, datetime, time
+from decimal import Decimal
+from typing import Literal
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class Formulario(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class DatosPersona(Formulario):
+    id: int | None = None
+    codigo: str = Field(min_length=1, max_length=30)
+    nombres: str = Field(min_length=1, max_length=100)
+    apellidos: str = Field(min_length=1, max_length=100)
+    documento: str | None = Field(default=None, max_length=20)
+    rol_id: int
+    grupo_id: int | None = None
+    horario_id: int | None = None
+    activa: bool = True
+    identificador_biometrico: str | None = Field(default=None, max_length=40)
+    tarifa_hora: Decimal = Field(default=0, ge=0, le=100000)
+    nombre_usuario: str | None = Field(default=None, pattern="^[a-z0-9._-]{3,80}$")
+    clave: str | None = Field(default=None, min_length=8, max_length=256)
+    permiso: Literal["personal", "operador", "administrador"] = "personal"
+
+
+class DatosCarrera(Formulario):
+    id: int | None = None
+    nombre: str = Field(min_length=1, max_length=120)
+    codigo: str = Field(min_length=1, max_length=30)
+    activa: bool = True
+
+
+class DatosGrupo(Formulario):
+    id: int | None = None
+    carrera_id: int
+    horario_id: int | None = None
+    codigo: str = Field(min_length=1, max_length=30)
+    ciclo: str = Field(min_length=1, max_length=30)
+    turno: str = Field(min_length=1, max_length=30)
+    activo: bool = True
+
+
+class DatosTramo(Formulario):
+    dia_semana: int = Field(ge=0, le=6)
+    hora_entrada: time
+    hora_salida: time | None = None
+
+
+class DatosHorario(Formulario):
+    nombre: str = Field(min_length=1, max_length=100)
+    tramos: list[DatosTramo] = Field(min_length=1, max_length=14)
+
+
+class DatosManual(Formulario):
+    persona_id: int
+    tipo: Literal["entrada", "salida"]
+    fecha_hora: datetime
+    motivo: str = Field(min_length=3, max_length=500)
+    identificador_evento: str = Field(min_length=36, max_length=36)
+
+
+class DatosJustificacion(Formulario):
+    persona_id: int
+    fecha: date
+    tipo: Literal["falta", "tardanza"]
+    motivo: str = Field(min_length=3, max_length=1000)
+    referencia: str | None = Field(default=None, max_length=200)
+
+
+class ResolverJustificacion(Formulario):
+    estado: Literal["aprobada", "observada"]
+    observacion: str = Field(min_length=3, max_length=500)
+
+
+class DatosReglas(Formulario):
+    tolerancias: dict[int, int]
+    anticipacion_minutos: int = Field(ge=0, le=1440)
+    limite_ausencia_minutos: int = Field(ge=0, le=1440)
+    observacion_porcentaje: int = Field(ge=0, le=99)
+    alerta_porcentaje: int = Field(ge=1, le=100)
+
+
+class DatosDia(Formulario):
+    fecha: date
+    motivo: str = Field(min_length=3, max_length=200)
+
+
+class DatosDispositivo(Formulario):
+    id: int | None = None
+    nombre: str = Field(min_length=1, max_length=100)
+    tipo: Literal["qr", "zkteco"]
+    modelo: str | None = Field(default=None, max_length=80)
+    direccion_ip: str | None = None
+    puerto: int = Field(default=4370, ge=1, le=65535)
+    activo: bool = True

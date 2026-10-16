@@ -19,7 +19,7 @@ class PruebasGestion(unittest.TestCase):
         return self.cliente.post('/api/gestion/' + ruta, json=datos, headers={'X-Fym-Peticion': '1'})
 
     def manual(self, persona=3, tipo='entrada', hora='2026-10-11T08:20:00', evento=None):
-        with patch('aplicacion.gestion.obtener_hora_utc', return_value=datetime(2026, 10, 11, 23)):
+        with patch('aplicacion.modulos.gestion.servicios.obtener_hora_utc', return_value=datetime(2026, 10, 11, 23)):
             return self.guardar('manual', {'persona_id': persona, 'tipo': tipo, 'fecha_hora': hora, 'motivo': 'Contingencia de prueba', 'identificador_evento': evento or str(uuid4())})
 
     def test_manual_idempotente_y_auditado(self):

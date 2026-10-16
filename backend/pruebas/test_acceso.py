@@ -5,7 +5,8 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 from aplicacion.main import aplicacion
-from aplicacion.acceso import obtener_base_datos, intentos
+from aplicacion.compartido.dependencias import obtener_base_datos
+from aplicacion.modulos.acceso.servicios import intentos
 from aplicacion.models import Base, Persona, Rol, Sede, Usuario, SesionAcceso, obtener_hora_utc
 from aplicacion.seguridad import generar_hash_clave, verificar_clave
 

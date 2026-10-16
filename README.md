@@ -1,8 +1,8 @@
 # FyM Pass
 
-Demo de asistencia de ingreso al Instituto de Educación Superior Técnica Finney Miller. Incluye administración web y aplicación Android Flutter. Actualmente opera en la sede principal.
+FyM Pass registra la asistencia de estudiantes, docentes y personal administrativo del Instituto de Educación Superior Técnica Finney Miller. Incluye una página web para administración y una aplicación Android Flutter para el carné y el marcado QR. La demo de la sede principal fue aprobada por el personal de administración.
 
-## Tecnologías y arquitectura
+## Tecnologías
 
 | Capa | Tecnologías |
 | --- | --- |
@@ -13,7 +13,76 @@ Demo de asistencia de ingreso al Instituto de Educación Superior Técnica Finne
 | Reportes | openpyxl para XLSX; Pillow para fotos |
 | Pruebas | unittest, Vitest y Testing Library; flutter test |
 
-Arquitectura de monolito modular: `Web React / App Flutter → API FastAPI → MySQL/MariaDB`. Solo la API accede a la base. Vite mantiene la web en localhost y redirige `/api` al servidor configurado. La API puede escuchar en la IP privada de la PC para Flutter. Los datos se guardan en UTC y se muestran según la zona de la sede, actualmente Lima.
+## Monolito modular con arquitectura por capas
+
+El backend funciona como una sola aplicación, organizada en módulos de acceso, asistencia, gestión y diagnóstico. Cada módulo separa las solicitudes HTTP, las reglas del sistema y el acceso a los datos.
+
+```text
+Web React / App Flutter
+          ↓
+Rutas y validación de entradas
+          ↓
+Servicios: reglas del negocio
+          ↓
+Repositorios: consultas y guardado
+          ↓
+MySQL / MariaDB
+```
+
+| Archivo | Responsabilidad |
+| --- | --- |
+| `rutas.py` | Recibe solicitudes, aplica dependencias de acceso y devuelve respuestas HTTP |
+| `esquemas.py` | Valida la estructura y los tipos de los datos de entrada |
+| `servicios.py` | Aplica las reglas y coordina las operaciones |
+| `repositorio.py` | Consulta y guarda datos mediante SQLAlchemy |
+
+Los servicios no reciben Request/Response ni construyen consultas SQL. Las fotos y los archivos Excel se procesan en infraestructura. Se comparten entidades ORM: esta es una separación clásica por capas, no una arquitectura de microservicios.
+
+Solo la API accede a la base. Vite mantiene la web en localhost y redirige `/api` al servidor configurado. La API puede escuchar en la IP privada de la PC para Flutter. Los eventos se guardan en UTC y se muestran según la zona de la sede, actualmente Lima.
+
+La reorganización conserva las **34 rutas y sus esquemas**, las cookies y las reglas de la demo. No requiere nuevas migraciones ni cambios de llamadas en React o Flutter. Más detalles en [docs/arquitectura.md](docs/arquitectura.md).
+
+## Estructura del proyecto
+
+```text
+FyM_Pass/
+├── backend/
+│   ├── aplicacion/
+│   │   ├── main.py             Inicia FastAPI y reúne las rutas
+│   │   ├── modulos/
+│   │   │   ├── acceso/         Cuentas y sesiones
+│   │   │   ├── asistencia/     Carnés, QR y marcados
+│   │   │   ├── gestion/        Administración y reportes
+│   │   │   └── diagnostico/    Salud y conexión del sistema
+│   │   ├── compartido/         Dependencias, errores, firma QR y repositorio base
+│   │   ├── infraestructura/    Procesamiento de fotos y Excel
+│   │   ├── models.py           Entidades y tablas
+│   │   ├── database.py         Conexión a MySQL/MariaDB
+│   │   ├── config.py           Configuración privada
+│   │   └── seguridad.py        Protección de contraseñas y tokens
+│   ├── migraciones/            Versiones del esquema con Alembic
+│   ├── pruebas/                Pruebas de recorridos, capas y contrato HTTP
+│   └── archivos/               Fotos locales excluidas de Git
+├── web/
+│   ├── src/
+│   │   ├── main.tsx            Inicia React
+│   │   ├── App.tsx             Acceso y pantalla según la cuenta
+│   │   ├── PanelAdministrativo.tsx  Módulos de administración
+│   │   ├── PuestoAsistencia.tsx     Pantalla del puesto QR
+│   │   ├── CarneVirtual.tsx         Carné personal
+│   │   ├── LectorCamara.tsx         Lectura de QR bajo demanda
+│   │   ├── DiagnosticoConexion.tsx  Estado de los servicios
+│   │   ├── servicio.ts         Comunicación con la API
+│   │   └── index.css           Estilos y temas
+│   ├── package.json            Dependencias y comandos web
+│   └── vite.config.ts          Servidor de desarrollo y proxy
+├── docs/                       Guías técnicas y recorrido de presentación
+├── mobile/                     Documentación del proyecto móvil separado
+├── iniciar.sh                  Único lanzador, para Linux
+└── CONTEXTO_PROYECTO.md         Contexto para continuar con otro agente
+```
+
+Acceso, asistencia y gestión contienen `rutas.py`, `esquemas.py`, `servicios.py` y `repositorio.py`. Diagnóstico no necesita un esquema de formulario propio. El frontend también incluye controles del puesto, confirmaciones, sonidos, temas y archivos de pruebas.
 
 El código móvil está en otro proyecto, `FyM_Pass_Movil`; esta carpeta `mobile/` solo documenta su relación. Para subir ambos, usa dos repositorios o incorpora explícitamente el móvil a una estructura común. Clonar este repositorio no incluye automáticamente la app móvil ni datos locales.
 
@@ -24,7 +93,7 @@ El código móvil está en otro proyecto, `FyM_Pass_Movil`; esta carpeta `mobile
 - Estudiantes: entrada. Docentes y administrativos: entrada y salida.
 - Confirmación de tres segundos, foto o iniciales, nombre, rol, movimiento, hora y resultado.
 - Resumen, dispositivos, diario, manual auditado, reportes Excel, preplanilla estimada, justificaciones, personas/carnés, carreras/horarios y tolerancias/reglas.
-- Temas claro, oscuro y del sistema; preferencias de transparencia, navegación adaptable y transiciones con reducción de movimiento.
+- Botón luna/sol para alternar tema claro y oscuro, preferencia inicial del sistema, navegación adaptable y transiciones con reducción de movimiento.
 
 ZKTeco es inventario/configuración; no hay integración física. La preplanilla es referencial. La asistencia al instituto no determina asistencia a clases ni sanciones académicas.
 
@@ -112,10 +181,38 @@ El carné descargado puede mostrarse offline; el marcado desde el móvil necesit
 
 ## Verificación
 
-Web: `npm --prefix web test` y `npm --prefix web run build`. Backend, desde su carpeta: `PYTHON_DEL_ENTORNO -m unittest discover -s pruebas` y `PYTHON_DEL_ENTORNO -m alembic check`. Móvil: `flutter analyze`, `flutter test`, `flutter build apk --debug` en su propio proyecto.
+Desde la raíz del proyecto:
 
-Última comprobación: 22 pruebas backend y 8 frontend correctas, compilación web correcta y esquema sin migraciones pendientes. Antes de producción faltan HTTPS, copias/restauración verificadas, configuración institucional, firma Android de distribución, vigencia histórica de grupos y operación entre sedes.
+```bash
+npm --prefix web test
+npm --prefix web run build
+```
+
+Desde `backend/` en Linux:
+
+```bash
+.venv/bin/python -m unittest discover -s pruebas
+.venv/bin/python -m alembic check
+```
+
+Las pruebas QR necesitan una CLAVE_QR válida en la configuración del entorno de pruebas. Las pruebas de recorridos utilizan una base SQLite temporal; no alteran los marcados reales. `test_capas.py` comprueba la separación de responsabilidades y compara OpenAPI con el contrato anterior guardado en `pruebas/contratos/openapi.json`. También se comprueban fotos, permisos y reversión de transacciones.
+
+En el proyecto móvil: `flutter analyze`, `flutter test` y `flutter build apk --debug`. Las pruebas Flutter no se repitieron durante esta reorganización del backend.
+
+Última comprobación: 33 pruebas backend y 18 frontend correctas, compilación web correcta y esquema sin migraciones pendientes. Antes de producción faltan HTTPS, copias/restauración verificadas, configuración institucional, firma Android de distribución, vigencia histórica de grupos y operación entre sedes.
 
 ## Preparar la presentación
 
-El resumen incluye diagnóstico independiente de API y base, dirección Flutter en modo red y un recorrido desplegable de la demo. Consulta [docs/recorrido_demo.md](docs/recorrido_demo.md) para preparar horarios y verificar los casos sin borrar registros. Este avance pasó 24 pruebas backend y 15 frontend.
+El resumen incluye diagnóstico independiente de API y base, dirección Flutter en modo red y un recorrido desplegable de la demo. Consulta [docs/recorrido_demo.md](docs/recorrido_demo.md) para preparar horarios y verificar los casos sin borrar registros. Este avance pasó 33 pruebas backend y 18 frontend.
+
+## Documentación
+
+- [Arquitectura y responsabilidades](docs/arquitectura.md).
+- [Recorrido de presentación](docs/recorrido_demo.md).
+- [Conexión Wi-Fi](docs/conexion_wifi.md).
+- [Acceso y permisos](docs/acceso.md).
+- [Base de datos](docs/base_datos.md).
+- [Puesto de asistencia](docs/puesto_asistencia.md).
+- [Contexto completo para otro agente](CONTEXTO_PROYECTO.md).
+
+Estado documentado: **16 de octubre de 2026**. Se mantiene `iniciar.sh` como único lanzador por decisión del usuario.

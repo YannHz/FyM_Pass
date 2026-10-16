@@ -44,7 +44,7 @@ class PruebasPuesto(unittest.TestCase):
 
     def test_carne_registro_y_confirmacion(self):
         carne = self.carne()
-        with patch('aplicacion.asistencia.obtener_hora_utc', return_value=datetime(2026, 10, 11, 13, 5)):
+        with patch('aplicacion.modulos.asistencia.servicios.obtener_hora_utc', return_value=datetime(2026, 10, 11, 13, 5)):
             respuesta = self.leer(carne)
         self.assertEqual(respuesta.status_code, 200)
         datos = respuesta.json()
@@ -53,7 +53,7 @@ class PruebasPuesto(unittest.TestCase):
         self.assertEqual(datos['resultado'], 'Puntual')
         self.assertEqual(datos['persona']['rol'], 'Estudiante')
         self.assertIn('foto', datos['persona'])
-        with patch('aplicacion.asistencia.obtener_hora_utc', return_value=datetime(2026, 10, 11, 13, 5, 1)):
+        with patch('aplicacion.modulos.asistencia.servicios.obtener_hora_utc', return_value=datetime(2026, 10, 11, 13, 5, 1)):
             eventos = self.cliente.get('/api/puesto/eventos', headers=self.encabezados).json()
         self.assertEqual(len(eventos), 1)
 
@@ -61,22 +61,22 @@ class PruebasPuesto(unittest.TestCase):
         carne = self.carne()
         evento = str(uuid4())
         ahora = datetime(2026, 10, 11, 13, 5)
-        with patch('aplicacion.asistencia.obtener_hora_utc', return_value=ahora):
+        with patch('aplicacion.modulos.asistencia.servicios.obtener_hora_utc', return_value=ahora):
             self.leer(carne, evento)
             self.assertTrue(self.leer(carne, evento).json()['repetido'])
-        with patch('aplicacion.asistencia.obtener_hora_utc', return_value=ahora + timedelta(seconds=2)):
+        with patch('aplicacion.modulos.asistencia.servicios.obtener_hora_utc', return_value=ahora + timedelta(seconds=2)):
             self.assertTrue(self.leer(carne).json()['repetido'])
-        with patch('aplicacion.asistencia.obtener_hora_utc', return_value=ahora + timedelta(seconds=11)):
+        with patch('aplicacion.modulos.asistencia.servicios.obtener_hora_utc', return_value=ahora + timedelta(seconds=11)):
             self.assertFalse(self.leer(carne).json()['aceptado'])
         with Session(self.motor) as base:
             self.assertEqual(len(base.scalars(select(Marcado)).all()), 1)
 
     def test_entrada_salida_personal(self):
         carne = self.carne('operador')
-        with patch('aplicacion.asistencia.obtener_hora_utc', return_value=datetime(2026, 10, 11, 13, 15)):
+        with patch('aplicacion.modulos.asistencia.servicios.obtener_hora_utc', return_value=datetime(2026, 10, 11, 13, 15)):
             entrada = self.leer(carne).json()
         self.assertEqual(entrada['resultado'], 'Tardanza')
-        with patch('aplicacion.asistencia.obtener_hora_utc', return_value=datetime(2026, 10, 11, 22)):
+        with patch('aplicacion.modulos.asistencia.servicios.obtener_hora_utc', return_value=datetime(2026, 10, 11, 22)):
             salida = self.leer(carne).json()
         self.assertEqual(salida['tipo'], 'salida')
         self.assertTrue(salida['aceptado'])
@@ -87,7 +87,7 @@ class PruebasPuesto(unittest.TestCase):
         datos = {'contenido': qr, 'identificador_evento': str(uuid4())}
         respuesta = self.cliente.post('/api/carne/marcar', json=datos, headers={'X-Fym-Peticion': '1'})
         self.assertTrue(respuesta.json()['aceptado'])
-        with patch('aplicacion.asistencia.time.time', return_value=(int(qr.split(':')[3]) + 1) * 30):
+        with patch('aplicacion.modulos.asistencia.servicios.time.time', return_value=(int(qr.split(':')[3]) + 1) * 30):
             self.assertEqual(self.cliente.post('/api/carne/marcar', json=datos, headers={'X-Fym-Peticion': '1'}).status_code, 409)
 
     def test_firma_alterada_rechazada(self):

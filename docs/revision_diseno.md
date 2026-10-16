@@ -37,7 +37,7 @@ Se verificaron visualmente el resumen, expediente y navegación de los diez mód
 
 ## Validación y límites
 
-22 pruebas de backend con base temporal y 8 pruebas de frontend: autenticación, QR, duplicados, entrada/salida, auditoría, permisos, justificaciones, exportación segura y navegación con consultas pendientes. Compilación TypeScript/Vite correcta. La exportación protege las cadenas que podrían interpretarse como fórmulas de Excel.
+22 pruebas de backend con base temporal y 18 pruebas de frontend: autenticación, QR, duplicados, entrada/salida, auditoría, permisos, justificaciones, exportación segura y navegación con consultas pendientes. Compilación TypeScript/Vite correcta. La exportación protege las cadenas que podrían interpretarse como fórmulas de Excel.
 
 La asistencia es de ingreso al instituto; el calendario y las citaciones no determinan asistencia a clases ni sanciones académicas. Las horas de permanencia no acreditan horas lectivas. Las carreras y grupos se crean desde el panel; no se importaron personas ficticias de la referencia. La versión Flutter no se modifica en esta entrega.
 
@@ -47,4 +47,6 @@ Vite informa un paquete principal de aproximadamente 726 kB sin comprimir; se pu
 
 ## Estado visual actualizado
 
-Se incorporaron superficies translúcidas, desenfoque, navegación inferior móvil con cuatro destinos, transiciones nativas con alternativa compatible y preferencias de tema/transparencia. Se respeta reducción de movimiento y se permiten superficies opacas. El control actual es un panel de preferencias, no el botón luna/sol anterior. Los estilos base y capas posteriores conviven; su consolidación está pendiente.
+Se incorporaron superficies translúcidas, desenfoque, navegación inferior móvil con cuatro destinos, transiciones nativas con alternativa compatible y preferencias de tema/transparencia. Se respeta reducción de movimiento y se permiten superficies opacas. Desde el pull 38ad631 el control actual vuelve a ser un botón luna/sol; ya no existe el panel manual de transparencia. Los estilos base y capas posteriores conviven; su consolidación está pendiente.
+
+Actualización del 15/10/2026: se conserva iniciar.sh como único lanzador por decisión del usuario. El puesto mantiene pruebas separadas de renovación QR y de confirmaciones de tres segundos con cola. El botón de apariencia es luna/sol. Las referencias a configuraciones previas describen avances históricos.

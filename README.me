@@ -1,0 +1,79 @@
+# FyM Pass
+
+FyM Pass es un sistema para registrar la asistencia de estudiantes, docentes y personal administrativo del Instituto Finney Miller.
+
+Las personas pueden mostrar el QR de su carné virtual o escanear el QR del instituto desde la aplicación móvil. Los estudiantes registran su entrada; los docentes y administrativos registran entrada y salida.
+
+Desde la página web, el personal encargado puede administrar personas y horarios, revisar asistencias, cargar registros manuales, atender justificaciones y descargar reportes en Excel.
+
+La página web está hecha con React y TypeScript, el servidor con Python y FastAPI, la base de datos con MySQL/MariaDB y la aplicación móvil con Flutter. Por ahora, la demo funciona para la sede principal.
+
+## Monolito modular con arquitectura por capas
+
+El servidor es una sola aplicación organizada en módulos: acceso, asistencia, administración y diagnóstico. Cada módulo separa las rutas que reciben solicitudes, los servicios que aplican reglas y los repositorios que consultan o guardan datos. Todos trabajan juntos y usan la misma base de datos.
+
+La página web y la aplicación móvil envían sus solicitudes al servidor. El servidor comprueba los datos, aplica las reglas y guarda o consulta la información en la base de datos.
+
+```text
+Página web (React) ──────┐
+                        ├── Servidor (FastAPI) ── Base de datos (MySQL/MariaDB)
+Aplicación móvil ────────┘
+(Flutter)
+```
+
+Solo el servidor se conecta directamente a la base de datos.
+
+## Estructura del backend
+
+La carpeta `backend/` contiene las reglas del sistema y el acceso a los datos.
+
+```text
+backend/
+├── aplicacion/
+│   ├── main.py           Reúne los módulos e inicia la API
+│   ├── modulos/          Acceso, asistencia, gestión y diagnóstico
+│   │   └── cada módulo/
+│   │       ├── rutas.py       Recibe solicitudes y devuelve respuestas
+│   │       ├── esquemas.py    Comprueba los datos de entrada, cuando hace falta
+│   │       ├── servicios.py   Aplica las reglas del sistema
+│   │       └── repositorio.py Consulta y guarda datos
+│   ├── compartido/      Sesiones, permisos, errores y firma QR
+│   ├── infraestructura/ Fotos y generación de Excel
+│   ├── models.py        Define las tablas de la base de datos
+│   ├── database.py      Conexión con la base de datos
+│   ├── config.py        Lee la configuración privada
+│   └── seguridad.py     Protege contraseñas y tokens
+├── migraciones/         Cambios de la estructura de la base
+├── pruebas/             Comprueba funcionamiento, capas y contrato de la API
+├── archivos/            Fotos locales
+├── .env.example         Ejemplo sin claves reales
+└── requirements.txt     Bibliotecas de Python
+```
+
+## Estructura del frontend
+
+La carpeta `web/` contiene las pantallas y controles que se utilizan desde el navegador.
+
+```text
+web/
+├── src/                       Código de la página web
+│   ├── main.tsx               Inicia la interfaz
+│   ├── App.tsx                Acceso y pantalla inicial según la cuenta
+│   ├── PanelAdministrativo.tsx Módulos del personal encargado
+│   ├── ControlAsistencia.tsx  Abre y pausa el puesto de asistencia
+│   ├── PuestoAsistencia.tsx   Pantalla del QR y la cámara del instituto
+│   ├── CarneVirtual.tsx       Carné personal y escaneo desde la web
+│   ├── LectorCamara.tsx       Lectura de códigos QR con la cámara
+│   ├── ConfirmacionMarcado.tsx Muestra el resultado del marcado
+│   ├── DiagnosticoConexion.tsx Comprueba la conexión del sistema
+│   ├── SelectorTema.tsx       Cambia entre tema claro y oscuro
+│   ├── servicio.ts            Comunicación con el servidor
+│   └── index.css              Colores, tamaños y estilos
+├── index.html                 Página donde se carga la interfaz
+├── package.json               Bibliotecas y comandos de la web
+└── vite.config.ts             Configuración del entorno web
+```
+
+Los archivos de pruebas del frontend terminan en `.test.ts` o `.test.tsx`. También hay archivos para los sonidos y las transiciones entre pantallas.
+
+La aplicación Flutter está en un proyecto separado llamado `FyM_Pass_Movil`. Para instalar y ejecutar la demo, consulta el `README.md` técnico.
