@@ -31,3 +31,18 @@ export function emitirSonido(contexto: AudioContext, tipo: TipoSonido) {
     oscilador.stop(inicio + .24)
   })
 }
+
+let contextoCompartido: AudioContext | null = null
+
+export async function prepararSonido() {
+  if (!contextoCompartido || contextoCompartido.state === 'closed') contextoCompartido = new AudioContext()
+  if (contextoCompartido.state !== 'running') await contextoCompartido.resume()
+  return contextoCompartido
+}
+
+export function iniciarSonido() {
+  const preparar = () => { void prepararSonido().catch(() => {}) }
+  document.addEventListener('pointerdown', preparar, { capture: true, passive: true })
+  document.addEventListener('touchend', preparar, { capture: true, passive: true })
+  document.addEventListener('keydown', preparar, { capture: true })
+}

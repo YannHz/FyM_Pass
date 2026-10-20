@@ -1,5 +1,7 @@
+from ...compartido.avisos_asistencia import notificar_marcado
+from ...compartido.identidad import iniciales_persona
 from ...compartido.codigos_qr import firmar, validar_firma
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import hmac
 import secrets
@@ -23,7 +25,7 @@ def identidad(repositorio: RepositorioAsistencia, persona: Persona):
     return {
         "nombre": f"{persona.nombres} {persona.apellidos}",
         "rol": rol.nombre,
-        "foto": persona.foto_ruta,
+        "iniciales": iniciales_persona(persona),
         "codigo": persona.codigo,
     }
 
@@ -282,7 +284,10 @@ def registrar_lectura(
         aceptado=not bool(rechazo),
     )
     repositorio.agregar(evento)
+    sede_id = persona.sede_id if marcado else None
     repositorio.confirmar()
+    if sede_id is not None:
+        notificar_marcado(sede_id)
     return formato_evento(repositorio, evento)
 
 
@@ -344,3 +349,29 @@ def consultar_marcados(
         }
         for marcado, sujeto, resultado in filas
     ]
+
+
+def consultar_mis_asistencias(mes=None, usuario=None, repositorio=None):
+    from calendar import monthrange
+    from ..gestion.servicios import filas_diarias
+
+    persona = repositorio.obtener_persona(usuario.persona_id)
+    sede = repositorio.obtener_sede(persona.sede_id)
+    hoy = obtener_hora_utc().replace(tzinfo=timezone.utc).astimezone(ZoneInfo(sede.zona_horaria)).date()
+    mes = mes or hoy.strftime("%Y-%m")
+    try:
+        desde = date.fromisoformat(mes + "-01")
+    except ValueError:
+        raise ErrorAplicacion(422, "Selecciona un mes válido.")
+    if desde > hoy:
+        raise ErrorAplicacion(422, "Selecciona el mes actual o uno anterior.")
+    hasta = min(date(desde.year, desde.month, monthrange(desde.year, desde.month)[1]), hoy)
+    filas = filas_diarias(repositorio.para_gestion(), usuario, desde, hasta, persona_id=persona.id)
+    campos = ("fecha", "entrada", "salida", "estado")
+    return {
+        "mes": mes,
+        "hasta": hasta.isoformat(),
+        "zona_horaria": sede.zona_horaria,
+        "requiere_salida": repositorio.obtener_rol(persona.rol_id).requiere_salida,
+        "dias": [{campo: fila[campo] for campo in campos} for fila in reversed(filas)],
+    }

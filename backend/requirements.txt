@@ -5,7 +5,6 @@ PyMySQL>=1.1,<2
 pydantic-settings>=2.7,<3
 alembic>=1.14,<2
 cryptography>=44
-httpx>=0.28,<1
 tzdata>=2025.1
 openpyxl>=3.1,<4
 python-multipart>=0.0.20

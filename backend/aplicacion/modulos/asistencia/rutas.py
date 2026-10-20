@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, Query
 from sqlalchemy.orm import Session
 from ...models import Usuario, PuestoAbierto
 from ...compartido.dependencias import (
@@ -113,3 +113,30 @@ def consultar_marcados(
     return servicios.consultar_marcados(
         usuario=usuario, repositorio=RepositorioAsistencia(base)
     )
+
+
+@rutas_asistencia.get("/mi-asistencia")
+def consultar_mis_asistencias(
+    respuesta: Response,
+    mes: str | None = Query(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
+    usuario: Usuario = Depends(obtener_usuario),
+    base: Session = Depends(obtener_base_datos),
+):
+    respuesta.headers["Cache-Control"] = "no-store"
+    return servicios.consultar_mis_asistencias(
+        mes=mes, usuario=usuario, repositorio=RepositorioAsistencia(base)
+    )
+
+
+@rutas_asistencia.get("/asistencia/cambios")
+async def esperar_cambios(
+    respuesta: Response,
+    version: str = Query(default="", max_length=80),
+    usuario: Usuario = Depends(obtener_encargado),
+    base: Session = Depends(obtener_base_datos),
+):
+    from ...compartido.avisos_asistencia import esperar_marcado
+    sede_id = RepositorioAsistencia(base).obtener_persona(usuario.persona_id).sede_id
+    base.close()
+    respuesta.headers["Cache-Control"] = "no-store"
+    return await esperar_marcado(sede_id, version)

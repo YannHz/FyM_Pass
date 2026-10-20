@@ -1,9 +1,8 @@
 from datetime import date
 from decimal import Decimal
 from typing import Literal
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, Response
 from fastapi.responses import StreamingResponse
-from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from ...models import Usuario
 from ...compartido.dependencias import (
@@ -51,25 +50,6 @@ def guardar_persona(
     )
 
 
-@rutas_gestion.post(
-    "/personas/{identificador}/foto", dependencies=[Depends(validar_peticion)]
-)
-async def guardar_foto(
-    identificador: int,
-    archivo: UploadFile = File(...),
-    usuario: Usuario = Depends(administrador),
-    base: Session = Depends(obtener_base_datos),
-):
-    contenido = await archivo.read(3 * 1024 * 1024 + 1)
-    return await run_in_threadpool(
-        servicios.guardar_foto,
-        identificador,
-        contenido,
-        usuario,
-        RepositorioGestion(base),
-    )
-
-
 @rutas_gestion.post("/carreras", dependencies=[Depends(validar_peticion)])
 def guardar_carrera(
     datos: DatosCarrera,
@@ -107,11 +87,14 @@ def guardar_horario(
 def consultar_diario(
     desde: date,
     hasta: date,
+    respuesta: Response,
+    solo_marcados: bool = False,
     usuario: Usuario = Depends(obtener_encargado),
     base: Session = Depends(obtener_base_datos),
 ):
+    respuesta.headers["Cache-Control"] = "no-store"
     return servicios.consultar_diario(
-        desde=desde, hasta=hasta, usuario=usuario, repositorio=RepositorioGestion(base)
+        desde=desde, hasta=hasta, solo_marcados=solo_marcados, usuario=usuario, repositorio=RepositorioGestion(base)
     )
 
 
@@ -253,6 +236,7 @@ def exportar(
     estado: str = "",
     carrera: str = "",
     tarifa: Decimal | None = None,
+    solo_marcados: bool = False,
     usuario: Usuario = Depends(obtener_encargado),
     base: Session = Depends(obtener_base_datos),
 ):
@@ -265,6 +249,7 @@ def exportar(
         estado=estado,
         carrera=carrera,
         tarifa=tarifa,
+        solo_marcados=solo_marcados,
         usuario=usuario,
         repositorio=RepositorioGestion(base),
     )

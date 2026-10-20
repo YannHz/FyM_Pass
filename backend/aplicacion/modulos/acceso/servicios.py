@@ -1,3 +1,4 @@
+from ...compartido.identidad import iniciales_persona
 from collections import OrderedDict
 from datetime import timedelta
 from threading import Lock
@@ -42,6 +43,7 @@ def describir_usuario(repositorio: RepositorioAcceso, usuario: Usuario):
     return {
         "id": usuario.id,
         "usuario": usuario.nombre_usuario,
+        "iniciales": iniciales_persona(persona),
         "nombre": f"{persona.nombres} {persona.apellidos}",
         "rol": rol.codigo,
         "permiso": usuario.permiso,

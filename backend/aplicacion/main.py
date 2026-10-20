@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from .version import VERSION
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
@@ -10,7 +11,7 @@ from .modulos.gestion.rutas import rutas_gestion
 from .modulos.diagnostico.rutas import rutas_salud, rutas_diagnostico
 
 aplicacion = FastAPI(
-    title="FyM Pass", description="API de asistencia institucional", version="0.1.0"
+    title="FyM Pass", description="API de asistencia institucional", version=VERSION
 )
 for enrutador in (
     rutas_salud,

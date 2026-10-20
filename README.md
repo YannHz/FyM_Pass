@@ -1,218 +1,156 @@
 # FyM Pass
 
-FyM Pass registra la asistencia de estudiantes, docentes y personal administrativo del Instituto de Educación Superior Técnica Finney Miller. Incluye una página web para administración y una aplicación Android Flutter para el carné y el marcado QR. La demo de la sede principal fue aprobada por el personal de administración.
+**0.2.0-beta.3 · beta funcional local**
+
+Sistema web de asistencia del Instituto de Educación Superior Técnica Finney Miller. Administración gestiona personas, horarios, puestos y reportes; estudiantes y personal acceden a su carné y a sus propias asistencias desde el navegador. La misma web puede instalarse como PWA en teléfonos y computadoras.
+
+Los alumnos registran entrada al instituto; docentes y administrativos registran entrada y salida. Se puede mostrar el carné a la cámara del puesto o escanear el QR dinámico con el teléfono. Flutter está descartado. El alojamiento en línea queda para una etapa posterior.
 
 ## Tecnologías
 
-| Capa | Tecnologías |
+| Parte | Tecnologías |
 | --- | --- |
-| Web | React 19, TypeScript, Vite, Tailwind CSS, Lucide, QRCode y ZXing |
-| API | Python, FastAPI, Uvicorn, Pydantic |
-| Persistencia | MySQL/MariaDB, SQLAlchemy, PyMySQL y Alembic |
-| Android | Flutter, Dart, mobile_scanner y flutter_secure_storage |
-| Reportes | openpyxl para XLSX; Pillow para fotos |
-| Pruebas | unittest, Vitest y Testing Library; flutter test |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, Lucide, QRCode y ZXing |
+| Backend | Python, FastAPI, Uvicorn y Pydantic |
+| Base de datos | MySQL/MariaDB, SQLAlchemy, PyMySQL y Alembic |
+| Archivos | openpyxl para Excel; Pillow conservado en infraestructura histórica de fotos |
+| Instalación web | Manifest y service worker para PWA |
 
 ## Monolito modular con arquitectura por capas
 
-El backend funciona como una sola aplicación, organizada en módulos de acceso, asistencia, gestión y diagnóstico. Cada módulo separa las solicitudes HTTP, las reglas del sistema y el acceso a los datos.
+Una sola API organizada en acceso, asistencia, gestión y diagnóstico. Cada módulo separa rutas HTTP, validación, reglas y consultas. Todos comparten una base de datos.
 
 ```text
-Web React / App Flutter
-          ↓
-Rutas y validación de entradas
-          ↓
-Servicios: reglas del negocio
-          ↓
-Repositorios: consultas y guardado
-          ↓
-MySQL / MariaDB
+Navegador / PWA React → Rutas y esquemas → Servicios → Repositorios → MySQL/MariaDB
 ```
 
-| Archivo | Responsabilidad |
-| --- | --- |
-| `rutas.py` | Recibe solicitudes, aplica dependencias de acceso y devuelve respuestas HTTP |
-| `esquemas.py` | Valida la estructura y los tipos de los datos de entrada |
-| `servicios.py` | Aplica las reglas y coordina las operaciones |
-| `repositorio.py` | Consulta y guarda datos mediante SQLAlchemy |
+Solo el backend accede a la base. En local, Vite redirige `/api` hacia FastAPI. Los eventos se guardan en UTC y se muestran según la zona de la sede, actualmente Lima. Los detalles están en [arquitectura](docs/arquitectura.md).
 
-Los servicios no reciben Request/Response ni construyen consultas SQL. Las fotos y los archivos Excel se procesan en infraestructura. Se comparten entidades ORM: esta es una separación clásica por capas, no una arquitectura de microservicios.
-
-Solo la API accede a la base. Vite mantiene la web en localhost y redirige `/api` al servidor configurado. La API puede escuchar en la IP privada de la PC para Flutter. Los eventos se guardan en UTC y se muestran según la zona de la sede, actualmente Lima.
-
-La reorganización conserva las **34 rutas y sus esquemas**, las cookies y las reglas de la demo. No requiere nuevas migraciones ni cambios de llamadas en React o Flutter. Más detalles en [docs/arquitectura.md](docs/arquitectura.md).
-
-## Estructura del proyecto
+## Carpetas
 
 ```text
-FyM_Pass/
-├── backend/
-│   ├── aplicacion/
-│   │   ├── main.py             Inicia FastAPI y reúne las rutas
-│   │   ├── modulos/
-│   │   │   ├── acceso/         Cuentas y sesiones
-│   │   │   ├── asistencia/     Carnés, QR y marcados
-│   │   │   ├── gestion/        Administración y reportes
-│   │   │   └── diagnostico/    Salud y conexión del sistema
-│   │   ├── compartido/         Dependencias, errores, firma QR y repositorio base
-│   │   ├── infraestructura/    Procesamiento de fotos y Excel
-│   │   ├── models.py           Entidades y tablas
-│   │   ├── database.py         Conexión a MySQL/MariaDB
-│   │   ├── config.py           Configuración privada
-│   │   └── seguridad.py        Protección de contraseñas y tokens
-│   ├── migraciones/            Versiones del esquema con Alembic
-│   ├── pruebas/                Pruebas de recorridos, capas y contrato HTTP
-│   └── archivos/               Fotos locales excluidas de Git
-├── web/
-│   ├── src/
-│   │   ├── main.tsx            Inicia React
-│   │   ├── App.tsx             Acceso y pantalla según la cuenta
-│   │   ├── PanelAdministrativo.tsx  Módulos de administración
-│   │   ├── PuestoAsistencia.tsx     Pantalla del puesto QR
-│   │   ├── CarneVirtual.tsx         Carné personal
-│   │   ├── LectorCamara.tsx         Lectura de QR bajo demanda
-│   │   ├── DiagnosticoConexion.tsx  Estado de los servicios
-│   │   ├── servicio.ts         Comunicación con la API
-│   │   └── index.css           Estilos y temas
-│   ├── package.json            Dependencias y comandos web
-│   └── vite.config.ts          Servidor de desarrollo y proxy
-├── docs/                       Guías técnicas y recorrido de presentación
-├── mobile/                     Documentación del proyecto móvil separado
-├── iniciar.sh                  Único lanzador, para Linux
-└── CONTEXTO_PROYECTO.md         Contexto para continuar con otro agente
+backend/
+├── aplicacion/
+│   ├── main.py                 Reúne las rutas de FastAPI
+│   ├── modulos/
+│   │   ├── acceso/             Cuentas y sesiones
+│   │   ├── asistencia/         Carnés, QR y marcados
+│   │   ├── gestion/            Administración y reportes
+│   │   └── diagnostico/        Salud del sistema
+│   ├── compartido/             Dependencias, errores y firma QR
+│   ├── infraestructura/        Fotos y archivos Excel
+│   ├── datos_beta.py           Preparación explícita de datos ficticios
+│   ├── models.py               Tablas y entidades
+│   ├── database.py             Conexión a la base
+│   └── config.py               Configuración privada
+├── migraciones/                Versiones del esquema
+└── archivos/                   Fotos y respaldos privados, fuera de Git
+web/
+├── src/
+│   ├── App.tsx                 Acceso y recuperación de sesión
+│   ├── PanelAdministrativo.tsx  Módulos de administración
+│   ├── FormularioGestion.tsx   Formularios y editor de horarios
+│   ├── componentesGestion.tsx  Consultas, tablas y diálogos
+│   ├── CarneVirtual.tsx        Identificación y escaneo personal
+│   ├── PuestoAsistencia.tsx    Pantalla de entrada al instituto
+│   ├── servicio.ts            Peticiones y errores de la API
+│   └── index.css              Apariencia y adaptación de pantallas
+├── public/                     Manifest, iconos y pantalla sin conexión
+├── pwa.ts                      Generación del service worker
+├── service-worker.js           Plantilla de caché pública
+├── package.json                Dependencias y comandos
+└── vite.config.ts              Desarrollo y proxy local
+docs/                           Guías del sistema
+iniciar.sh                      Lanzador local para Linux
 ```
 
-Acceso, asistencia y gestión contienen `rutas.py`, `esquemas.py`, `servicios.py` y `repositorio.py`. Diagnóstico no necesita un esquema de formulario propio. El frontend también incluye controles del puesto, confirmaciones, sonidos, temas y archivos de pruebas.
+En los módulos: `rutas.py` recibe peticiones, `esquemas.py` valida entradas, `servicios.py` aplica reglas y `repositorio.py` consulta o guarda. Diagnóstico no necesita un esquema de formulario propio.
 
-El código móvil está en otro proyecto, `FyM_Pass_Movil`; esta carpeta `mobile/` solo documenta su relación. Para subir ambos, usa dos repositorios o incorpora explícitamente el móvil a una estructura común. Clonar este repositorio no incluye automáticamente la app móvil ni datos locales.
+Por decisión del usuario, esta versión no incluye archivos de pruebas automatizadas ni configuración de contenedores.
 
-## Funcionalidades
+## Preparación local
 
-- Acceso con usuario y contraseña; destino y permisos según cuenta.
-- Carné virtual y QR dinámico del puesto, con modalidades configurables.
-- Estudiantes: entrada. Docentes y administrativos: entrada y salida.
-- Confirmación de tres segundos, foto o iniciales, nombre, rol, movimiento, hora y resultado.
-- Resumen, dispositivos, diario, manual auditado, reportes Excel, preplanilla estimada, justificaciones, personas/carnés, carreras/horarios y tolerancias/reglas.
-- Botón luna/sol para alternar tema claro y oscuro, preferencia inicial del sistema, navegación adaptable y transiciones con reducción de movimiento.
+Requiere Python compatible con las dependencias, Node.js 22, npm y MySQL 8 o MariaDB 10.4 o superior. La instalación actual usa MariaDB de XAMPP. Desde la raíz, en Linux:
 
-ZKTeco es inventario/configuración; no hay integración física. La preplanilla es referencial. La asistencia al instituto no determina asistencia a clases ni sanciones académicas.
-
-## Requisitos y primera instalación
-
-Python 3.11 o superior compatible con las dependencias, Node.js 22 LTS y npm. MySQL 8 o MariaDB 10.4 o superior. El arranque requiere MySQL activo y dependencias instaladas; no instala programas, no inicia MySQL con privilegios ni aplica migraciones automáticamente.
-
-### Linux
-
-Instala Python, pip/venv, Node/npm y MySQL/MariaDB mediante tu distribución. No necesitas activar el entorno virtual:
-
-```bash
+```sh
 python3 -m venv backend/.venv
 backend/.venv/bin/python -m pip install -r backend/requirements.lock
 npm --prefix web ci
 cp backend/.env.example backend/.env
 ```
 
-Si una versión fijada no tiene soporte para tu Python/arquitectura, usa `backend/requirements.txt` y verifica pruebas. Los lockfiles permanecen versionados.
+En Windows usa `py -m venv backend/.venv` y `backend\.venv\Scripts\python.exe` en lugar del Python de Linux.
 
-### Preparar la base
+Crea la base `fym_pass` y un usuario dedicado; configura su host, puerto y credenciales en `backend/.env`. Genera `CLAVE_QR` aleatoria de al menos 32 caracteres y consérvala para que los carnés mantengan su validez. No publiques el archivo `.env`.
 
-Con un administrador de MySQL/MariaDB, crea una base local y un usuario dedicado. Sustituye la contraseña de ejemplo por una propia:
+Después, desde `backend/`:
 
-```sql
-CREATE DATABASE fym_pass CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'fym_pass'@'127.0.0.1' IDENTIFIED BY 'CAMBIAR_POR_CLAVE_LOCAL';
-GRANT ALL PRIVILEGES ON fym_pass.* TO 'fym_pass'@'127.0.0.1';
-```
-
-Edita `backend/.env`: host `127.0.0.1`, puerto `3306`, base y usuario `fym_pass`, tu contraseña y `CLAVE_QR` aleatoria de al menos 32 caracteres. Para generarla sin compartirla: `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`. Conserva la clave mientras quieras mantener válidos los carnés.
-
-Desde `backend`, ejecuta estos tres comandos usando el Python correspondiente:
-
-```bash
+```sh
 .venv/bin/python -m alembic upgrade head
-.venv/bin/python -m aplicacion.datos_demo
-.venv/bin/python -m aplicacion.horarios_demo
+.venv/bin/python -m aplicacion.datos_beta --confirmar-base fym_pass
 ```
 
-Las migraciones crean estructura y catálogos iniciales; las cuentas y horarios demo se preparan aparte. Las contraseñas se generan aleatoriamente y se guardan en `backend/.credenciales_demo.local.txt`. No ejecutar estos preparadores sobre datos institucionales sin revisar su alcance.
+El preparador requiere `mysqldump` o `mariadb-dump`, crea un respaldo privado y rechaza una carga nueva si ya existen personas. No se ejecuta durante el arranque normal. No uses `--reemplazar-usuarios` salvo que quieras descartar expresamente las personas y el historial de esa base local.
 
-## Arrancar con un comando
+## Arranque
 
-Desde la raíz del proyecto, en Bash, fish o zsh:
+En Linux, desde Bash, fish o zsh:
 
-```bash
+```sh
 ./iniciar.sh
 ```
 
-Para presentar también la aplicación Flutter por Wi-Fi, conecta primero la laptop a la misma red que el teléfono y ejecuta:
+Requiere Bash y Python 3; no ejecutar con `fish iniciar.sh`. MySQL debe estar iniciado. `--sin-navegador` evita abrir el navegador; Ctrl+C cierra los procesos iniciados por el lanzador. Los registros quedan en `.registros/`.
 
-```bash
-./iniciar.sh --red auto
+Para iniciar manualmente, desde `backend/`:
+
+```sh
+.venv/bin/python -m uvicorn aplicacion.main:aplicacion --host 127.0.0.1 --port 8000
 ```
 
-También puedes indicar la IPv4 privada de tu laptop con `./iniciar.sh --red 192.168.1.100`. Si usas otra carpeta de trabajo, ejecuta el script por su ruta absoluta. Consulta las opciones con `./iniciar.sh --help`.
+En otra terminal, desde `web/`: `npm run dev`.
 
-El único lanzador es `iniciar.sh` y requiere Bash y Python 3. Inicia API y web, verifica la conexión a MySQL y abre el navegador cuando los servicios están disponibles. `--sin-navegador` evita abrirlo. Mantén la terminal abierta; Ctrl+C detiene los servicios iniciados por el script. Los registros quedan en `.registros/backend.log` y `.registros/web.log`. Si los puertos 8000/5173 están ocupados, cierra la instancia anterior.
+En Windows (PowerShell), con MySQL de XAMPP iniciado, usar dos terminales:
 
-Usa en Flutter la dirección `API / Flutter` que muestra la terminal. Si cambia la IP de la laptop, actualiza el servidor en Flutter y revisa el permiso HTTP de Android. La detección automática depende de la ruta de red activa; una VPN puede cambiarla.
-
-La web está en `http://127.0.0.1:5173`; la documentación API en `http://IP_PC:8000/docs`. El modo red no configura el firewall; en Linux adapta las reglas al firewall de tu distribución y permite únicamente TCP 8000 desde la red local. MySQL no necesita exponerse.
-
-## Credenciales de acceso
-
-| Cuenta | Uso |
-| --- | --- |
-| `admin.demo` | Administración completa web; identidad administrativa en móvil |
-| `operador.demo` | Operación del puesto y cargas permitidas |
-| `docente.demo` | Carné web/móvil y entrada/salida |
-| `estudiante.demo` | Carné web/móvil y entrada |
-
-Web y Flutter usan las mismas cuentas y contraseñas. Las contraseñas actuales y la conexión de base de esta instalación están en **`README_CREDENCIALES.local.md`**, excluido de Git. El clon genera sus propias cuentas mediante `datos_demo`; no depende de contraseñas publicadas ni copia las sesiones anteriores. La base usa los valores de `backend/.env`, también excluido. Nunca subas estos archivos, fotos ni volcados con información real.
-
-Si quieres conservar los datos de prueba entre PCs, realiza una exportación privada de MySQL/MariaDB y transfiere también las fotos y la configuración necesaria por un medio privado. Git no transporta la base ni archivos ignorados. No vuelvas a generar cuentas demo sobre una base importada.
-
-## Flutter por Wi-Fi
-
-La PC y el teléfono deben compartir red. Ejecuta el lanzador con `--red IP_PC`, comprueba `http://IP_PC:8000/api/salud` desde el teléfono y configura esa dirección en **Conexión de la demo → Servidor** de Flutter. Ya se probó sin cable usando el punto de acceso del teléfono.
-
-Android limita el HTTP de la demo a direcciones explícitas en `android/app/src/main/res/xml/network_security_config.xml` del proyecto móvil. Si cambia la IP al usar la ThinkPad, actualiza ese archivo y recompila/reinstala el APK, o utiliza un endpoint HTTPS. Cambiar solo el campo Servidor puede no bastar. No abrir esta demo HTTP a internet.
-
-El carné descargado puede mostrarse offline; el marcado desde el móvil necesita servidor y red disponibles. No existe una cola móvil de marcados offline.
-
-## Verificación
-
-Desde la raíz del proyecto:
-
-```bash
-npm --prefix web test
-npm --prefix web run build
+```powershell
+cd D:\dev_\FyM_Pass\backend
+.\.venv\Scripts\python.exe -m uvicorn aplicacion.main:aplicacion --host 127.0.0.1 --port 8000
 ```
 
-Desde `backend/` en Linux:
-
-```bash
-.venv/bin/python -m unittest discover -s pruebas
-.venv/bin/python -m alembic check
+```powershell
+cd D:\dev_\FyM_Pass\web
+npm run dev
 ```
 
-Las pruebas QR necesitan una CLAVE_QR válida en la configuración del entorno de pruebas. Las pruebas de recorridos utilizan una base SQLite temporal; no alteran los marcados reales. `test_capas.py` comprueba la separación de responsabilidades y compara OpenAPI con el contrato anterior guardado en `pruebas/contratos/openapi.json`. También se comprueban fotos, permisos y reversión de transacciones.
+No ejecutar estos comandos otra vez si esos puertos ya están ocupados por la instalación activa.
 
-En el proyecto móvil: `flutter analyze`, `flutter test` y `flutter build apk --debug`. Las pruebas Flutter no se repitieron durante esta reorganización del backend.
+Web: `http://127.0.0.1:5173`. API: `http://127.0.0.1:8000/docs`. La opción `./iniciar.sh --red auto` conserva el diagnóstico de la API por red; no habilita HTTPS ni la instalación o cámara del navegador en teléfonos.
 
-Última comprobación: 33 pruebas backend y 18 frontend correctas, compilación web correcta y esquema sin migraciones pendientes. Antes de producción faltan HTTPS, copias/restauración verificadas, configuración institucional, firma Android de distribución, vigencia histórica de grupos y operación entre sedes.
+## Cuentas locales
 
-## Preparar la presentación
+28 personas completamente ficticias: 4 administrativos, 6 docentes y 18 estudiantes. Usuarios sin puntos, por ejemplo `mariasalazar`, `rosaquispe`, `luishuaman` y `diegoflores`. Las credenciales completas están en `README_CREDENCIALES.local.md` y `backend/.credenciales_beta.local.txt`, excluidos de Git.
 
-El resumen incluye diagnóstico independiente de API y base, dirección Flutter en modo red y un recorrido desplegable de la demo. Consulta [docs/recorrido_demo.md](docs/recorrido_demo.md) para preparar horarios y verificar los casos sin borrar registros. Este avance pasó 33 pruebas backend y 18 frontend.
+Se mantienen tres carreras ilustrativas y seis grupos. Horarios de lunes a viernes: administración 08–17; docentes 08–13 o 14–19; alumnos entrada a las 08 o 14. Se pueden editar desde el panel. No se generan DNI, fotos reales ni asistencias artificiales; se conservan los registros realizados durante las pruebas.
 
-## Documentación
+La herramienta permite actualizar solo los accesos del conjunto ficticio, conservando los datos:
 
-- [Arquitectura y responsabilidades](docs/arquitectura.md).
-- [Recorrido de presentación](docs/recorrido_demo.md).
-- [Conexión Wi-Fi](docs/conexion_wifi.md).
-- [Acceso y permisos](docs/acceso.md).
-- [Base de datos](docs/base_datos.md).
-- [Puesto de asistencia](docs/puesto_asistencia.md).
-- [Contexto completo para otro agente](CONTEXTO_PROYECTO.md).
+```sh
+.venv/bin/python -m aplicacion.datos_beta --actualizar-accesos --confirmar-base fym_pass
+```
 
-Estado documentado: **16 de octubre de 2026**. Se mantiene `iniciar.sh` como único lanzador por decisión del usuario.
+Esta operación respalda la base, cambia usuarios y claves, revoca sesiones y pausa los puestos abiertos. No borra personas, grupos ni asistencias.
+
+## Compilación e instalación web
+
+`npm --prefix web run build` verifica TypeScript y genera `web/dist/` y el service worker. La PWA instala en un contexto seguro: HTTPS o localhost. En iPhone se añade desde Safari; en Android y PC se usa el menú de instalación del navegador.
+
+La PWA conserva únicamente recursos públicos. No almacena carnés, fotos ni respuestas de la API; no hay sincronización de marcados sin conexión. Ante una caída muestra contingencia y se utiliza el registro manual. Acceso desde teléfono mediante túnel HTTPS y detalles de instalación en la [guía de operación](docs/operacion.md).
+
+## Documentación esencial
+
+- [Arquitectura y base de datos](docs/arquitectura.md): módulos, capas, tablas y seguridad.
+- [Operación y pruebas locales](docs/operacion.md): puesto QR, cuentas, PWA, túnel HTTPS y respaldos.
+- [Contexto para continuar](CONTEXTO_PROYECTO.md): decisiones vigentes, diseño y pendientes.
+- AGENTS.md: convenciones para trabajar en el repositorio.
+
+Las credenciales completas siguen en README_CREDENCIALES.local.md y backend/.credenciales_beta.local.txt, privados y excluidos de Git. Fotos, respaldos y base tampoco viajan con Git; transferirlos por un medio privado al cambiar de equipo.

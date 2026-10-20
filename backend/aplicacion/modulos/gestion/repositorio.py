@@ -139,17 +139,26 @@ class RepositorioGestion(RepositorioBase):
             )
         ).all()
 
-    def personas_del_diario(self, sede):
+    def personas_con_marcados(self, sede, inicio, fin):
         return self._base.scalars(
-            select(Persona).where(Persona.sede_id == sede.id)
+            select(Persona)
+            .join(Marcado, Marcado.persona_id == Persona.id)
+            .where(Persona.sede_id == sede.id, Marcado.ocurrido_en >= inicio, Marcado.ocurrido_en < fin)
+            .distinct()
         ).all()
 
-    def marcados_del_intervalo(self, fin, inicio, sede):
+    def personas_del_diario(self, sede, persona_id=None):
+        return self._base.scalars(
+            select(Persona).where(Persona.sede_id == sede.id, *([Persona.id == persona_id] if persona_id is not None else []))
+        ).all()
+
+    def marcados_del_intervalo(self, fin, inicio, sede, persona_id=None):
         return self._base.scalars(
             select(Marcado)
             .join(Persona)
             .where(
                 Persona.sede_id == sede.id,
+                *([Persona.id == persona_id] if persona_id is not None else []),
                 Marcado.ocurrido_en >= inicio,
                 Marcado.ocurrido_en < fin,
             )
@@ -165,12 +174,13 @@ class RepositorioGestion(RepositorioBase):
             )
         ).all()
 
-    def justificaciones_aprobadas(self, desde, hasta, sede):
+    def justificaciones_aprobadas(self, desde, hasta, sede, persona_id=None):
         return self._base.scalars(
             select(Justificacion)
             .join(Persona)
             .where(
                 Persona.sede_id == sede.id,
+                *([Persona.id == persona_id] if persona_id is not None else []),
                 Justificacion.estado == "aprobada",
                 Justificacion.fecha >= desde,
                 Justificacion.fecha <= hasta,

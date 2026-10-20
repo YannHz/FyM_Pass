@@ -106,7 +106,7 @@ def iniciar():
         if not listo:
             raise RuntimeError('No se completo el inicio. Comprueba MySQL, backend/.env y los archivos de .registros.')
         print('Web: http://127.0.0.1:5173')
-        print(f'API / Flutter: http://{direccion}:8000')
+        print(f'API de desarrollo: http://{direccion}:8000')
         print('MySQL disponible. Mantén esta terminal abierta. Ctrl+C detiene API y web.')
         if not opciones.sin_navegador:
             webbrowser.open('http://127.0.0.1:5173')

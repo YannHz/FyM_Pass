@@ -1,3 +1,5 @@
+from ...compartido.avisos_asistencia import notificar_marcado
+from ...compartido.identidad import iniciales_persona
 from datetime import date, datetime, timedelta, timezone, time
 from decimal import Decimal
 from ipaddress import ip_address
@@ -39,7 +41,6 @@ from .esquemas import (
     DatosDia,
     DatosDispositivo,
 )
-from ...infraestructura.fotos import guardar_foto_validada
 from ...infraestructura.reportes import construir_excel
 
 
@@ -143,9 +144,11 @@ def consultar_catalogo(usuario: Usuario = None, repositorio: RepositorioGestion 
     for persona in personas:
         datos = datos_objeto(persona)
         datos.pop("version_carne")
+        datos.pop("foto_ruta", None)
         cuenta = repositorio.cuenta_de_persona(persona)
         datos.update(
             nombre=f"{persona.nombres} {persona.apellidos}",
+            iniciales=iniciales_persona(persona),
             rol=repositorio.obtener_rol(persona.rol_id).nombre,
             rol_codigo=repositorio.obtener_rol(persona.rol_id).codigo,
             nombre_usuario=cuenta.nombre_usuario if cuenta else None,
@@ -306,26 +309,6 @@ def guardar_persona(
     return {"id": persona.id, "mensaje": "Persona guardada."}
 
 
-def guardar_foto(
-    identificador: int,
-    contenido: bytes = None,
-    usuario: Usuario = None,
-    repositorio: RepositorioGestion = None,
-):
-    persona = comprobar_persona(repositorio, usuario, identificador)
-    persona.foto_ruta = guardar_foto_validada(contenido)
-    registrar_auditoria(
-        repositorio,
-        usuario,
-        "guardar_foto",
-        "personas",
-        persona.id,
-        {"foto": persona.foto_ruta.rsplit("/", 1)[-1]},
-    )
-    confirmar(repositorio)
-    return {"foto": persona.foto_ruta}
-
-
 def guardar_carrera(
     datos: DatosCarrera, usuario: Usuario = None, repositorio: RepositorioGestion = None
 ):
@@ -430,10 +413,11 @@ def intervalo(repositorio, usuario, desde, hasta):
     return (sede, zona, inicio, fin)
 
 
-def filas_diarias(repositorio, usuario, desde, hasta):
+def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marcados=False):
     sede, zona, inicio, fin = intervalo(repositorio, usuario, desde, hasta)
-    personas = repositorio.personas_del_diario(sede)
-    marcas = repositorio.marcados_del_intervalo(fin, inicio, sede)
+    personas = (repositorio.personas_con_marcados(sede, inicio, fin)
+                if solo_marcados else repositorio.personas_del_diario(sede, persona_id))
+    marcas = repositorio.marcados_del_intervalo(fin, inicio, sede, persona_id)
     por_dia = {}
     for marcado in marcas:
         dia = marcado.ocurrido_en.replace(tzinfo=timezone.utc).astimezone(zona).date()
@@ -444,7 +428,7 @@ def filas_diarias(repositorio, usuario, desde, hasta):
     }
     justificaciones = {
         (dato.persona_id, dato.fecha): dato
-        for dato in repositorio.justificaciones_aprobadas(desde, hasta, sede)
+        for dato in repositorio.justificaciones_aprobadas(desde, hasta, sede, persona_id)
     }
     ahora = obtener_hora_utc().replace(tzinfo=timezone.utc).astimezone(zona)
     regla = regla_sede(repositorio, sede.id)
@@ -559,13 +543,23 @@ def filas_diarias(repositorio, usuario, desde, hasta):
     return filas
 
 
+def filas_marcadas(filas):
+    return sorted(
+        (fila for fila in filas if fila["entrada"] or fila["salida"]),
+        key=lambda fila: (max(fila["entrada"] or "", fila["salida"] or ""), fila["persona_id"]),
+        reverse=True,
+    )
+
+
 def consultar_diario(
     desde: date,
     hasta: date,
     usuario: Usuario = None,
     repositorio: RepositorioGestion = None,
+    solo_marcados: bool = False,
 ):
-    return filas_diarias(repositorio, usuario, desde, hasta)
+    filas = filas_diarias(repositorio, usuario, desde, hasta, solo_marcados=solo_marcados)
+    return filas_marcadas(filas) if solo_marcados else filas
 
 
 def consultar_resumen(
@@ -581,7 +575,7 @@ def consultar_resumen(
         "tardanzas": sum((fila["estado"] == "Tardanza" for fila in diario)),
         "faltas": sum((fila["estado"] == "Falta" for fila in diario)),
         "pendientes": len(pendientes),
-        "diario": diario,
+        "diario": filas_marcadas(diario),
         "semana": [
             {
                 "fecha": str(fecha - timedelta(days=6 - numero)),
@@ -660,7 +654,9 @@ def registrar_manual(
         marcado.id,
         {"hora": instante, "motivo": datos.motivo},
     )
+    sede_id = persona.sede_id
     confirmar(repositorio)
+    notificar_marcado(sede_id)
     return {"mensaje": "Registro manual guardado.", "id": marcado.id}
 
 
@@ -858,7 +854,7 @@ def consultar_expediente(
             "nombre": f"{persona.nombres} {persona.apellidos}",
             "codigo": persona.codigo,
             "rol": repositorio.obtener_rol(persona.rol_id).nombre,
-            "foto": persona.foto_ruta,
+            "iniciales": iniciales_persona(persona),
             "sede": repositorio.obtener_sede(persona.sede_id).nombre,
             "qr": valor + ":" + firmar(valor),
         },
@@ -929,6 +925,7 @@ def exportar(
     estado: str = "",
     carrera: str = "",
     tarifa: Decimal | None = None,
+    solo_marcados: bool = False,
     usuario: Usuario = None,
     repositorio: RepositorioGestion = None,
 ):
@@ -941,7 +938,7 @@ def exportar(
     else:
         filas = [
             fila
-            for fila in filas_diarias(repositorio, usuario, desde, hasta)
+            for fila in consultar_diario(desde, hasta, usuario, repositorio, solo_marcados=solo_marcados)
             if (not rol or fila["rol_codigo"] == rol)
             and (not estado or fila["estado"] == estado)
             and (not carrera or fila["carrera"] == carrera)

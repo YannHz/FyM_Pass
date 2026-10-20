@@ -1,4 +1,5 @@
 import ipaddress
+from ...version import VERSION
 from ...compartido.errores import FalloPersistencia
 
 
@@ -22,7 +23,7 @@ def direccion_movil(servidor):
 
 
 def consultar_salud():
-    return {"estado": "disponible", "aplicacion": "FyM Pass", "version": "0.1.0"}
+    return {"estado": "disponible", "aplicacion": "FyM Pass", "version": VERSION}
 
 
 def consultar_base_datos(repositorio):

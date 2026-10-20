@@ -1,6 +1,13 @@
+# configuracion y credenciales locales
 .env
 .env.*
 !.env.example
+!.env.*.example
+*.local
+*.local.*
+README_CREDENCIALES.local.md
+
+# dependencias y cache de python
 .venv/
 venv/
 __pycache__/
@@ -8,16 +15,19 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# dependencias y archivos generados del frontend
 node_modules/
 dist/
+build/
 coverage/
+.vite/
+*.tsbuildinfo
+
+# archivos de ejecucion y datos privados
 .registros/
 *.log
 *.pid
-.credenciales_demo.local.txt
-README_CREDENCIALES.local.md
-*.local.md
-*.local.txt
 backend/archivos/
 *.sql
 *.sql.gz
@@ -25,17 +35,16 @@ backend/archivos/
 *.db
 *.dump
 *.bak
+*.pem
+*.key
+*.p12
+*.pfx
+
+# archivos temporales del editor y del sistema
 .DS_Store
 Thumbs.db
+Desktop.ini
 .idea/
 *.swp
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-build/
-android/local.properties
-android/key.properties
-*.jks
-*.keystore
-*.apk
-*.aab
+*.swo
+*~
