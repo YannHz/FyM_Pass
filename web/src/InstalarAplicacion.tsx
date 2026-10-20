@@ -32,13 +32,13 @@ export function InstalarAplicacion() {
   return <details className="instalar-aplicacion">
     <summary><Download size={18} aria-hidden="true" /> Instalar FyM Pass</summary>
     <div>
-      <p>Abre tu carné o el panel desde un icono en tu teléfono o computadora.</p>
+      <p>Abre tu carnet o el panel desde un icono en tu teléfono o computadora.</p>
       {solicitud ? <button type="button" disabled={ocupada} onClick={() => void instalar()}>{ocupada ? 'Abriendo instalación…' : 'Instalar aplicación'}</button> : <>
         <p><strong>iPhone o iPad:</strong> abre esta página en Safari, toca Compartir y elige «Añadir a pantalla de inicio».</p>
         <p><strong>Android:</strong> en el menú del navegador busca «Instalar aplicación» o «Añadir a pantalla de inicio».</p>
         <p><strong>Computadora:</strong> en Chrome o Edge busca la opción de instalar en la barra de direcciones o en el menú.</p>
       </>}
-      <small>Necesitas conexión para iniciar sesión, consultar el carné y registrar asistencia. La instalación depende del navegador.</small>
+      <small>Necesitas conexión para iniciar sesión, consultar el carnet y registrar asistencia. La instalación depende del navegador.</small>
       {aviso && <p role="status">{aviso}</p>}
     </div>
   </details>

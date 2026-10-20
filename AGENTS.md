@@ -15,3 +15,5 @@
 - Las cuentas ficticias locales usan usuario sin puntos y contraseña con primer nombre sin tildes en minúsculas + fym. Mantener credenciales completas fuera de Git.
 
 - Documentacion esencial: README.md (inicio), docs/arquitectura.md (codigo y datos), docs/operacion.md (uso/PWA/tunel) y CONTEXTO_PROYECTO.md (decisiones y pendientes). Actualizar esos archivos antes de crear guias nuevas que dupliquen informacion.
+
+- Usar WebP para fotografias e imagenes rasterizadas nuevas; conservar SVG para logos, iconos y QR vectoriales, y PNG para compatibilidad de iconos de instalacion PWA/Apple. No convertir vectores a mapas de bits ni modificar dependencias o respaldos para aplicar esta regla. Las nuevas fotos procesadas por el backend se guardan en WebP; conservar las rutas historicas existentes.

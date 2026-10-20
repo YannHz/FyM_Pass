@@ -150,5 +150,5 @@ export function Dialogo({ titulo, cerrar, children, clase = '', bloqueado = fals
         void animacion.current.finished.catch(() => { }).then(() => { if (montado.current)
             cerrar(); });
     }
-    return <dialog ref={dialogo} className={`dialogo ${clase}`} onCancel={evento => { evento.preventDefault(); cerrarAnimado(); }} aria-label={titulo}><div className="titulo-dialogo"><h2>{titulo}</h2><button className="icono-boton" type="button" onClick={cerrarAnimado} disabled={bloqueado} aria-label="Cerrar ventana"><X aria-hidden="true"/></button></div>{children}</dialog>;
+    return <dialog ref={dialogo} className={`dialogo ${clase}`} onCancel={evento => { evento.preventDefault(); cerrarAnimado(); }} aria-label={titulo}><div className="titulo-dialogo"><h2>{titulo}</h2><button className="icono-boton" type="button" onClick={cerrarAnimado} disabled={bloqueado} aria-label="Cerrar ventana"><X aria-hidden="true"/></button></div>{clase.split(" ").includes("expediente") ? <div className="cuerpo-expediente">{children}</div> : children}</dialog>;
 }

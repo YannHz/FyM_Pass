@@ -2,9 +2,9 @@
 
 **0.2.0-beta.3 · beta funcional local**
 
-Sistema web de asistencia del Instituto de Educación Superior Técnica Finney Miller. Administración gestiona personas, horarios, puestos y reportes; estudiantes y personal acceden a su carné y a sus propias asistencias desde el navegador. La misma web puede instalarse como PWA en teléfonos y computadoras.
+Sistema web de asistencia del Instituto de Educación Superior Técnica Finney Miller. Administración gestiona personas, horarios, puestos y reportes; estudiantes y personal acceden a su carnet y a sus propias asistencias desde el navegador. La misma web puede instalarse como PWA en teléfonos y computadoras.
 
-Los alumnos registran entrada al instituto; docentes y administrativos registran entrada y salida. Se puede mostrar el carné a la cámara del puesto o escanear el QR dinámico con el teléfono. Flutter está descartado. El alojamiento en línea queda para una etapa posterior.
+Los alumnos registran entrada al instituto; docentes y administrativos registran entrada y salida. Se puede mostrar el carnet a la cámara del puesto o escanear el QR dinámico con el teléfono. Flutter está descartado. El alojamiento en línea queda para una etapa posterior.
 
 ## Tecnologías
 
@@ -34,7 +34,7 @@ backend/
 │   ├── main.py                 Reúne las rutas de FastAPI
 │   ├── modulos/
 │   │   ├── acceso/             Cuentas y sesiones
-│   │   ├── asistencia/         Carnés, QR y marcados
+│   │   ├── asistencia/         Carnets, QR y marcados
 │   │   ├── gestion/            Administración y reportes
 │   │   └── diagnostico/        Salud del sistema
 │   ├── compartido/             Dependencias, errores y firma QR
@@ -81,7 +81,7 @@ cp backend/.env.example backend/.env
 
 En Windows usa `py -m venv backend/.venv` y `backend\.venv\Scripts\python.exe` en lugar del Python de Linux.
 
-Crea la base `fym_pass` y un usuario dedicado; configura su host, puerto y credenciales en `backend/.env`. Genera `CLAVE_QR` aleatoria de al menos 32 caracteres y consérvala para que los carnés mantengan su validez. No publiques el archivo `.env`.
+Crea la base `fym_pass` y un usuario dedicado; configura su host, puerto y credenciales en `backend/.env`. Genera `CLAVE_QR` aleatoria de al menos 32 caracteres y consérvala para que los carnets mantengan su validez. No publiques el archivo `.env`.
 
 Después, desde `backend/`:
 
@@ -144,7 +144,7 @@ Esta operación respalda la base, cambia usuarios y claves, revoca sesiones y pa
 
 `npm --prefix web run build` verifica TypeScript y genera `web/dist/` y el service worker. La PWA instala en un contexto seguro: HTTPS o localhost. En iPhone se añade desde Safari; en Android y PC se usa el menú de instalación del navegador.
 
-La PWA conserva únicamente recursos públicos. No almacena carnés, fotos ni respuestas de la API; no hay sincronización de marcados sin conexión. Ante una caída muestra contingencia y se utiliza el registro manual. Acceso desde teléfono mediante túnel HTTPS y detalles de instalación en la [guía de operación](docs/operacion.md).
+La PWA conserva únicamente recursos públicos. No almacena carnets, fotos ni respuestas de la API; no hay sincronización de marcados sin conexión. Ante una caída muestra contingencia; los registros externos se revisan con administración. El registro manual presencial requiere conexión y solo guarda entradas de hoy con la hora del servidor. Acceso desde teléfono mediante túnel HTTPS y detalles de instalación en la [guía de operación](docs/operacion.md).
 
 ## Documentación esencial
 

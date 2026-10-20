@@ -81,7 +81,7 @@ Los modelos ORM permanecen compartidos y los servicios reciben repositorios conc
 5. El servicio confirma la operación y devuelve el resultado.
 6. La ruta lo expone con el mismo contrato que ya utilizan React.
 
-La firma QR se comparte para que carné, expediente y lectura no mantengan versiones distintas de la misma regla. Asistencia consulta las reglas y horarios de Gestión utilizando un repositorio sobre la misma sesión, sin llamar a rutas HTTP internas.
+La firma QR se comparte para que carnet, expediente y lectura no mantengan versiones distintas de la misma regla. Asistencia consulta las reglas y horarios de Gestión utilizando un repositorio sobre la misma sesión, sin llamar a rutas HTTP internas.
 
 ## Transacciones, errores y archivos
 
@@ -101,7 +101,7 @@ Pendientes: despliegue permanente con dominio y HTTPS, respaldo externo y restau
 
 ## Interfaz web
 
-App.tsx coordina acceso y recuperación de sesión. PanelAdministrativo.tsx compone módulos; FormularioGestion.tsx concentra formularios y tramos de horarios, y componentesGestion.tsx reúne tablas, diálogos, consultas y estados. servicio.ts centraliza peticiones, errores y avisos de caducidad. Carné y puesto conservan pantallas separadas con el mismo backend.
+App.tsx coordina acceso y recuperación de sesión. PanelAdministrativo.tsx compone módulos; FormularioGestion.tsx concentra formularios y tramos de horarios, y componentesGestion.tsx reúne tablas, diálogos, consultas y estados. servicio.ts centraliza peticiones, errores y avisos de caducidad. Carnet y puesto conservan pantallas separadas con el mismo backend.
 
 ## Base de datos
 
@@ -135,10 +135,18 @@ Un 401 protegido abre la renovación de la misma cuenta sin desmontar el formula
 
 ## Historial personal
 
-GET /api/mi-asistencia requiere sesión y recibe solo el mes. El servicio obtiene persona/sede desde la cuenta, valida periodo hasta hoy y delega en filas_diarias con persona_id. Las consultas de personas, marcados y justificaciones filtran esa identidad en SQL. La respuesta expone solo fecha, entrada, salida y estado, con Cache-Control no-store. Los permisos administrativos no cambian. EspacioPersonal.tsx coordina carné e historial por fragmento de URL; MisAsistencias.tsx presenta mes, resumen y días.
+GET /api/mi-asistencia requiere sesión y recibe solo el mes. El servicio obtiene persona/sede desde la cuenta, valida periodo hasta hoy y delega en filas_diarias con persona_id. Las consultas de personas, marcados y justificaciones filtran esa identidad en SQL. La respuesta expone solo fecha, entrada, salida y estado, con Cache-Control no-store. Los permisos administrativos no cambian. EspacioPersonal.tsx coordina carnet e historial por fragmento de URL; MisAsistencias.tsx presenta mes, resumen y días.
 
 ## Jornada en vivo
 
 GET /api/gestion/diario conserva su contrato completo para reportes y admite solo_marcados=true para la jornada. En ese modo el repositorio selecciona personas con marcados en el intervalo local convertido a UTC; el servicio elimina días sin movimientos y ordena por último marcado. La opción también se aplica al Excel. La respuesta diaria lleva Cache-Control no-store. useDatos admite consulta periódica sin superponer peticiones, conserva datos durante el refresco y cancela las consultas al desmontar/cambiar ruta. PanelAdministrativo controla el cambio de fecha local, conservando las consultas históricas elegidas por el usuario.
 
 Los avisos de asistencia funcionan en memoria con un único proceso de API, incluyendo QR y registro manual después del commit. Son compatibles con el túnel HTTPS temporal. Al reconectar se recupera la tabla; si falla la conexión se reintenta cada tres segundos. Antes de usar varios procesos se requiere un canal compartido de avisos.
+
+## Formatos de imágenes
+
+Las fotografías y nuevas imágenes rasterizadas utilizan WebP. Los logos, iconos y QR vectoriales conservan SVG; los iconos de instalación mantienen PNG por compatibilidad PWA/Apple. No se convierten dependencias, respaldos ni archivos compilados de forma independiente de sus fuentes.
+
+La utilidad heredada `infraestructura/fotos.py` guarda nuevas fotos como WebP con calidad 85, método 6 y tamaño máximo de 512 × 512. Conserva los límites de entrada de 3 MB y 4096 píxeles por dimensión. La interfaz actual usa iniciales; este cambio no incorpora una carga de fotos. Las rutas históricas se conservan.
+
+El contrato vigente de `POST /api/gestion/manual` recibe exclusivamente `persona_id` e `identificador_evento` (UUID). La fecha/hora y la entrada se determinan en el servidor. Se bloquea la persona y se verifica el ingreso previo con lectura bloqueante antes de crear un marcado manual auditado. La operación rechaza faltas ya evaluadas y publica un aviso de actualización después del commit.

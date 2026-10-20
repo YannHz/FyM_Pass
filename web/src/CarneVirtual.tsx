@@ -1,4 +1,3 @@
-import { LogoInstitucional } from './LogoInstitucional';
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ScanLine as IconoEscaneo, X as IconoCerrar, BadgeCheck as IconoIdentidad } from 'lucide-react';
@@ -39,19 +38,18 @@ export function CarneVirtual() {
             ocupado.current = false;
         }
     }
-    return <section className={`panel zona-carne ${escaneando ? 'escaneando' : ''}`}>
-    <div className="titulo-carne"><h1>Mi carné</h1><p>Muéstralo en la entrada o escanea el QR del puesto.</p></div>
+    return <section className={`panel zona-carne ${escaneando ? 'escaneando' : ''}`} aria-label="Mi carnet">
+    <div className="titulo-carne"><p>Muéstralo en la entrada o escanea el QR del puesto.</p></div>
     {error && <p role="alert" className="aviso error">{error}</p>}
     {carne ? <>
       <button className="escanear-movil" aria-expanded={escaneando} aria-controls="camara-carne" onClick={() => { establecerEscaneando(!escaneando); establecerError(''); }}>{escaneando ? <IconoCerrar size={20} aria-hidden="true"/> : <IconoEscaneo size={20} aria-hidden="true"/>}{escaneando ? 'Cerrar cámara' : 'Escanear QR del instituto'}</button>
       <div className="carne">
-        <div className="cabecera-carne"><span className="marca-carne"><LogoInstitucional decorativo /><strong>FyM Pass</strong></span><span>{carne.sede}</span></div>
-        <div className="identidad-carne"><AvatarPersona persona={carne}/><span className="etiqueta">FINNEY &amp; MILLER</span><h3>{carne.nombre}</h3><p>{carne.rol} · {carne.codigo}</p></div>
-        <div className="talon-carne"><div className="qr-carne"><QRCodeSVG value={carne.qr} size={240} level="M" marginSize={4} title="QR de mi carné virtual"/></div><span className="detalle-carne"><IconoIdentidad size={16} aria-hidden="true"/>Identificación institucional</span><small>Presenta este código en la cámara del puesto.</small></div>
+        <div className="identidad-carne"><AvatarPersona persona={carne}/><h3>{carne.nombre}</h3><p>{carne.rol} · {carne.codigo}</p></div>
+        <div className="talon-carne"><div className="qr-carne"><QRCodeSVG value={carne.qr} size={240} level="M" marginSize={4} title="QR de mi carnet virtual"/></div><span className="detalle-carne"><IconoIdentidad size={16} aria-hidden="true"/>Identificación institucional</span><small>Presenta este código en la cámara del puesto.</small></div>
       </div>
 
       {escaneando && <div id="camara-carne" className="camara-carne"><Suspense fallback={<p role="status">Cargando cámara…</p>}><LectorCamara habilitada={escaneando} bloqueada={Boolean(evento)} alLeer={valor => void marcar(valor)}/></Suspense></div>}
-    </> : !error && <p className="carga" role="status">Cargando carné…</p>}
+    </> : !error && <p className="carga" role="status">Cargando carnet…</p>}
     <SonidoAsistencia evento={evento}/>
     {evento && <div className="confirmacion-puesto"><ConfirmacionMarcado evento={evento}/></div>}
   </section>;

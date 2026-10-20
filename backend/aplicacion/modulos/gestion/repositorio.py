@@ -198,7 +198,7 @@ class RepositorioGestion(RepositorioBase):
 
     def bloquear_persona(self, persona):
         return self._base.execute(
-            select(Persona).where(Persona.id == persona.id).with_for_update()
+            select(Persona).where(Persona.id == persona.id).with_for_update().execution_options(populate_existing=True)
         ).scalar_one()
 
     def marcado_por_evento(self, datos):
@@ -214,7 +214,7 @@ class RepositorioGestion(RepositorioBase):
                 Marcado.persona_id == persona.id,
                 Marcado.ocurrido_en >= inicio,
                 Marcado.ocurrido_en < fin,
-            )
+            ).with_for_update()
         ).all()
 
     def primer_punto_de_sede(self, PuntoAsistencia, persona):
