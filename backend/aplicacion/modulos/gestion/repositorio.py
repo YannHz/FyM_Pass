@@ -22,6 +22,47 @@ from ...compartido.repositorio import RepositorioBase
 
 class RepositorioGestion(RepositorioBase):
 
+    def bloquear_carrera(self, identificador):
+        return self._base.scalar(select(Carrera).where(Carrera.id == identificador).with_for_update())
+
+    def asignaciones_programadas(self, fecha, persona):
+        return self._base.scalars(select(AsignacionHorario).where(
+            AsignacionHorario.persona_id == persona.id,
+            AsignacionHorario.vigente_hasta.is_(None) | (AsignacionHorario.vigente_hasta >= fecha)
+        ).order_by(AsignacionHorario.vigente_desde)).all()
+
+    def asignaciones_desde(self, fecha, persona):
+        return self._base.scalars(select(AsignacionHorario).where(
+            AsignacionHorario.persona_id == persona.id,
+            AsignacionHorario.vigente_hasta.is_(None) | (AsignacionHorario.vigente_hasta >= fecha)
+        ).with_for_update().execution_options(populate_existing=True)).all()
+
+    def bloquear_grupo(self, identificador):
+        return self._base.scalar(select(Grupo).where(Grupo.id == identificador).with_for_update().execution_options(populate_existing=True))
+
+    def bloquear_horario(self, identificador):
+        return self._base.scalar(select(Horario).where(Horario.id == identificador).with_for_update())
+
+    def horario_tiene_asignaciones(self, identificador, bloquear=False):
+        grupos = select(Grupo.id).where(Grupo.horario_id == identificador).limit(1)
+        personas = select(AsignacionHorario.id).where(AsignacionHorario.horario_id == identificador).limit(1)
+        grupo = self._base.scalar(grupos.with_for_update() if bloquear else grupos)
+        persona = self._base.scalar(personas.with_for_update() if bloquear else personas)
+        return grupo is not None or persona is not None
+
+    def eliminar_tramos(self, identificador):
+        for tramo in self._base.scalars(select(TramoHorario).where(TramoHorario.horario_id == identificador).with_for_update()).all():
+            self.eliminar(tramo)
+        self.sincronizar()
+
+    def personas_del_horario(self, identificador):
+        return self._base.execute(
+            select(AsignacionHorario, Persona)
+            .join(Persona, Persona.id == AsignacionHorario.persona_id)
+            .where(AsignacionHorario.horario_id == identificador)
+            .order_by(Persona.apellidos, Persona.nombres)
+        ).all()
+
     def regla_de_sede(self, sede):
         return self._base.scalar(select(ReglaSede).where(ReglaSede.sede_id == sede))
 

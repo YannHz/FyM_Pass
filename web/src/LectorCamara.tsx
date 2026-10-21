@@ -98,7 +98,6 @@ export function LectorCamara({
         <video
           ref={video}
           style={{
-            objectFit: "contain",
             transform: orientacion === "user" ? "scaleX(-1)" : undefined,
           }}
           muted

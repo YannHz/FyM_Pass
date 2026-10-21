@@ -1,3 +1,4 @@
+import { MenuCuenta } from './MenuCuenta'
 import { EspacioPersonal } from "./EspacioPersonal";
 import { LogoInstitucional, MarcaInstitucional } from './LogoInstitucional';
 import { InstalarAplicacion } from "./InstalarAplicacion";
@@ -182,7 +183,7 @@ export function Aplicacion() {
     return <>
     {administrativo ? <PanelAdministrativo usuario={usuario} alCerrar={() => void cerrarSesion()} cerrando={ocupado} errorSesion={caducada ? '' : error}/> :
             <div className="acceso-personal">
-        <header className="cabecera-personal"><a className="marca" href={usuario.destino}><MarcaInstitucional /></a><div className="acciones-personales"><SelectorTema /><details className="cuenta-personal"><summary>Mi cuenta</summary><div><strong>{usuario.nombre}</strong><p>{usuario.sede}</p>{usuario.permiso !== 'personal' && <a href={usuario.destino}>Volver al panel</a>}<InstalarAplicacion /><button className="secundario" onClick={() => void cerrarSesion()} disabled={ocupado}>{ocupado ? 'Cerrando…' : 'Cerrar sesión'}</button></div></details></div></header>
+        <header className="cabecera-personal"><a className="marca" href={usuario.destino}><MarcaInstitucional /></a><div className="acciones-personales"><SelectorTema /><MenuCuenta texto="Mi cuenta"><strong>{usuario.nombre}</strong><p>{usuario.sede}</p>{usuario.permiso !== 'personal' && <a href={usuario.destino}>Volver al panel</a>}<InstalarAplicacion /><button className="secundario" onClick={() => void cerrarSesion()} disabled={ocupado}>{ocupado ? 'Cerrando…' : 'Cerrar sesión'}</button></MenuCuenta></div></header>
         <main className="contenido-personal">{!caducada && error && <p className="aviso error" role="alert">{error}</p>}<EspacioPersonal /></main>
       </div>}
     {caducada && <Dialogo titulo="Tu sesión caducó" cerrar={() => { establecerUsuario(null); establecerCaducada(false); establecerError(''); window.history.replaceState(null, '', '/acceso'); }}>

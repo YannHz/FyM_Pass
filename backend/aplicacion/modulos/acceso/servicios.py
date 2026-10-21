@@ -120,5 +120,5 @@ def consultar_resumen(usuario: Usuario = None, repositorio: RepositorioAcceso = 
     filas = repositorio.conteos_por_rol(persona)
     return {
         "personas_por_rol": dict(filas),
-        "mensaje": "Las cuentas de demostración están listas. El marcado QR se incorporará en el siguiente avance.",
+        "mensaje": "Resumen de personas activas de la sede.",
     }

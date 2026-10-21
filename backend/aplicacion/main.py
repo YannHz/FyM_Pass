@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 from .compartido.errores import ErrorAplicacion, ConflictoPersistencia
-from .infraestructura.fotos import CARPETA_FOTOS
+from pathlib import Path
 from .modulos.acceso.rutas import rutas
 from .modulos.asistencia.rutas import rutas_asistencia
 from .modulos.gestion.rutas import rutas_gestion
@@ -39,5 +39,6 @@ async def manejar_error_base_datos(request, error):
     )
 
 
+CARPETA_FOTOS = Path(__file__).resolve().parents[1] / "archivos/fotos"
 CARPETA_FOTOS.mkdir(parents=True, exist_ok=True)
 aplicacion.mount("/api/fotos", StaticFiles(directory=CARPETA_FOTOS), name="fotos")

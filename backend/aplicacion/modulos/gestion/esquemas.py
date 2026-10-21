@@ -32,16 +32,6 @@ class DatosCarrera(Formulario):
     activa: bool = True
 
 
-class DatosGrupo(Formulario):
-    id: int | None = None
-    carrera_id: int
-    horario_id: int | None = None
-    codigo: str = Field(min_length=1, max_length=30)
-    ciclo: str = Field(min_length=1, max_length=30)
-    turno: str = Field(min_length=1, max_length=30)
-    activo: bool = True
-
-
 class DatosTramo(Formulario):
     dia_semana: int = Field(ge=0, le=6)
     hora_entrada: time
@@ -51,6 +41,30 @@ class DatosTramo(Formulario):
 class DatosHorario(Formulario):
     nombre: str = Field(min_length=1, max_length=100)
     tramos: list[DatosTramo] = Field(min_length=1, max_length=14)
+
+
+class DatosGrupo(Formulario):
+    id: int | None = None
+    carrera_id: int
+    horario_id: int | None = None
+    codigo: str = Field(min_length=1, max_length=30)
+    ciclo: str = Field(min_length=1, max_length=30)
+    turno: str = Field(min_length=1, max_length=30)
+    activo: bool = True
+    ingreso: DatosHorario | None = None
+    alcance: Literal["grupo"] = "grupo"
+
+
+class DatosUsarHorarioGrupo(Formulario):
+    persona_ids: list[int] = Field(min_length=1, max_length=500)
+    horario_esperado: int = Field(gt=0)
+    vigente_desde: date
+
+
+class DatosAsignacionLaboral(Formulario):
+    persona_ids: list[int] = Field(min_length=1, max_length=500)
+    horario_id: int = Field(gt=0)
+    vigente_desde: date
 
 
 class DatosManual(Formulario):
@@ -93,3 +107,12 @@ class DatosDispositivo(Formulario):
     direccion_ip: str | None = None
     puerto: int = Field(default=4370, ge=1, le=65535)
     activo: bool = True
+
+
+class DatosAlumnoExistente(Formulario):
+    persona_id: int = Field(gt=0)
+    grupo_esperado: int | None
+
+
+class DatosAgregarAlumnos(Formulario):
+    alumnos: list[DatosAlumnoExistente] = Field(min_length=1, max_length=500)

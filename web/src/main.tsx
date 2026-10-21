@@ -5,6 +5,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Aplicacion } from "./App";
 import "./index.css";
+import "./controles.css";
 
 iniciarTema();
 iniciarSonido();

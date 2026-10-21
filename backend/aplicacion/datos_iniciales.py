@@ -68,7 +68,7 @@ ESTUDIANTES = [
 ]
 
 
-def clave_beta(nombres):
+def clave_inicial(nombres):
     nombre = unicodedata.normalize("NFKD", nombres.split()[0].lower())
     return nombre.encode("ascii", "ignore").decode() + "fym"
 
@@ -98,12 +98,12 @@ def reemplazar_personas(base):
         base.execute(delete(Horario).where(Horario.id.in_(identificadores)))
 
 
-def crear_personas_beta(base, inicio):
+def crear_personas_iniciales(base, inicio):
     if base.scalar(select(func.count()).select_from(Persona)) or base.scalar(
         select(func.count()).select_from(Usuario)
     ):
         raise RuntimeError(
-            "La carga beta requiere personas y cuentas vacías. No se modificaron los datos."
+            "La carga inicial requiere personas y cuentas vacías. No se modificaron los datos."
         )
     sede = base.scalar(select(Sede).where(Sede.activa.is_(True)).order_by(Sede.id))
     if sede is None:
@@ -198,7 +198,7 @@ def crear_personas_beta(base, inicio):
         )
         base.add(persona)
         base.flush()
-        clave = clave_beta(nombres)
+        clave = clave_inicial(nombres)
         base.add(
             Usuario(
                 persona_id=persona.id,
@@ -297,7 +297,7 @@ def respaldar_base(carpeta):
 
 def guardar_listado(cuentas, archivo, respaldo, inicio):
     lineas = [
-        "# Accesos privados · FyM Pass beta local",
+        "# Accesos privados · FyM Pass",
         "",
         "Personas completamente ficticias para pruebas. No publicar este archivo.",
         "",
@@ -333,7 +333,7 @@ def guardar_listado(cuentas, archivo, respaldo, inicio):
     archivo.write_text("\n".join(lineas) + "\n", encoding="utf-8")
 
 
-def preparar_beta(reemplazar=False, confirmar_base=""):
+def preparar_datos_iniciales(reemplazar=False, confirmar_base=""):
     if configuracion.bd_host not in {"127.0.0.1", "localhost", "::1"}:
         raise RuntimeError("Esta herramienta está limitada a la base local de pruebas.")
     if confirmar_base != configuracion.bd_nombre:
@@ -365,7 +365,7 @@ def preparar_beta(reemplazar=False, confirmar_base=""):
                 )
             if reemplazar:
                 reemplazar_personas(base)
-            cuentas = crear_personas_beta(base, momento.date())
+            cuentas = crear_personas_iniciales(base, momento.date())
             guardar_listado(cuentas, archivo, respaldo, momento.date())
         # conserva una copia recuperable incluso si falla la escritura del acceso rapido
         shutil.copy2(archivo, raiz / "README_CREDENCIALES.local.md")
@@ -385,7 +385,7 @@ def preparar_beta(reemplazar=False, confirmar_base=""):
     return cuentas
 
 
-def actualizar_accesos_beta(confirmar_base):
+def actualizar_accesos_iniciales(confirmar_base):
     if (
         configuracion.bd_host not in {"127.0.0.1", "localhost", "::1"}
         or confirmar_base != configuracion.bd_nombre
@@ -424,7 +424,7 @@ def actualizar_accesos_beta(confirmar_base):
                 for _, persona, _ in filas
             ):
                 raise RuntimeError(
-                    "La actualización está limitada al conjunto de 28 cuentas ficticias de la beta."
+                    "La actualización está limitada al conjunto de 28 cuentas ficticias iniciales."
                 )
             usuarios = [
                 usuario.nombre_usuario.replace(".", "") for usuario, _, _ in filas
@@ -436,7 +436,7 @@ def actualizar_accesos_beta(confirmar_base):
             cuentas = []
             for (usuario, persona, rol), nombre in zip(filas, usuarios):
                 usuario.nombre_usuario = nombre
-                clave = clave_beta(persona.nombres)
+                clave = clave_inicial(persona.nombres)
                 usuario.clave_hash = generar_hash_clave(clave)
                 cuentas.append(
                     {
@@ -469,7 +469,7 @@ def actualizar_accesos_beta(confirmar_base):
 
 if __name__ == "__main__":
     argumentos = ArgumentParser(
-        description="Prepara cuentas ficticias de beta local con respaldo obligatorio."
+        description="Prepara cuentas ficticias iniciales con respaldo obligatorio."
     )
     argumentos.add_argument("--reemplazar-usuarios", action="store_true")
     argumentos.add_argument("--confirmar-base", required=True)
@@ -478,6 +478,6 @@ if __name__ == "__main__":
     if opciones.actualizar_accesos:
         if opciones.reemplazar_usuarios:
             argumentos.error("No combines actualizar accesos con reemplazar usuarios.")
-        actualizar_accesos_beta(opciones.confirmar_base)
+        actualizar_accesos_iniciales(opciones.confirmar_base)
     else:
-        preparar_beta(opciones.reemplazar_usuarios, opciones.confirmar_base)
+        preparar_datos_iniciales(opciones.reemplazar_usuarios, opciones.confirmar_base)

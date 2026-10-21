@@ -18,6 +18,9 @@ from .esquemas import (
     DatosCarrera,
     DatosGrupo,
     DatosHorario,
+    DatosUsarHorarioGrupo,
+    DatosAsignacionLaboral,
+    DatosAgregarAlumnos,
     DatosManual,
     DatosJustificacion,
     ResolverJustificacion,
@@ -72,6 +75,14 @@ def guardar_grupo(
     )
 
 
+@rutas_gestion.post("/grupos/{identificador}/usar-horario", dependencies=[Depends(validar_peticion)])
+def usar_horario_grupo(
+    identificador: int, datos: DatosUsarHorarioGrupo,
+    usuario: Usuario = Depends(administrador), base: Session = Depends(obtener_base_datos),
+):
+    return servicios.usar_horario_grupo(identificador, datos, usuario, RepositorioGestion(base))
+
+
 @rutas_gestion.post("/horarios", dependencies=[Depends(validar_peticion)])
 def guardar_horario(
     datos: DatosHorario,
@@ -81,6 +92,23 @@ def guardar_horario(
     return servicios.guardar_horario(
         datos=datos, usuario=usuario, repositorio=RepositorioGestion(base)
     )
+
+
+@rutas_gestion.put("/horarios/{identificador}", dependencies=[Depends(validar_peticion)])
+def editar_horario(
+    identificador: int, datos: DatosHorario,
+    usuario: Usuario = Depends(administrador),
+    base: Session = Depends(obtener_base_datos),
+):
+    return servicios.guardar_horario(datos=datos, usuario=usuario, repositorio=RepositorioGestion(base), horario_id=identificador)
+
+
+@rutas_gestion.delete("/horarios/{identificador}", dependencies=[Depends(validar_peticion)])
+def eliminar_horario(
+    identificador: int, usuario: Usuario = Depends(administrador),
+    base: Session = Depends(obtener_base_datos),
+):
+    return servicios.eliminar_horario(identificador, usuario=usuario, repositorio=RepositorioGestion(base))
 
 
 @rutas_gestion.get("/diario")
@@ -118,6 +146,16 @@ def registrar_manual(
     return servicios.registrar_manual(
         datos=datos, usuario=usuario, repositorio=RepositorioGestion(base)
     )
+
+
+@rutas_gestion.get("/incidencias")
+def consultar_incidencias(
+    desde: date,
+    hasta: date,
+    usuario: Usuario = Depends(obtener_encargado),
+    base: Session = Depends(obtener_base_datos),
+):
+    return servicios.consultar_incidencias(desde, hasta, usuario, RepositorioGestion(base))
 
 
 @rutas_gestion.get("/justificaciones")
@@ -237,6 +275,9 @@ def exportar(
     carrera: str = "",
     tarifa: Decimal | None = None,
     solo_marcados: bool = False,
+    incluir_no_programados: bool = True,
+    ciclo: str = "",
+    turno: str = "",
     usuario: Usuario = Depends(obtener_encargado),
     base: Session = Depends(obtener_base_datos),
 ):
@@ -250,6 +291,9 @@ def exportar(
         carrera=carrera,
         tarifa=tarifa,
         solo_marcados=solo_marcados,
+        incluir_no_programados=incluir_no_programados,
+        ciclo=ciclo,
+        turno=turno,
         usuario=usuario,
         repositorio=RepositorioGestion(base),
     )
@@ -272,3 +316,19 @@ def consultar_historial_marcados(
     return servicios.consultar_historial_marcados(
         desde=desde, hasta=hasta, usuario=usuario, repositorio=RepositorioGestion(base)
     )
+
+
+@rutas_gestion.post("/horarios/asignar-personal", dependencies=[Depends(validar_peticion)])
+def asignar_horario_laboral(
+    datos: DatosAsignacionLaboral, usuario: Usuario = Depends(administrador),
+    base: Session = Depends(obtener_base_datos),
+):
+    return servicios.asignar_horario_laboral(datos, usuario, RepositorioGestion(base))
+
+
+@rutas_gestion.post("/grupos/{identificador}/alumnos", dependencies=[Depends(validar_peticion)])
+def agregar_alumnos_grupo(
+    identificador: int, datos: DatosAgregarAlumnos,
+    usuario: Usuario = Depends(administrador), base: Session = Depends(obtener_base_datos),
+):
+    return servicios.agregar_alumnos_grupo(identificador, datos, usuario, RepositorioGestion(base))

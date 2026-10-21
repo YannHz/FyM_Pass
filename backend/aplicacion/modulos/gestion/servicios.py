@@ -1,3 +1,4 @@
+from .asignaciones import asignar_desde, hoy_sede, validar_fecha
 from ...compartido.avisos_asistencia import notificar_marcado
 from ...compartido.identidad import iniciales_persona
 from datetime import date, datetime, timedelta, timezone, time
@@ -107,7 +108,7 @@ def tramos_para(repositorio, persona, fecha):
     horario_id = (
         asignacion.horario_id
         if asignacion
-        else grupo.horario_id if grupo and grupo.activo else None
+        else grupo.horario_id if grupo and grupo.activo and repositorio.obtener_rol(persona.rol_id).codigo != "estudiante" else None
     )
     horario = repositorio.obtener_horario(horario_id) if horario_id else None
     if not horario or not horario.activo:
@@ -156,6 +157,10 @@ def consultar_catalogo(usuario: Usuario = None, repositorio: RepositorioGestion 
         )
         asignacion = repositorio.asignacion_del_catalogo(hoy, persona)
         datos["horario_id"] = asignacion.horario_id if asignacion else None
+        datos["horario_desde"] = str(asignacion.vigente_desde) if asignacion else None
+        datos["asignaciones"] = [{"horario_id": valor.horario_id, "desde": str(valor.vigente_desde),
+            "hasta": str(valor.vigente_hasta) if valor.vigente_hasta else None}
+            for valor in repositorio.asignaciones_programadas(hoy, persona)]
         tarifa = repositorio.tarifa_de_persona(persona)
         datos["tarifa_hora"] = (
             float(tarifa.tarifa_hora)
@@ -179,6 +184,14 @@ def consultar_catalogo(usuario: Usuario = None, repositorio: RepositorioGestion 
         "horarios": [
             {
                 **datos_objeto(horario),
+                "en_uso": repositorio.horario_tiene_asignaciones(horario.id),
+                "asignaciones_individuales": [
+                    {"persona_id": persona.id, "nombre": f"{persona.nombres} {persona.apellidos}",
+                     "codigo": persona.codigo, "desde": str(asignacion.vigente_desde),
+                     "hasta": str(asignacion.vigente_hasta) if asignacion.vigente_hasta else None,
+                     "vigente": asignacion.vigente_desde <= hoy and (asignacion.vigente_hasta is None or asignacion.vigente_hasta >= hoy)}
+                    for asignacion, persona in repositorio.personas_del_horario(horario.id)
+                ],
                 "tramos": [
                     datos_objeto(tramo)
                     for tramo in repositorio.tramos_del_horario(horario)
@@ -215,7 +228,12 @@ def guardar_persona(
         grupo = repositorio.obtener_grupo(datos.grupo_id)
         if not grupo or repositorio.obtener_carrera(grupo.carrera_id).sede_id != sede:
             raise ErrorAplicacion(422, "El grupo no pertenece a tu sede.")
-    if datos.horario_id:
+    es_estudiante = repositorio.obtener_rol(datos.rol_id).codigo == "estudiante"
+    if es_estudiante and not datos.grupo_id:
+        raise ErrorAplicacion(422, "Selecciona la carrera, ciclo y turno del estudiante.")
+    if not es_estudiante and datos.grupo_id:
+        raise ErrorAplicacion(422, "Los grupos académicos son solo para estudiantes.")
+    if datos.horario_id and not es_estudiante:
         comprobar_horario(repositorio, sede, datos.horario_id)
     persona = (
         comprobar_persona(repositorio, usuario, datos.id)
@@ -269,28 +287,10 @@ def guardar_persona(
         if datos.clave:
             cuenta.clave_hash = generar_hash_clave(datos.clave)
         repositorio.agregar(cuenta)
-    hoy = (
-        obtener_hora_utc()
-        .replace(tzinfo=timezone.utc)
-        .astimezone(ZoneInfo("America/Lima"))
-        .date()
-    )
-    actuales = repositorio.asignaciones_abiertas(persona)
-    if datos.horario_id != (actuales[-1].horario_id if actuales else None):
-        for actual in actuales:
-            if actual.vigente_desde == hoy:
-                repositorio.eliminar(actual)
-            else:
-                actual.vigente_hasta = hoy - timedelta(days=1)
-        repositorio.sincronizar()
-        if datos.horario_id:
-            repositorio.agregar(
-                AsignacionHorario(
-                    persona_id=persona.id,
-                    horario_id=datos.horario_id,
-                    vigente_desde=hoy,
-                )
-            )
+    if not es_estudiante:
+        actual = repositorio.asignacion_vigente(hoy_sede(repositorio, sede), persona)
+        if datos.horario_id != (actual.horario_id if actual else None):
+            raise ErrorAplicacion(409, "Confirma los cambios de horario desde Horarios laborales. Si el horario cambió mientras editabas, actualiza la página.")
     if repositorio.obtener_rol(datos.rol_id).codigo == "docente":
         tarifa = repositorio.tarifa_de_persona(persona) or TarifaDocente(
             persona_id=persona.id
@@ -342,18 +342,33 @@ def guardar_grupo(
     datos: DatosGrupo, usuario: Usuario = None, repositorio: RepositorioGestion = None
 ):
     sede = sede_usuario(repositorio, usuario)
-    carrera = repositorio.obtener_carrera(datos.carrera_id)
+    carrera = repositorio.bloquear_carrera(datos.carrera_id)
     if not carrera or carrera.sede_id != sede:
         raise ErrorAplicacion(422, "Carrera no disponible.")
-    if datos.horario_id:
-        comprobar_horario(repositorio, sede, datos.horario_id)
-    grupo = repositorio.obtener_grupo(datos.id) if datos.id else Grupo()
-    if not grupo or (
-        datos.id and repositorio.obtener_carrera(grupo.carrera_id).sede_id != sede
-    ):
-        raise ErrorAplicacion(404, "Grupo no disponible.")
-    for campo, valor in datos.model_dump(exclude={"id"}).items():
+    grupo = repositorio.bloquear_grupo(datos.id) if datos.id else Grupo()
+    if not grupo or (datos.id and grupo.carrera_id != carrera.id):
+        raise ErrorAplicacion(404, "Grupo no disponible en esta carrera.")
+    ciclo, turno = datos.ciclo.strip().upper(), datos.turno.strip().capitalize()
+    if turno not in ("Mañana", "Tarde", "Noche"):
+        raise ErrorAplicacion(422, "Selecciona Mañana, Tarde o Noche.")
+    for otro in repositorio.grupos_de_sede(sede):
+        if otro.id != datos.id and otro.carrera_id == carrera.id and otro.ciclo.strip().upper() == ciclo and otro.turno.strip().casefold() == turno.casefold():
+            raise ErrorAplicacion(409, "Ya existe un grupo para ese ciclo y turno en la carrera.")
+    horario_id = datos.horario_id
+    if datos.ingreso:
+        if any(tramo.hora_salida for tramo in datos.ingreso.tramos):
+            raise ErrorAplicacion(422, "El ingreso de estudiantes solo necesita hora de entrada.")
+        anteriores = repositorio.tramos_del_horario(repositorio.obtener_horario(grupo.horario_id)) if datos.id and grupo.horario_id else []
+        firma = lambda tramos: sorted((tramo.dia_semana, tramo.hora_entrada, tramo.hora_salida or time.min) for tramo in tramos)
+        horario_id = grupo.horario_id if anteriores and firma(anteriores) == firma(datos.ingreso.tramos) else guardar_horario(datos.ingreso, usuario, repositorio, confirmar_cambios=False)["id"]
+    elif horario_id:
+        comprobar_horario(repositorio, sede, horario_id)
+    else:
+        raise ErrorAplicacion(422, "Configura los días y la hora de ingreso del grupo.")
+    for campo, valor in datos.model_dump(exclude={"id", "ingreso", "alcance", "horario_id"}).items():
         setattr(grupo, campo, valor)
+    grupo.ciclo, grupo.turno = ciclo, turno
+    grupo.horario_id = horario_id
     repositorio.agregar(grupo)
     try:
         repositorio.sincronizar()
@@ -364,11 +379,12 @@ def guardar_grupo(
         repositorio, usuario, "guardar_grupo", "grupos", grupo.id, datos.model_dump()
     )
     confirmar(repositorio)
-    return {"mensaje": "Grupo guardado."}
+    return {"mensaje": "Grupo e ingreso guardados.", "id": grupo.id, "horario_id": grupo.horario_id}
 
 
 def guardar_horario(
-    datos: DatosHorario, usuario: Usuario = None, repositorio: RepositorioGestion = None
+    datos: DatosHorario, usuario: Usuario = None, repositorio: RepositorioGestion = None,
+    horario_id: int | None = None, confirmar_cambios: bool = True,
 ):
     vistos = set()
     for tramo in datos.tramos:
@@ -378,7 +394,15 @@ def guardar_horario(
         if clave in vistos:
             raise ErrorAplicacion(422, "Hay tramos repetidos.")
         vistos.add(clave)
-    horario = Horario(nombre=datos.nombre, sede_id=sede_usuario(repositorio, usuario))
+    sede = sede_usuario(repositorio, usuario)
+    horario = repositorio.bloquear_horario(horario_id) if horario_id is not None else Horario(sede_id=sede)
+    if not horario or (horario_id is not None and horario.sede_id != sede):
+        raise ErrorAplicacion(404, "Horario no disponible en tu sede.")
+    if horario_id is not None:
+        if repositorio.horario_tiene_asignaciones(horario.id, bloquear=True):
+            raise ErrorAplicacion(409, "Este horario conserva asignaciones. Crea una copia y confírmala desde una nueva fecha.")
+        repositorio.eliminar_tramos(horario.id)
+    horario.nombre = datos.nombre
     repositorio.agregar(horario)
     repositorio.sincronizar()
     for tramo in datos.tramos:
@@ -386,13 +410,77 @@ def guardar_horario(
     registrar_auditoria(
         repositorio,
         usuario,
-        "crear_horario",
+        "editar_horario" if horario_id is not None else "crear_horario",
         "horarios",
         horario.id,
         datos.model_dump(),
     )
+    if confirmar_cambios:
+        confirmar(repositorio)
+    return {"id": horario.id, "mensaje": "Horario actualizado." if horario_id is not None else "Horario creado. Puedes asignarlo a personas o grupos."}
+
+
+def usar_horario_grupo(identificador, datos, usuario=None, repositorio=None):
+    grupo = repositorio.bloquear_grupo(identificador)
+    sede = sede_usuario(repositorio, usuario)
+    if not grupo or repositorio.obtener_carrera(grupo.carrera_id).sede_id != sede:
+        raise ErrorAplicacion(404, "Grupo no disponible en tu sede.")
+    if grupo.horario_id != datos.horario_esperado:
+        raise ErrorAplicacion(409, "El ingreso del grupo cambió. Revisa la selección de nuevo.")
+    comprobar_horario(repositorio, sede, grupo.horario_id)
+    if not grupo.activo:
+        raise ErrorAplicacion(422, "El grupo está desactivado.")
+    validar_fecha(repositorio, sede, datos.vigente_desde)
+    personas = []
+    for identificador_persona in sorted(set(datos.persona_ids)):
+        persona = comprobar_persona(repositorio, usuario, identificador_persona)
+        persona = repositorio.bloquear_persona(persona)
+        if not persona.activa or persona.grupo_id != grupo.id or repositorio.obtener_rol(persona.rol_id).codigo != "estudiante":
+            raise ErrorAplicacion(422, "Selecciona estudiantes activos del grupo.")
+        personas.append(persona)
+    for persona in personas:
+        asignar_desde(repositorio, persona, grupo.horario_id, datos.vigente_desde)
+        registrar_auditoria(repositorio, usuario, "confirmar_ingreso_grupo", "personas", persona.id,
+            {"grupo_id": grupo.id, "horario_id": grupo.horario_id, "desde": str(datos.vigente_desde)})
     confirmar(repositorio)
-    return {"mensaje": "Horario creado. Puedes asignarlo a personas o grupos."}
+    notificar_marcado(sede)
+    return {"mensaje": f"Horario confirmado para {len(personas)} estudiantes desde {datos.vigente_desde}."}
+
+
+def asignar_horario_laboral(datos, usuario=None, repositorio=None):
+    sede = sede_usuario(repositorio, usuario)
+    comprobar_horario(repositorio, sede, datos.horario_id)
+    validar_fecha(repositorio, sede, datos.vigente_desde)
+    personas = []
+    for identificador in sorted(set(datos.persona_ids)):
+        persona = comprobar_persona(repositorio, usuario, identificador)
+        persona = repositorio.bloquear_persona(persona)
+        if not persona.activa or repositorio.obtener_rol(persona.rol_id).codigo not in ("docente", "administrativo"):
+            raise ErrorAplicacion(422, "Selecciona docentes o personal administrativo activos.")
+        personas.append(persona)
+    tramos = repositorio.tramos_del_horario(repositorio.obtener_horario(datos.horario_id))
+    if any(not tramo.hora_salida for tramo in tramos):
+        raise ErrorAplicacion(422, "El horario laboral debe incluir entrada y salida en cada tramo.")
+    for persona in personas:
+        asignar_desde(repositorio, persona, datos.horario_id, datos.vigente_desde)
+        registrar_auditoria(repositorio, usuario, "asignar_horario_laboral", "personas", persona.id,
+            {"horario_id": datos.horario_id, "desde": str(datos.vigente_desde)})
+    confirmar(repositorio)
+    notificar_marcado(sede)
+    return {"mensaje": f"Horario laboral confirmado para {len(personas)} personas."}
+
+
+def eliminar_horario(identificador: int, usuario: Usuario = None, repositorio: RepositorioGestion = None):
+    horario = repositorio.bloquear_horario(identificador)
+    if not horario or horario.sede_id != sede_usuario(repositorio, usuario):
+        raise ErrorAplicacion(404, "Horario no disponible en tu sede.")
+    if repositorio.horario_tiene_asignaciones(identificador, bloquear=True):
+        raise ErrorAplicacion(409, "Este horario tiene grupos o asignaciones individuales, actuales o históricas. No se puede eliminar.")
+    registrar_auditoria(repositorio, usuario, "eliminar_horario", "horarios", identificador, {"nombre": horario.nombre})
+    repositorio.eliminar_tramos(identificador)
+    repositorio.eliminar(horario)
+    confirmar(repositorio)
+    return {"mensaje": "Horario eliminado."}
 
 
 def intervalo(repositorio, usuario, desde, hasta):
@@ -535,6 +623,8 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
                     "horas_programadas": round(programadas, 2),
                     "horas_permanencia": round(horas, 2),
                     "grupo": grupo.codigo if grupo else "",
+                    "ciclo": grupo.ciclo if grupo else "",
+                    "turno": grupo.turno if grupo else "",
                     "carrera": carrera.nombre if carrera else "",
                     "modalidad": entrada.modalidad if entrada else "",
                     "requiere_salida": rol.requiere_salida,
@@ -661,12 +751,42 @@ def consultar_justificaciones(
     ]
 
 
+def consultar_incidencias(desde, hasta, usuario=None, repositorio=None):
+    filas = filas_diarias(repositorio, usuario, desde, hasta)
+    solicitudes = repositorio.justificaciones_de_sede(sede_usuario(repositorio, usuario))
+    recientes = {}
+    for solicitud, persona in solicitudes:
+        if desde <= solicitud.fecha <= hasta:
+            clave = (solicitud.persona_id, str(solicitud.fecha), solicitud.tipo)
+            if clave not in recientes:
+                recientes[clave] = {**datos_objeto(solicitud)}
+    resultados = []
+    for fila in filas:
+        tipos = {tipo for persona_id, fecha, tipo in recientes if persona_id == fila["persona_id"] and fecha == fila["fecha"]}
+        if fila["estado"] in ("Falta", "Tardanza"):
+            tipos.add("falta" if fila["estado"] == "Falta" else "tardanza")
+        for tipo in tipos:
+            solicitud = recientes.get((fila["persona_id"], fila["fecha"], tipo))
+            resultados.append({**fila, "tipo": tipo, "solicitud": solicitud,
+                "estado_justificacion": solicitud["estado"] if solicitud else "sin_justificar"})
+    resultados.sort(key=lambda fila: (fila["fecha"], fila["nombre"], fila["tipo"]), reverse=True)
+    return resultados
+
+
 def crear_justificacion(
     datos: DatosJustificacion,
     usuario: Usuario = None,
     repositorio: RepositorioGestion = None,
 ):
-    comprobar_persona(repositorio, usuario, datos.persona_id)
+    persona = comprobar_persona(repositorio, usuario, datos.persona_id)
+    repositorio.bloquear_persona(persona)
+    existentes = repositorio.justificaciones_de_sede(sede_usuario(repositorio, usuario))
+    if any(solicitud.persona_id == datos.persona_id and solicitud.fecha == datos.fecha and solicitud.tipo == datos.tipo and solicitud.estado in ("pendiente", "aprobada") for solicitud, _ in existentes):
+        raise ErrorAplicacion(409, "Esta incidencia ya tiene una justificación pendiente o aprobada.")
+    filas = filas_diarias(repositorio, usuario, datos.fecha, datos.fecha, persona_id=datos.persona_id)
+    esperado = "Falta" if datos.tipo == "falta" else "Tardanza"
+    if not any(fila["estado"] == esperado for fila in filas):
+        raise ErrorAplicacion(422, "La incidencia ya no está disponible. Actualiza los registros antes de justificar.")
     justificacion = Justificacion(**datos.model_dump(), creada_por_id=usuario.id)
     repositorio.agregar(justificacion)
     repositorio.sincronizar()
@@ -808,7 +928,7 @@ def guardar_dispositivo(
     )
     confirmar(repositorio)
     return {
-        "mensaje": "Configuración guardada. Los biométricos no están conectados en esta demo."
+        "mensaje": "Configuración guardada. La integración con biométricos no está habilitada."
     }
 
 
@@ -896,6 +1016,8 @@ def consultar_preplanilla(
                         for fila in datos
                     )
                 ),
+                "tarifa_configurada": tarifa is not None or configurada is not None,
+                "dias_tardanza": sum(fila["estado"] == "Tardanza" for fila in datos),
                 "tarifa_hora": float(valor),
                 "importe_estimado": round(float(valor) * horas, 2),
                 "descuento_referencial": round(float(valor) * minutos / 60, 2),
@@ -914,6 +1036,9 @@ def exportar(
     carrera: str = "",
     tarifa: Decimal | None = None,
     solo_marcados: bool = False,
+    incluir_no_programados: bool = True,
+    ciclo: str = "",
+    turno: str = "",
     usuario: Usuario = None,
     repositorio: RepositorioGestion = None,
 ):
@@ -930,12 +1055,32 @@ def exportar(
             if (not rol or fila["rol_codigo"] == rol)
             and (not estado or fila["estado"] == estado)
             and (not carrera or fila["carrera"] == carrera)
+            and (incluir_no_programados or fila["estado"] != "No programado")
+            and (not ciclo or fila["ciclo"] == ciclo)
+            and (not turno or fila["turno"] == turno)
             and (
                 not buscar
-                or buscar.lower() in (fila["nombre"] + fila["codigo"]).lower()
+                or buscar.lower() in (fila["nombre"] + " " + fila["codigo"]).lower()
             )
         ]
-    return construir_excel(filas, tipo)
+    if tipo == "preplanilla":
+        detalle = [fila for fila in filas_diarias(repositorio, usuario, desde, hasta) if fila["rol_codigo"] == "docente"]
+        resumen = [
+            {**fila, "importe_estimado": fila["importe_estimado"] if fila["tarifa_configurada"] else "Sin tarifa", "descuento_referencial": fila["descuento_referencial"] if fila["tarifa_configurada"] else "Sin tarifa"}
+            for fila in filas
+        ]
+        return construir_excel(resumen, tipo, detalle=detalle)
+    filas.sort(key=lambda fila: (fila["fecha"], fila["entrada"] or "", fila["persona_id"]), reverse=True)
+    filtros = " · ".join(valor for valor in [
+        f"Rol: {rol}" if rol else "",
+        f"Estado: {estado}" if estado else "",
+        f"Carrera: {carrera}" if carrera else "",
+        f"Ciclo: {ciclo}" if ciclo else "",
+        f"Turno: {turno}" if turno else "",
+        f"Busqueda: {buscar}" if buscar else "",
+        "Incluye no programados" if incluir_no_programados else "Sin dias no programados",
+    ] if valor)
+    return construir_excel(filas, tipo, desde=desde, hasta=hasta, filtros=filtros)
 
 
 def consultar_historial_marcados(
@@ -968,3 +1113,32 @@ def consultar_historial_marcados(
         }
         for marcado, persona, responsable in filas
     ]
+
+
+def agregar_alumnos_grupo(identificador, datos, usuario=None, repositorio=None):
+    sede = sede_usuario(repositorio, usuario)
+    grupo = repositorio.bloquear_grupo(identificador)
+    if not grupo or repositorio.obtener_carrera(grupo.carrera_id).sede_id != sede:
+        raise ErrorAplicacion(404, "Grupo no disponible en tu sede.")
+    carrera = repositorio.obtener_carrera(grupo.carrera_id)
+    if not grupo.activo or not carrera.activa:
+        raise ErrorAplicacion(409, "La carrera y el grupo deben estar activos.")
+    if len({dato.persona_id for dato in datos.alumnos}) != len(datos.alumnos):
+        raise ErrorAplicacion(422, "No repitas estudiantes en la selección.")
+    personas = []
+    for dato in sorted(datos.alumnos, key=lambda valor: valor.persona_id):
+        persona = comprobar_persona(repositorio, usuario, dato.persona_id)
+        persona = repositorio.bloquear_persona(persona)
+        if not persona.activa or repositorio.obtener_rol(persona.rol_id).codigo != "estudiante":
+            raise ErrorAplicacion(422, "Selecciona únicamente estudiantes activos.")
+        if persona.grupo_id != dato.grupo_esperado:
+            raise ErrorAplicacion(409, f"El grupo de {persona.nombres} cambió. Actualiza la lista y vuelve a seleccionar.")
+        personas.append(persona)
+    for persona in personas:
+        anterior = persona.grupo_id
+        persona.grupo_id = grupo.id
+        registrar_auditoria(repositorio, usuario, "agregar_alumno_grupo", "personas", persona.id,
+            {"grupo_anterior": anterior, "grupo_id": grupo.id})
+    confirmar(repositorio)
+    notificar_marcado(sede)
+    return {"mensaje": f"{len(personas)} alumnos agregados. Revisa y confirma su horario."}

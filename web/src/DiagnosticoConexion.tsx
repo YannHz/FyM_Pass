@@ -62,7 +62,6 @@ export function DiagnosticoConexion() {
     catch {
         establecerAviso('No se pudo copiar la dirección.');
     } }}><Copy size={16} aria-hidden="true"/>Copiar dirección</button></>}</div></div>
-    <details className="seguimiento"><summary>Verificaciones de la beta local</summary><ol><li>Comprueba API y base; abre la web en el teléfono.</li><li>Abre el puesto y marca una entrada con una cuenta de prueba.</li><li>Consulta el resultado en Asistencia diaria y repite el escaneo para mostrar el control de duplicados.</li><li>Muestra entrada y salida de personal; el estudiante registra solamente entrada.</li><li>Pausa el puesto y verifica que rechace nuevos marcados.</li><li>Busca un estudiante, registra su entrada manual de hoy y comprueba el diario, el resumen y la exportación.</li></ol><p className="nota">Comprueba los horarios configurados antes de probar puntualidad o tardanza. No cambies el reloj ni borres registros para repetir las pruebas.</p></details>
     <small>{hora ? `Última comprobación: ${hora} · Lima. Se actualiza cada 30 segundos.` : 'Preparando diagnóstico…'}</small>{aviso && <p role="status">{aviso}</p>}
   </details>;
 }

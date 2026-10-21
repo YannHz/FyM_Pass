@@ -1,5 +1,6 @@
+import { SelectorFecha } from './SelectorFecha'
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Estado, Insignia, useDatos } from './componentesGestion'
 
 type Dia = { fecha: string; entrada: string | null; salida: string | null; estado: string }
@@ -15,7 +16,6 @@ export function MisAsistencias() {
   const [desplazamiento, establecerDesplazamiento] = useState(0)
   const gesto = useRef<{ x: number; y: number; id: number; arrastrando: boolean } | null>(null)
   const ultimoDeslizamiento = useRef(0)
-  const selectorMes = useRef<HTMLInputElement>(null)
   const mesMinimo = '2000-01'
   function elegirMes(valor: string) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(valor) || valor < mesMinimo || valor > mesActual || valor === mes) return
@@ -70,7 +70,6 @@ export function MisAsistencias() {
     return numero > 0 && numero <= cantidad ? `${mes}-${String(numero).padStart(2, '0')}` : null
   })
   const semanas = Array.from({ length: celdas.length / 7 }, (_, indice) => celdas.slice(indice * 7, indice * 7 + 7))
-  const nombreMes = new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(Date.UTC(anio, numeroMes - 1, 1)))
   function indicador(dia: Dia | undefined) {
     if (!dia) return { clase: 'futuro', simbolo: '', texto: 'Sin evaluar' }
     if (dia.estado === 'Justificado') return { clase: 'justificado', simbolo: 'J', texto: dia.estado }
@@ -87,7 +86,7 @@ export function MisAsistencias() {
       <div className="resumen-asistencias" aria-label="Resumen del mes"><div><strong>{historial ? dias.filter(dia => dia.entrada).length : '—'}</strong><span>Ingresos</span></div><div><strong>{historial ? dias.filter(dia => dia.estado === 'Tardanza').length : '—'}</strong><span>Tardanzas</span></div><div><strong>{historial ? dias.filter(dia => dia.estado === 'Falta').length : '—'}</strong><span>Inasistencias</span></div></div>
       <div className="calendario-personal">
         <div className="cabecera-calendario">
-          <label className="selector-mes-calendario"><span id="nombre-mes-calendario" aria-live="polite">{nombreMes}</span><ChevronDown size={16} aria-hidden="true" /><input ref={selectorMes} type="month" aria-label="Elegir mes y año" value={mes} min={mesMinimo} max={mesActual} onClick={() => { try { selectorMes.current?.showPicker?.() } catch {} }} onChange={evento => elegirMes(evento.target.value)} /></label>
+          <div className="selector-mes-calendario"><SelectorFecha modo="mes" etiqueta="Elegir mes y año" ocultarEtiqueta valor={mes} minimo={mesMinimo} maximo={mesActual} alCambiar={elegirMes}/></div>
           <div className="flechas-calendario"><button type="button" className="icono-boton" aria-label="Mes anterior" disabled={mes <= mesMinimo} onClick={() => cambiarMes(-1)}><ChevronLeft size={20} aria-hidden="true" /></button><button type="button" className="icono-boton" aria-label="Mes siguiente" disabled={mes >= mesActual} onClick={() => cambiarMes(1)}><ChevronRight size={20} aria-hidden="true" /></button></div>
         </div>
         <p className="solo-lector" id="ayuda-calendario">Desliza a izquierda o derecha para cambiar de mes, usa las flechas o pulsa el título para elegir mes y año.</p>
