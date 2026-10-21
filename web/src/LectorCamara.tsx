@@ -68,9 +68,13 @@ export function LectorCamara({
             | (MediaTrackCapabilities & { focusMode?: string[] })
             | undefined;
           if (pista && capacidades?.focusMode?.includes("continuous")) {
-            void pista.applyConstraints({
-              advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
-            }).catch(() => {});
+            void pista
+              .applyConstraints({
+                advanced: [
+                  { focusMode: "continuous" } as MediaTrackConstraintSet,
+                ],
+              })
+              .catch(() => {});
           }
           establecerLista(true);
         }
@@ -93,7 +97,10 @@ export function LectorCamara({
       <div className="visor">
         <video
           ref={video}
-          style={{ objectFit: "contain", transform: orientacion === "user" ? "scaleX(-1)" : undefined }}
+          style={{
+            objectFit: "contain",
+            transform: orientacion === "user" ? "scaleX(-1)" : undefined,
+          }}
           muted
           playsInline
           aria-label="Vista de la cámara para leer códigos QR"
@@ -125,7 +132,10 @@ export function LectorCamara({
           </div>
         )}
       </div>
-      <p className="nota">Mantén el QR completo dentro del marco, con buena luz y sin reflejos. Si está borroso, aléjalo un poco.</p>
+      <p className="nota">
+        Mantén el QR completo dentro del marco, con buena luz y sin reflejos. Si
+        está borroso, aléjalo un poco.
+      </p>
     </div>
   );
 }

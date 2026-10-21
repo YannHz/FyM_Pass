@@ -302,9 +302,9 @@ def leer_carne(
         partes = validar_firma(datos.contenido, "carne")
         persona = repositorio.obtener_persona(int(partes[2]))
         if not persona or not hmac.compare_digest(persona.version_carne, partes[3]):
-            rechazo = "El carné no está vigente"
+            rechazo = "El carnet no está vigente"
     except (ErrorAplicacion, ValueError):
-        rechazo = "QR no válido. Presenta tu carné de FyM Pass"
+        rechazo = "QR no válido. Presenta tu carnet de FyM Pass"
     return registrar_lectura(
         repositorio, puesto, persona, datos, "camara_puesto", rechazo
     )

@@ -121,7 +121,7 @@ export function Aplicacion() {
             <p>
               El sistema de asistencia para estudiantes, docentes y personal administrativo.
               <br />
-              Usa tu carné virtual y revisa tus registros.
+              Usa tu carnet virtual y revisa tus registros.
             </p>
             <div className="vista-pase" aria-hidden="true">
               <div className="cabecera-vista-pase">

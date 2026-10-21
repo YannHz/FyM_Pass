@@ -596,68 +596,56 @@ def registrar_manual(
     datos: DatosManual, usuario: Usuario = None, repositorio: RepositorioGestion = None
 ):
     persona = comprobar_persona(repositorio, usuario, datos.persona_id)
-    repositorio.bloquear_persona(persona)
+    persona = repositorio.bloquear_persona(persona)
     previo = repositorio.marcado_por_evento(datos)
     if previo:
-        if previo.persona_id != persona.id or previo.registrado_por_id != usuario.id:
+        if previo.persona_id != persona.id or previo.registrado_por_id != usuario.id or previo.modalidad != "manual":
             raise ErrorAplicacion(409, "Ese identificador de registro ya existe.")
-        return {"mensaje": "Registro ya guardado.", "id": previo.id}
+        return {"mensaje": "La entrada ya estaba guardada.", "id": previo.id, "nombre": f"{persona.nombres} {persona.apellidos}", "hora": previo.ocurrido_en.replace(tzinfo=timezone.utc).isoformat(), "resultado": previo.resultado, "repetido": True}
     if not persona.activa:
-        raise ErrorAplicacion(422, "La persona está desactivada.")
+        raise ErrorAplicacion(422, "El estudiante está desactivado.")
+    if repositorio.obtener_rol(persona.rol_id).codigo != "estudiante":
+        raise ErrorAplicacion(422, "Este registro manual es únicamente para estudiantes.")
     sede = repositorio.obtener_sede(persona.sede_id)
-    local = datos.fecha_hora
-    if local.tzinfo is None:
-        local = local.replace(tzinfo=ZoneInfo(sede.zona_horaria))
-    instante = local.astimezone(timezone.utc).replace(tzinfo=None)
-    if instante > obtener_hora_utc() + timedelta(seconds=30):
-        raise ErrorAplicacion(422, "No puedes registrar una hora futura.")
-    dia = local.astimezone(ZoneInfo(sede.zona_horaria)).date()
-    _, _, inicio, fin = intervalo(repositorio, usuario, dia, dia)
+    instante = obtener_hora_utc()
+    local = instante.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(sede.zona_horaria))
+    _, _, inicio, fin = intervalo(repositorio, usuario, local.date(), local.date())
     existentes = repositorio.marcados_de_persona(fin, inicio, persona)
-    if any((marcado.tipo == datos.tipo for marcado in existentes)):
-        raise ErrorAplicacion(409, "Ese movimiento ya está registrado para ese día.")
-    if datos.tipo == "salida":
-        if not repositorio.obtener_rol(persona.rol_id).requiere_salida:
-            raise ErrorAplicacion(422, "Los estudiantes registran solamente entrada.")
-        if not any(
-            (
-                marcado.tipo == "entrada" and marcado.ocurrido_en < instante
-                for marcado in existentes
-            )
-        ):
-            raise ErrorAplicacion(
-                422, "Registra primero una entrada anterior a la salida."
-            )
+    if any(marcado.tipo == "entrada" for marcado in existentes):
+        raise ErrorAplicacion(409, "El estudiante ya tiene una entrada registrada hoy.")
+    filas = filas_diarias(repositorio, usuario, local.date(), local.date(), persona_id=persona.id)
+    if filas and filas[0]["estado"] in ("Falta", "Justificado"):
+        raise ErrorAplicacion(409, "El plazo de ingreso terminó. Acude a administración para revisar la justificación.")
+    tramos = tramos_para(repositorio, persona, local.date())
+    regla = regla_sede(repositorio, persona.sede_id)
+    if regla.anticipacion_minutos and tramos and local < datetime.combine(local.date(), tramos[0].hora_entrada, local.tzinfo) - timedelta(minutes=regla.anticipacion_minutos):
+        raise ErrorAplicacion(409, "El ingreso todavía no está habilitado para este horario.")
     from ...models import PuntoAsistencia
 
     punto = repositorio.primer_punto_de_sede(PuntoAsistencia, persona)
-    resultado = evaluar_manual(repositorio, persona, instante, datos.tipo)
+    if not punto or not punto.activo:
+        raise ErrorAplicacion(409, "La sede no tiene un punto de asistencia activo.")
+    resultado = evaluar_manual(repositorio, persona, instante, "entrada")
     marcado = Marcado(
         persona_id=persona.id,
         punto_id=punto.id,
         rol_id=persona.rol_id,
-        tipo=datos.tipo,
+        tipo="entrada",
         modalidad="manual",
         ocurrido_en=instante,
         registrado_por_id=usuario.id,
-        motivo=datos.motivo.strip(),
+        motivo="Ingreso presencial registrado por el encargado",
         identificador_evento=datos.identificador_evento,
         resultado=resultado,
     )
     repositorio.agregar(marcado)
     repositorio.sincronizar()
-    registrar_auditoria(
-        repositorio,
-        usuario,
-        "registro_manual",
-        "marcados",
-        marcado.id,
-        {"hora": instante, "motivo": datos.motivo},
-    )
+    registrar_auditoria(repositorio, usuario, "registro_manual", "marcados", marcado.id, {"hora": instante, "persona_id": persona.id, "modalidad": "manual"})
+    respuesta = {"mensaje": "Entrada registrada.", "id": marcado.id, "nombre": f"{persona.nombres} {persona.apellidos}", "hora": instante.replace(tzinfo=timezone.utc).isoformat(), "resultado": resultado, "repetido": False}
     sede_id = persona.sede_id
     confirmar(repositorio)
     notificar_marcado(sede_id)
-    return {"mensaje": "Registro manual guardado.", "id": marcado.id}
+    return respuesta
 
 
 def consultar_justificaciones(

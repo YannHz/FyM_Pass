@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Estado, Insignia, useDatos } from './componentesGestion'
 
 type Dia = { fecha: string; entrada: string | null; salida: string | null; estado: string }
@@ -53,7 +53,7 @@ export function MisAsistencias() {
     if (inicio.arrastrando) ultimoDeslizamiento.current = Date.now()
     if (Math.abs(x) >= 60 && Math.abs(x) > Math.abs(y) * 1.4) cambiarMes(x < 0 ? 1 : -1)
   }
-  const { datos, cargando, error } = useDatos(`/api/mi-asistencia?mes=${mes}`, revision)
+  const { datos, cargando, error } = useDatos(`/api/mi-asistencia?mes=${mes}`, revision, 20000)
   const historial = datos as Historial | null
   useEffect(() => {
     const renovar = () => establecerRevision(valor => valor + 1)
@@ -82,8 +82,7 @@ export function MisAsistencias() {
   const hora = (valor: string | null) => valor ? new Intl.DateTimeFormat('es-PE', { timeZone: historial?.zona_horaria || 'America/Lima', hour: '2-digit', minute: '2-digit' }).format(new Date(valor)) : '—'
   const fecha = (valor: string) => new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(valor + 'T12:00:00Z'))
   return <section className="mis-asistencias" aria-labelledby="titulo-mis-asistencias">
-    <header className="titulo-historial"><div><h1 id="titulo-mis-asistencias">Mis asistencias</h1><p>Consulta tus registros de ingreso al instituto.</p></div><button className="icono-boton" aria-label="Actualizar mis asistencias" disabled={cargando} onClick={() => establecerRevision(valor => valor + 1)}><RefreshCw size={18} aria-hidden="true" /></button></header>
-    <p className="nota">Solo tú y el personal autorizado pueden consultar tus registros. Esta información corresponde al ingreso al instituto, no a la asistencia a clases.</p>
+    <header className="titulo-historial"><h1 id="titulo-mis-asistencias" className="titulo-consulta-asistencias">Consulta tus registros de asistencia</h1></header>
     <Estado cargando={cargando} error={error} />
       <div className="resumen-asistencias" aria-label="Resumen del mes"><div><strong>{historial ? dias.filter(dia => dia.entrada).length : '—'}</strong><span>Ingresos</span></div><div><strong>{historial ? dias.filter(dia => dia.estado === 'Tardanza').length : '—'}</strong><span>Tardanzas</span></div><div><strong>{historial ? dias.filter(dia => dia.estado === 'Falta').length : '—'}</strong><span>Inasistencias</span></div></div>
       <div className="calendario-personal">

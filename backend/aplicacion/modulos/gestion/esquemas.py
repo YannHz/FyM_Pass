@@ -54,11 +54,9 @@ class DatosHorario(Formulario):
 
 
 class DatosManual(Formulario):
-    persona_id: int
-    tipo: Literal["entrada", "salida"]
-    fecha_hora: datetime
-    motivo: str = Field(min_length=3, max_length=500)
-    identificador_evento: str = Field(min_length=36, max_length=36)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    persona_id: int = Field(gt=0)
+    identificador_evento: str = Field(pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
 class DatosJustificacion(Formulario):

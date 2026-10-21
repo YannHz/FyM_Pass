@@ -18,9 +18,9 @@ def guardar_foto_validada(contenido):
         foto.thumbnail((512, 512))
     except (UnidentifiedImageError, ValueError, OSError):
         raise ErrorAplicacion(
-            422, "Selecciona una imagen JPG o PNG válida de hasta 4096 píxeles."
+            422, "Selecciona una imagen JPG, PNG o WebP válida de hasta 4096 píxeles."
         )
     CARPETA_FOTOS.mkdir(parents=True, exist_ok=True)
-    nombre = str(uuid4()) + ".jpg"
-    foto.save(CARPETA_FOTOS / nombre, format="JPEG", quality=85)
+    nombre = str(uuid4()) + ".webp"
+    foto.save(CARPETA_FOTOS / nombre, format="WEBP", quality=85, method=6)
     return "/api/fotos/" + nombre

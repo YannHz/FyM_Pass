@@ -12,7 +12,7 @@ export function EspacioPersonal() {
   }, [])
   return <>
     <nav className="navegacion-personal" aria-label="Mi espacio">
-      <a href="#carne" aria-current={seccion === 'carne' ? 'page' : undefined}><QrCode size={18} aria-hidden="true" />Mi carné</a>
+      <a href="#carne" aria-current={seccion === 'carne' ? 'page' : undefined}><QrCode size={18} aria-hidden="true" />Mi carnet</a>
       <a href="#asistencias" aria-current={seccion === 'asistencias' ? 'page' : undefined}><CalendarDays size={18} aria-hidden="true" />Mis asistencias</a>
     </nav>
     {seccion === 'carne' ? <CarneVirtual /> : <MisAsistencias />}
