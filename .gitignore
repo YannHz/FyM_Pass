@@ -35,6 +35,7 @@ coverage/
 *.pid
 *.pid.lock
 backend/archivos/
+/database/
 *.sql
 *.sql.gz
 *.sql.bz2
@@ -62,3 +63,6 @@ Desktop.ini
 *.tmp
 *.temp
 *~
+
+
+/.agents/
