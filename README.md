@@ -1,111 +1,118 @@
 # FyM Pass
 
-**Versión 1.0.0 · primera versión funcional · ejecución local**
+## Resumen
 
-Sistema web de asistencia del Instituto de Educación Superior Técnica Finney Miller. Permite registrar el ingreso al instituto, administrar personas y horarios, justificar tardanzas e inasistencias y consultar reportes. Estudiantes, docentes y administrativos acceden a su carnet y a sus asistencias desde el navegador. La web puede instalarse como PWA en Android, iPhone y computadoras.
+FyM Pass es un sistema web para registrar y administrar la asistencia de ingreso al Instituto de Educación Superior Tecnológico Finney y Miller. Permite trabajar con carnets y códigos QR, consultar la jornada diaria, organizar personas y horarios, gestionar justificaciones y generar reportes en Excel.
 
-## Funciones
+La aplicación incluye un panel administrativo y un espacio personal para estudiantes, docentes y personal administrativo. Puede utilizarse desde el navegador o instalarse como una aplicación web progresiva (PWA).
 
-- **Asistencia:** estudiantes registran entrada; docentes y administrativos, entrada y salida. Administración puede habilitar el QR dinámico para escaneo desde el teléfono, la lectura del carnet con cámara o ambas modalidades.
-- **Jornada diaria:** muestra solo personas con marcados, se actualiza al confirmar cada registro y comienza visualmente vacía al cambiar el día. El historial se conserva.
-- **Personas y carnets:** búsqueda por nombre, ID, documento o usuario; filtros por rol, estado y cuenta; expediente con calendario, carnet y horario. Todas las personas se identifican mediante iniciales, sin carga de fotografías.
-- **Carreras y horarios:** carrera → ciclo y turno → alumnos registrados o nuevos → confirmación del horario y fecha de inicio. No se usan secciones. Docentes y administrativos tienen horarios laborales separados con entrada y salida.
-- **Reportes:** periodos rápidos o intervalos de hasta 62 días, filtros, resumen y expediente del periodo. Excel con consolidado, cuadrícula mensual por rol y detalle diario con horas de Lima. Exporta todos los resultados filtrados.
-- **Preplanilla docente:** revisión de minutos y días de tardanza, faltas y salidas pendientes. Los importes son estimaciones secundarias; no aplica descuentos ni determina pagos.
-- **Justificaciones:** bandeja de tardanzas y faltas al superar el límite configurado, búsqueda por nombre o ID y formulario por incidencia. Operadores registran solicitudes; administradores aprueban u observan. Se evitan duplicados pendientes o aprobados.
-- **Reglas:** tolerancia por rol, anticipación de ingreso, límite para evaluar ausencia, umbrales de seguimiento y calendario de días no lectivos.
-- **Espacio personal:** carnet y calendario de asistencias con navegación por mes, selección de fecha y consulta de registros propios.
+## Stack de desarrollo
 
-El registro corresponde al ingreso al instituto, no a la asistencia a clases. Los estados de seguimiento no generan sanciones académicas. La confirmación permanece tres segundos: verde para puntualidad, ámbar para tardanza, azul para otros marcados aceptados o repetidos y rojo para rechazo.
-
-## Tecnologías
-
-| Parte | Tecnologías |
+| Área | Tecnologías |
 | --- | --- |
-| Frontend | React 19, TypeScript, Vite 6, Tailwind CSS, Lucide, QRCode y ZXing |
+| Frontend | React 19, TypeScript, Vite 6 y Tailwind CSS 4 |
+| Interfaz | Lucide React, QRCode y ZXing |
 | Backend | Python, FastAPI, Uvicorn y Pydantic |
-| Datos | MySQL/MariaDB, SQLAlchemy, PyMySQL y Alembic |
+| Persistencia | MySQL o MariaDB, SQLAlchemy, PyMySQL y Alembic |
 | Reportes | openpyxl |
-| Instalación web | Manifest y service worker para PWA |
+| Aplicación instalable | Web App Manifest y service worker |
 
-## Monolito modular con arquitectura por capas
+## Arquitectura
 
-Una sola API agrupa acceso, asistencia, gestión y diagnóstico. Cada módulo separa la entrada HTTP, las reglas del sistema y el acceso a los datos. Todos comparten una base MySQL/MariaDB.
+El proyecto usa un monolito modular con arquitectura por capas. El frontend consume una única API y el backend agrupa los módulos de acceso, asistencia, gestión y diagnóstico. Todos los módulos comparten la misma base de datos.
 
 ```text
-Navegador / PWA React
-          ↓
-Rutas HTTP y esquemas de validación
-          ↓
-Servicios: reglas y operaciones
-          ↓
-Repositorios: consultas y persistencia
-          ↓
-MySQL / MariaDB
+Navegador o PWA
+       │
+       ▼
+Frontend React
+       │ HTTP / JSON
+       ▼
+Rutas y esquemas FastAPI
+       │
+       ▼
+Servicios y reglas de negocio
+       │
+       ▼
+Repositorios y modelos SQLAlchemy
+       │
+       ▼
+MySQL o MariaDB
 ```
 
-Solo el backend accede a la base. Las rutas resuelven permisos y parámetros; los esquemas validan entradas; los servicios coordinan operaciones y transacciones; los repositorios ejecutan SQL y bloqueos. Excel se genera en infraestructura. Los modelos ORM y utilidades comunes se comparten.
+- Las rutas reciben las peticiones, verifican permisos y preparan las respuestas.
+- Los esquemas validan los datos de entrada y salida.
+- Los servicios coordinan las reglas del sistema y las transacciones.
+- Los repositorios concentran las consultas y operaciones de persistencia.
+- Alembic mantiene la evolución del esquema de la base de datos.
+- La generación de reportes Excel se encuentra en la capa de infraestructura.
 
-Se usa esta arquitectura porque permite organizar las funciones sin mantener varios servidores independientes. Sigue siendo un único despliegue; no es una arquitectura de microservicios.
-
-## Estructura de carpetas
+## Estructura del backend
 
 ```text
 backend/
 ├── aplicacion/
-│   ├── main.py                 Compone la API y sus manejadores de errores
-│   ├── version.py              Versión de la API
-│   ├── config.py               Configuración desde el entorno
-│   ├── database.py             Conexión a la base
-│   ├── models.py               Tablas y entidades
-│   ├── seguridad.py            Contraseñas y tokens
-│   ├── datos_iniciales.py      Preparación opcional de cuentas ficticias
-│   ├── compartido/             Permisos, errores, firma QR y avisos
-│   ├── infraestructura/        Generación de archivos Excel
+│   ├── main.py                 punto de entrada de la API
+│   ├── config.py               configuración del entorno
+│   ├── database.py             conexión y sesión de base de datos
+│   ├── models.py               modelos ORM
+│   ├── seguridad.py            autenticación, sesiones y contraseñas
+│   ├── datos_iniciales.py      carga opcional de datos iniciales
+│   ├── compartido/             utilidades comunes y dependencias
+│   ├── infraestructura/        generación de reportes Excel
 │   └── modulos/
-│       ├── acceso/             Cuentas y sesiones
-│       ├── asistencia/         Carnets, puestos QR y marcados
-│       ├── gestion/            Personas, horarios, incidencias y reportes
-│       └── diagnostico/        Estado del servidor y base
-├── migraciones/                Cambios del esquema y datos con Alembic
-├── archivos/                   Archivos y respaldos privados, fuera de Git
-├── .env.example                Ejemplo de configuración
-└── requirements.lock           Dependencias fijadas
-web/
-├── src/
-│   ├── App.tsx                 Acceso y recuperación de sesión
-│   ├── PanelAdministrativo.tsx  Composición del panel administrativo
-│   ├── PersonasCarnets.tsx     Directorio institucional
-│   ├── CarrerasHorarios.tsx    Grupos y horarios laborales
-│   ├── ReportesAsistencia.tsx  Consulta y exportación
-│   ├── PreplanillaDocente.tsx  Tardanzas de docentes
-│   ├── Justificaciones.tsx     Incidencias y revisión
-│   ├── ToleranciasReglas.tsx   Reglas y días no lectivos
-│   ├── FormularioGestion.tsx   Formularios compartidos
-│   ├── componentesGestion.tsx  Consultas, tablas y diálogos
-│   ├── CarneVirtual.tsx       Identificación y escaneo personal
-│   ├── MisAsistencias.tsx     Calendario personal
-│   ├── PuestoAsistencia.tsx   Pantalla de entrada al instituto
-│   ├── servicio.ts            Peticiones y errores de la API
-│   └── index.css              Tema y estilos generales
-├── public/                     Iconos, manifest y pantalla sin conexión
-├── pwa.ts                      Generación del service worker
-├── service-worker.js           Plantilla de caché pública
-├── package.json                Dependencias y versión del frontend
-└── vite.config.ts              Desarrollo y proxy local
-iniciar.sh                      Lanzador para Linux, también desde fish
-README.md                       Guía del proyecto
-CONTEXTO_PROYECTO.md             Contexto para continuar con otro agente
-AGENTS.md                       Convenciones de trabajo del repositorio
+│       ├── acceso/             cuentas y sesiones
+│       ├── asistencia/         carnets, puestos y marcados
+│       ├── gestion/            personas, horarios y reportes
+│       └── diagnostico/        estado de la aplicación y la base
+├── migraciones/                revisiones de Alembic
+├── .env.example                variables de entorno de referencia
+├── alembic.ini                 configuración de migraciones
+├── requirements.txt            rangos de dependencias
+└── requirements.lock           dependencias fijadas
 ```
 
-En cada módulo, `rutas.py` recibe peticiones, `esquemas.py` valida entradas, `servicios.py` aplica reglas y `repositorio.py` consulta o guarda. Diagnóstico no necesita esquemas de formulario propios.
+Los módulos aplican la misma separación cuando corresponde: `rutas.py` expone la API, `esquemas.py` valida los datos, `servicios.py` contiene las reglas y `repositorio.py` accede a la base.
 
-## Preparación local
+## Estructura del frontend
 
-Requiere Python compatible con las dependencias fijadas, Node.js 22 o superior con npm y MySQL 8 o MariaDB 10.4 o superior. La instalación local utiliza MariaDB de XAMPP.
+```text
+web/
+├── src/
+│   ├── main.tsx                inicio de React
+│   ├── App.tsx                 sesión y navegación principal
+│   ├── PanelAdministrativo.tsx panel de administración
+│   ├── EspacioPersonal.tsx     carnet y asistencia personal
+│   ├── PuestoAsistencia.tsx    pantalla del puesto de ingreso
+│   ├── servicio.ts             comunicación con la API
+│   ├── componentesGestion.tsx  componentes administrativos comunes
+│   ├── controles.css           estilos de controles compartidos
+│   └── index.css               tema y estilos generales
+├── public/                     iconos, manifest y página sin conexión
+├── pwa.ts                      preparación de la PWA
+├── service-worker.js           caché de recursos públicos
+├── index.html                  documento principal
+├── package.json                scripts y dependencias
+├── tsconfig.json               configuración de TypeScript
+└── vite.config.ts              compilación, servidor y proxy local
+```
 
-Desde la raíz en Linux:
+Las pantallas y sus estilos se organizan por función dentro de `web/src`. Los controles reutilizables para fechas, horas, filtros, tema y menús también se encuentran en esa carpeta.
+
+## Requisitos para ejecutarlo en local
+
+- Python 3 compatible con `backend/requirements.lock`.
+- Node.js 22 o superior con npm.
+- MySQL 8 o MariaDB 10.4 o superior.
+- Bash y Python 3 para utilizar `iniciar.sh` en Linux o macOS.
+- Cloudflared en el `PATH` si se necesita acceso HTTPS desde un teléfono.
+- Una base de datos llamada `fym_pass` y un usuario con permisos sobre ella.
+
+## Guía para ejecutarlo en local
+
+### 1. Instalar las dependencias
+
+En Linux o macOS, desde la raíz del proyecto:
 
 ```sh
 python3 -m venv backend/.venv
@@ -114,7 +121,7 @@ npm --prefix web ci
 cp backend/.env.example backend/.env
 ```
 
-En Windows, PowerShell:
+En Windows, desde PowerShell:
 
 ```powershell
 py -m venv backend/.venv
@@ -123,117 +130,93 @@ npm --prefix web ci
 Copy-Item backend/.env.example backend/.env
 ```
 
-Crea la base `fym_pass` y una cuenta de base de datos dedicada. Completa `BD_HOST`, `BD_PUERTO`, `BD_USUARIO`, `BD_CLAVE` y `BD_NOMBRE` en `backend/.env`. Genera `CLAVE_QR` aleatoria de al menos 32 caracteres y consérvala: cambiarla invalida los carnets existentes. No publiques el archivo `.env`.
+### 2. Configurar la base de datos
 
-Con MySQL iniciado, aplica las migraciones desde `backend/`:
+Inicia MySQL o MariaDB, crea la base `fym_pass` y completa `backend/.env`:
 
-```sh
-.venv/bin/python -m alembic upgrade head
+```dotenv
+BD_HOST=127.0.0.1
+BD_PUERTO=3306
+BD_USUARIO=fym_pass
+BD_CLAVE=
+BD_NOMBRE=fym_pass
+
+CLAVE_QR=
+COOKIE_SEGURA=false
 ```
 
-En Windows usa `.\.venv\Scripts\python.exe` en lugar de `.venv/bin/python`. La revisión actual es **0005**. El arranque no migra ni reinicia los datos automáticamente.
+`CLAVE_QR` debe contener una clave aleatoria de al menos 32 caracteres. Debe conservarse para que los carnets emitidos sigan siendo válidos.
 
-### Datos iniciales opcionales
+### 3. Aplicar las migraciones
 
-La instalación actual conserva 28 personas ficticias: 4 administrativos, 6 docentes y 18 estudiantes, además de los marcados realizados durante la validación. Cambiar la versión no reemplaza estos datos.
+En Linux o macOS:
 
-Para preparar ese conjunto en una base local nueva, desde `backend/`:
+```sh
+cd backend
+.venv/bin/python -m alembic upgrade head
+cd ..
+```
+
+En Windows:
+
+```powershell
+Set-Location backend
+.\.venv\Scripts\python.exe -m alembic upgrade head
+Set-Location ..
+```
+
+En una instalación vacía se pueden cargar los datos iniciales desde `backend`:
 
 ```sh
 .venv/bin/python -m aplicacion.datos_iniciales --confirmar-base fym_pass
 ```
 
-La herramienta exige `mysqldump` o `mariadb-dump`, crea un respaldo y rechaza la carga si ya hay personas. No se ejecuta al iniciar el sistema. `--actualizar-accesos` solo actualiza las cuentas del conjunto ficticio, revoca sus sesiones y pausa los puestos; `--reemplazar-usuarios` descarta personas e historial y requiere una decisión explícita del responsable. No combines estas dos opciones.
+En Windows, reemplaza `.venv/bin/python` por `.\.venv\Scripts\python.exe`.
 
-## Arranque
+### 4. Iniciar la aplicación
 
-En Linux, desde Bash, fish o zsh:
+En Linux o macOS, con MySQL activo:
 
 ```sh
 ./iniciar.sh
 ```
 
-El script necesita Bash y Python 3; no se ejecuta con `fish iniciar.sh`. MySQL debe estar iniciado. `--sin-navegador` evita abrir el navegador y Ctrl+C cierra los procesos iniciados por el lanzador. Los registros quedan en `.registros/`.
+El script comprueba la configuración, las migraciones y las versiones; después compila la web e inicia la API en `127.0.0.1:8000` y la web en `127.0.0.1:4173`. Desde fish debe ejecutarse como `./iniciar.sh`, porque el propio archivo utiliza Bash.
 
-En Windows, inicia MySQL en XAMPP y usa dos terminales PowerShell:
-
-```powershell
-cd D:\dev_\FyM_Pass\backend
-.\.venv\Scripts\python.exe -m uvicorn aplicacion.main:aplicacion --host 127.0.0.1 --port 8000
-```
-
-```powershell
-cd D:\dev_\FyM_Pass\web
-npm run dev
-```
-
-En Linux también puedes iniciar manualmente Uvicorn con `.venv/bin/python` desde `backend/` y `npm run dev` desde `web/`. No repitas los comandos si los puertos ya están ocupados.
-
-- Web local: `http://127.0.0.1:5173`.
-- Documentación de la API: `http://127.0.0.1:8000/docs`.
-- Salud del sistema: `/api/salud`; base de datos: `/api/salud/base-datos`.
-
-## Uso de la jornada
-
-1. Ingresa como administrador u operador y abre **Dispositivos y puesto**.
-2. Elige QR dinámico, cámara o ambas modalidades e inicia la asistencia. Permite la ventana emergente y, si corresponde, la cámara.
-3. Cada persona presenta su carnet a la cámara o escanea el QR del puesto desde su cuenta.
-4. Consulta los marcados en Asistencia diaria; reportes y justificaciones conservan el historial.
-5. Al finalizar, pausa el puesto. Cerrar su ventana no lo pausa. Reabrirlo reemplaza la credencial anterior.
-
-El QR dinámico cambia cada 30 segundos. El puesto dispone de un token de hasta 16 horas en `sessionStorage`. Los estudiantes tienen una entrada al día; el personal, una entrada y una salida, sin reingresos. Repetir una lectura dentro de diez segundos devuelve el resultado existente y el UUID evita duplicar una solicitud. Retira el carnet de la cámara al menos 1,5 segundos antes de volver a mostrarlo.
-
-Los horarios se confirman con fecha de inicio y conservan asignaciones anteriores. Cambiar la configuración de un grupo prepara un nuevo horario, pero no lo aplica hasta confirmar alumnos y fecha. Los horarios ya utilizados no se editan directamente: se copian y se reasignan. La migración 0005 conserva las asignaciones heredadas de alumnos existentes.
-
-La cámara procesa imágenes en el navegador, sin grabarlas ni enviarlas al servidor. Las confirmaciones sonoras están activas y necesitan la primera interacción que permita el navegador.
-
-## Teléfono, HTTPS e instalación PWA
-
-Para cámara e instalación desde otro dispositivo se necesita HTTPS. Se puede usar un túnel temporal de Cloudflare. Con la API y MySQL activos, compila la web y abre Preview desde la raíz:
+Para trabajar con recarga automática y sin PWA:
 
 ```sh
-npm --prefix web run build
-npm --prefix web run preview -- --host 127.0.0.1 --port 4173 --strictPort
+./iniciar.sh --desarrollo
 ```
 
-En otra terminal:
+En Windows, inicia la API desde una terminal PowerShell:
+
+```powershell
+Set-Location backend
+.\.venv\Scripts\python.exe -B -m uvicorn aplicacion.main:aplicacion --host 127.0.0.1 --port 8000
+```
+
+Luego compila y sirve la web desde otra terminal situada en la raíz:
+
+```powershell
+npm --prefix web run build
+node .\web\node_modules\vite\bin\vite.js preview --host 127.0.0.1 --port 4173 --strictPort
+```
+
+La aplicación queda disponible en `http://127.0.0.1:4173` y la documentación de la API en `http://127.0.0.1:8000/docs`.
+
+### 5. Abrir un túnel HTTPS con Cloudflare
+
+Con MySQL, la API y la web activos, ejecuta en otra terminal:
 
 ```sh
 cloudflared tunnel --url http://127.0.0.1:4173 --http-host-header localhost
 ```
 
-En esta instalación de Windows, si no está en PATH:
+Si Cloudflared está instalado en su ubicación habitual de Windows pero no está en el `PATH`:
 
 ```powershell
 & "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://127.0.0.1:4173 --http-host-header localhost
 ```
 
-Abre en el teléfono la URL HTTPS que imprime el túnel. Preview redirige `/api` a FastAPI; no se expone MySQL. Mantén PC, API, Preview y túnel activos; Ctrl+C detiene el acceso temporal. Un error 502 suele indicar que Preview no está disponible; si la web abre pero no accede, revisa API y base.
-
-En iPhone, usa Safari y **Añadir a pantalla de inicio**. En Android y PC, usa **Instalar FyM Pass** o la opción del navegador. El service worker se registra en la compilación, no en desarrollo. Actualiza fuera de una sesión de marcado y cierra ventanas antiguas para que se active la nueva versión. Una instalación desde un túnel deja de conectar si el enlace cambia o se cierra.
-
-La PWA cachea únicamente recursos públicos. No guarda carnets ni respuestas de la API y no tiene cola de marcados sin conexión. `./iniciar.sh --red auto` permite comprobar la API en red local, pero no configura HTTPS.
-
-## Datos, acceso y respaldos
-
-El rol institucional es distinto del permiso: administrador, operador o acceso personal. El backend autoriza cada operación. Las contraseñas usan scrypt; las sesiones duran ocho horas mediante cookie HttpOnly/SameSite Strict y la base guarda el resumen del token. En HTTPS permanente debe habilitarse `COOKIE_SEGURA`. El historial personal deriva su identidad de la sesión y no permite consultar otra persona.
-
-Las credenciales completas se conservan en `README_CREDENCIALES.local.md` y `backend/.credenciales_beta.local.txt`, privados y excluidos de Git. El nombre del segundo archivo se mantiene por compatibilidad con los respaldos locales; no indica la versión del sistema. No hay credenciales públicas de acceso.
-
-DBeaver se conecta a MariaDB/MySQL en `127.0.0.1:3306`, base `fym_pass`, con la cuenta privada de `.env`. Respalda la base antes de migraciones o mantenimiento. Conserva también `.env`, `CLAVE_QR` y `backend/archivos/` por un medio privado. La base, fotos históricas, credenciales y respaldos no viajan con Git.
-
-Los eventos se guardan en UTC y se muestran en `America/Lima`. Las tablas principales agrupan identidad y sesiones, carreras/grupos, horarios/asignaciones, tolerancias/reglas, puestos/marcados, justificaciones, dispositivos, tarifas y auditoría. Alembic controla las revisiones.
-
-## Alcance y siguientes etapas
-
-La versión 1.0.0 es funcional y se ejecuta localmente. Mantiene datos ficticios hasta que administración defina su sustitución por datos institucionales. El despliegue con VPS, dominio y HTTPS permanente sigue pendiente.
-
-- Los avisos en vivo y el límite de intentos de acceso funcionan en memoria de un único proceso de API; varios procesos requieren almacenamiento o mensajería compartidos.
-- No hay sincronización offline ni carga retroactiva completa. El registro manual actual solo permite entradas de hoy con hora del servidor y rechaza ausencias ya evaluadas. Ante una caída se conserva un registro externo para revisión administrativa.
-- Los filtros de carrera/ciclo/turno representan la asignación actual; su historial completo queda pendiente. No hay jornadas nocturnas ni reingresos.
-- ZKTeco se conserva solo como inventario/configuración. La integración física no está implementada.
-- Quedan pendientes recuperación autónoma de contraseñas, operación entre sedes y validación de despliegue, concurrencia y dispositivos reales.
-
-La web conserva los temas claro y oscuro, azul institucional y controles compartidos. Por decisión del usuario, el repositorio no contiene suites de pruebas automatizadas ni Docker. Se verifica con compilación TypeScript/Vite y comprobaciones puntuales sin conservar archivos de prueba.
-
-La documentación de uso y arquitectura se concentra en este README. El contexto para continuar el desarrollo está en [CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md); las convenciones para agentes permanecen en [AGENTS.md](AGENTS.md).
+Cloudflare mostrará una URL HTTPS temporal. Ábrela en el teléfono para utilizar la cámara o instalar la PWA. La terminal del túnel y los servicios locales deben permanecer abiertos durante el uso.
