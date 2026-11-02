@@ -15,8 +15,11 @@ def consultar_salud():
 
 @rutas_salud.get("/api/salud/base-datos")
 def consultar_base_datos(
-    respuesta: Response, base: Session = Depends(obtener_base_datos)
+    respuesta: Response,
+    usuario: object = Depends(obtener_encargado),
+    base: Session = Depends(obtener_base_datos),
 ):
+    # solo encargados: no divulga motor y version al publico
     datos = servicios.consultar_base_datos(RepositorioDiagnostico(base))
     if datos["estado"] != "disponible":
         respuesta.status_code = 503

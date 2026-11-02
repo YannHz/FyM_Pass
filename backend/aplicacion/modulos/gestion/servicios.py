@@ -285,6 +285,9 @@ def guardar_persona(
         cuenta.permiso = datos.permiso
         cuenta.activo = datos.activa
         if datos.clave:
+            # una clave nueva invalida las sesiones abiertas de la cuenta
+            if cuenta.id:
+                repositorio.revocar_sesiones(cuenta)
             cuenta.clave_hash = generar_hash_clave(datos.clave)
         repositorio.agregar(cuenta)
     if not es_estudiante:
@@ -520,6 +523,16 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
     }
     ahora = obtener_hora_utc().replace(tzinfo=timezone.utc).astimezone(zona)
     regla = regla_sede(repositorio, sede.id)
+    roles = {}
+    grupos = {}
+    carreras = {}
+
+    def rol_de(identificador):
+        # evita repetir la misma consulta de rol en cada fila
+        if identificador not in roles:
+            roles[identificador] = repositorio.obtener_rol(identificador)
+        return roles[identificador]
+
     filas = []
     for numero in range((hasta - desde).days + 1):
         fecha = desde + timedelta(days=numero)
@@ -527,7 +540,7 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
             marcas_persona = por_dia.get((persona.id, fecha), [])
             if not persona.activa and (not marcas_persona):
                 continue
-            rol = repositorio.obtener_rol(
+            rol = rol_de(
                 marcas_persona[0].rol_id if marcas_persona else persona.rol_id
             )
             tramos = tramos_para(repositorio, persona, fecha)
@@ -594,12 +607,19 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
                 if entrada and salida
                 else 0
             )
-            grupo = (
-                repositorio.obtener_grupo(persona.grupo_id)
-                if persona.grupo_id
-                else None
-            )
-            carrera = repositorio.obtener_carrera(grupo.carrera_id) if grupo else None
+            grupo = None
+            if persona.grupo_id:
+                # el grupo y la carrera no cambian del dia a la fecha consultada
+                grupo = grupos.get(persona.grupo_id, False)
+                if grupo is False:
+                    grupo = repositorio.obtener_grupo(persona.grupo_id)
+                    grupos[persona.grupo_id] = grupo
+            carrera = None
+            if grupo:
+                carrera = carreras.get(grupo.carrera_id, False)
+                if carrera is False:
+                    carrera = repositorio.obtener_carrera(grupo.carrera_id)
+                    carreras[grupo.carrera_id] = carrera
             filas.append(
                 {
                     "persona_id": persona.id,
@@ -941,11 +961,7 @@ def consultar_expediente(
 ):
     persona = comprobar_persona(repositorio, usuario, identificador)
     valor = f"fym:carne:{persona.id}:{persona.version_carne}"
-    filas = [
-        fila
-        for fila in filas_diarias(repositorio, usuario, desde, hasta)
-        if fila["persona_id"] == persona.id
-    ]
+    filas = filas_diarias(repositorio, usuario, desde, hasta, persona_id=persona.id)
     programados = [
         fila for fila in filas if fila["estado"] not in ("No programado", "Pendiente")
     ]

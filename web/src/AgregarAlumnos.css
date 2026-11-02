@@ -5,71 +5,446 @@
   padding: 0;
   overflow: hidden;
 }
-.dialogo.dialogo-agregar-alumnos[open] { display: flex; flex-direction: column; }
-.dialogo.dialogo-agregar-alumnos > .titulo-dialogo { flex: 0 0 auto; padding: 20px 28px; }
-.dialogo.dialogo-agregar-alumnos > .titulo-dialogo h2 { font-size: 1.25rem; font-weight: 650; letter-spacing: -.025em; }
-.seleccion-alumnos { display: flex; flex-direction: column; gap: 20px; padding: 24px 28px 0; flex: 1; min-height: 0; }
-.destino-alumnos { display: flex; gap: 14px; align-items: center; flex: 0 0 auto; }
-.simbolo-destino { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: var(--suave); color: var(--acento-texto); flex: 0 0 auto; }
-.destino-alumnos > div { min-width: 0; }
-.rotulo-destino { color: var(--secundario); font-size: .75rem; }
-.destino-alumnos h3 { font-size: .9375rem; font-weight: 600; line-height: 1.4; margin: 3px 0; text-wrap: pretty; }
-.destino-alumnos p { color: var(--secundario); font-size: .8125rem; margin: 0; }
-.dialogo .controles-seleccion-alumnos { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
-.solo-lectura-alumnos { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-.herramientas-seleccion-alumnos { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
-.campo-busqueda-alumnos { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; border: 1px solid var(--borde-control); border-radius: 15px; background: var(--superficie); }
-.campo-busqueda-alumnos:focus-within { border-color: var(--acento-texto); outline: 2px solid color-mix(in srgb, var(--acento) 18%, transparent); outline-offset: 1px; }
-.campo-busqueda-alumnos > svg { position: absolute; left: 14px; pointer-events: none; color: var(--secundario); }
-.dialogo .campo-busqueda-alumnos input { width: 100%; border: 0; outline: 0; background: transparent; min-height: 46px; padding: 12px 42px; font-size: .875rem; box-shadow: none; border-radius: inherit; }
-.campo-busqueda-alumnos input::-webkit-search-cancel-button { -webkit-appearance: none; }
-.limpiar-busqueda-alumnos { position: absolute; right: 2px; width: 40px; min-height: 40px; padding: 0; border: 0; border-radius: 12px; background: transparent; color: var(--secundario); }
-.registrar-nuevo-alumno { flex: 0 0 auto; min-height: 46px; padding: 10px 14px; font-size: .8125rem; gap: 8px; }
-.resumen-lista-alumnos { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; min-height: 48px; padding: 8px 2px 2px; }
-.resumen-lista-alumnos > span { color: var(--secundario); font-size: .8125rem; }
-.resumen-lista-alumnos .boton-texto { font-size: .8125rem; padding: 8px 0 8px 8px; }
-.listado-seleccion-alumnos { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px 8px 2px 2px; scrollbar-gutter: stable; }
-.dialogo .fila-seleccion-alumno { display: flex; gap: 14px; align-items: center; position: relative; padding: 14px; margin: 0 0 6px; min-height: 92px; border: 1px solid transparent; border-radius: 16px; cursor: pointer; transition: background 120ms ease, border-color 120ms ease; }
-.fila-seleccion-alumno:hover { background: var(--suave); }
-.fila-seleccion-alumno[data-seleccionado="true"] { background: var(--suave); border-color: color-mix(in srgb, var(--acento) 35%, var(--linea)); }
-.fila-seleccion-alumno:focus-within { outline: 2px solid var(--acento-texto); outline-offset: -2px; }
-.casilla-alumno { position: relative; display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; }
-.dialogo .casilla-alumno input { appearance: none; position: absolute; inset: 0; width: 22px; height: 22px; min-height: 0; margin: 0; padding: 0; border: 1.5px solid var(--borde-control); border-radius: 6px; background: var(--superficie); cursor: pointer; }
-.casilla-alumno input:checked { background: var(--acento); border-color: var(--acento); }
-.casilla-alumno > svg { position: relative; color: var(--sobre-acento); pointer-events: none; opacity: 0; }
-.casilla-alumno input:checked + svg { opacity: 1; }
-.avatar-seleccion-alumno { flex: 0 0 auto; }
-.avatar-seleccion-alumno .foto-persona { width: 42px; height: 42px; min-width: 42px; border-radius: 13px; margin: 0; font-size: .875rem; }
-.datos-seleccion-alumno { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.datos-seleccion-alumno strong { font-weight: 550; font-size: .875rem; line-height: 1.4; overflow-wrap: anywhere; }
-.codigo-seleccion-alumno, .origen-seleccion-alumno { color: var(--secundario); font-size: .75rem; line-height: 1.4; }
-.origen-seleccion-alumno { overflow-wrap: anywhere; }
-.aclaracion-seleccion-alumnos { display: flex; align-items: flex-start; gap: 9px; margin: 0; color: var(--secundario); font-size: .75rem; line-height: 1.5; flex: 0 0 auto; }
-.aclaracion-seleccion-alumnos svg { flex: 0 0 auto; margin-top: 1px; }
-.error-seleccion-alumnos { margin: 0; max-height: 100px; overflow: auto; flex: 0 0 auto; }
-.pie-seleccion-alumnos { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 0 0 auto; margin-inline: -28px; padding: 18px 28px 22px; border-top: 1px solid var(--linea); background: var(--superficie); }
-.total-seleccion-alumnos { color: var(--secundario); font-size: .75rem; line-height: 1.4; max-width: 220px; }
-.total-seleccion-alumnos strong { color: var(--texto); }
-.pie-seleccion-alumnos > div { display: flex; gap: 8px; flex: 0 0 auto; }
-.pie-seleccion-alumnos button { min-height: 44px; padding-inline: 20px; }
-.listado-seleccion-alumnos .vacio { padding: 24px 12px; }
-@media (max-width: 600px) {
-  .dialogo.dialogo-agregar-alumnos { width: calc(100vw - 20px); height: calc(100dvh - 24px); max-height: calc(100dvh - 24px); border-radius: 26px; }
-  .dialogo.dialogo-agregar-alumnos > .titulo-dialogo { padding: 16px 20px; }
-  .seleccion-alumnos { padding: 20px 20px 0; gap: 16px; }
-  .simbolo-destino { width: 44px; height: 44px; border-radius: 14px; }
-  .herramientas-seleccion-alumnos { align-items: stretch; flex-direction: column; gap: 4px; }
-  .registrar-nuevo-alumno { align-self: flex-start; background: transparent; color: var(--acento-texto); padding-inline: 2px; }
-  .dialogo .fila-seleccion-alumno { padding: 12px 8px; gap: 10px; }
-  .avatar-seleccion-alumno .foto-persona { width: 36px; height: 36px; min-width: 36px; border-radius: 11px; font-size: .75rem; }
-  .pie-seleccion-alumnos { margin-inline: -20px; padding: 14px 20px max(18px, env(safe-area-inset-bottom)); flex-direction: column; align-items: stretch; gap: 12px; }
-  .total-seleccion-alumnos { max-width: none; }
-  .pie-seleccion-alumnos > div { width: 100%; }
-  .pie-seleccion-alumnos button { flex: 1; padding-inline: 10px; }
+
+.dialogo.dialogo-agregar-alumnos[open] {
+  display: flex;
+  flex-direction: column;
 }
-@media (prefers-reduced-motion: reduce) { .fila-seleccion-alumno { transition: none; } }
+
+.dialogo.dialogo-agregar-alumnos>.titulo-dialogo {
+  flex: 0 0 auto;
+  padding: 20px 28px;
+}
+
+.dialogo.dialogo-agregar-alumnos>.titulo-dialogo h2 {
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+
+.seleccion-alumnos {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 28px 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.destino-alumnos {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.simbolo-destino {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--suave);
+  color: var(--acento-texto);
+  flex: 0 0 auto;
+}
+
+.destino-alumnos>div {
+  min-width: 0;
+}
+
+.rotulo-destino {
+  color: var(--secundario);
+  font-size: .75rem;
+}
+
+.destino-alumnos h3 {
+  font-size: .9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 3px 0;
+  text-wrap: pretty;
+}
+
+.destino-alumnos p {
+  color: var(--secundario);
+  font-size: .8125rem;
+  margin: 0;
+}
+
+.dialogo .controles-seleccion-alumnos {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.solo-lectura-alumnos {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.herramientas-seleccion-alumnos {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.campo-busqueda-alumnos {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--borde-control);
+  border-radius: 15px;
+  background: var(--superficie);
+}
+
+.campo-busqueda-alumnos:focus-within {
+  border-color: var(--acento-texto);
+  outline: 2px solid color-mix(in srgb, var(--acento) 18%, transparent);
+  outline-offset: 1px;
+}
+
+.campo-busqueda-alumnos>svg {
+  position: absolute;
+  left: 14px;
+  pointer-events: none;
+  color: var(--secundario);
+}
+
+.dialogo .campo-busqueda-alumnos input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  min-height: 46px;
+  padding: 12px 42px;
+  font-size: .875rem;
+  box-shadow: none;
+  border-radius: inherit;
+}
+
+.campo-busqueda-alumnos input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.limpiar-busqueda-alumnos {
+  position: absolute;
+  right: 2px;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--secundario);
+}
+
+.registrar-nuevo-alumno {
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 10px 14px;
+  font-size: .8125rem;
+  gap: 8px;
+}
+
+.resumen-lista-alumnos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 8px 2px 2px;
+}
+
+.resumen-lista-alumnos>span {
+  color: var(--secundario);
+  font-size: .8125rem;
+}
+
+.resumen-lista-alumnos .boton-texto {
+  font-size: .8125rem;
+  padding: 8px 0 8px 8px;
+}
+
+.listado-seleccion-alumnos {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 8px 2px 2px;
+  scrollbar-gutter: stable;
+}
+
+.dialogo .fila-seleccion-alumno {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  position: relative;
+  padding: 14px;
+  margin: 0 0 6px;
+  min-height: 92px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.fila-seleccion-alumno:hover {
+  background: var(--suave);
+}
+
+.fila-seleccion-alumno[data-seleccionado="true"] {
+  background: var(--suave);
+  border-color: color-mix(in srgb, var(--acento) 35%, var(--linea));
+}
+
+.fila-seleccion-alumno:focus-within {
+  outline: 2px solid var(--acento-texto);
+  outline-offset: -2px;
+}
+
+.casilla-alumno {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.dialogo .casilla-alumno input {
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--borde-control);
+  border-radius: 6px;
+  background: var(--superficie);
+  cursor: pointer;
+}
+
+.casilla-alumno input:checked {
+  background: var(--acento);
+  border-color: var(--acento);
+}
+
+.casilla-alumno>svg {
+  position: relative;
+  color: var(--sobre-acento);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.casilla-alumno input:checked+svg {
+  opacity: 1;
+}
+
+.avatar-seleccion-alumno {
+  flex: 0 0 auto;
+}
+
+.avatar-seleccion-alumno .foto-persona {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 13px;
+  margin: 0;
+  font-size: .875rem;
+}
+
+.datos-seleccion-alumno {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.datos-seleccion-alumno strong {
+  font-weight: 550;
+  font-size: .875rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.codigo-seleccion-alumno,
+.origen-seleccion-alumno {
+  color: var(--secundario);
+  font-size: .75rem;
+  line-height: 1.4;
+}
+
+.origen-seleccion-alumno {
+  overflow-wrap: anywhere;
+}
+
+.aclaracion-seleccion-alumnos {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  color: var(--secundario);
+  font-size: .75rem;
+  line-height: 1.5;
+  flex: 0 0 auto;
+}
+
+.aclaracion-seleccion-alumnos svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.error-seleccion-alumnos {
+  margin: 0;
+  max-height: 100px;
+  overflow: auto;
+  flex: 0 0 auto;
+}
+
+.pie-seleccion-alumnos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 0 0 auto;
+  margin-inline: -28px;
+  padding: 18px 28px 22px;
+  border-top: 1px solid var(--linea);
+  background: var(--superficie);
+}
+
+.total-seleccion-alumnos {
+  color: var(--secundario);
+  font-size: .75rem;
+  line-height: 1.4;
+  max-width: 220px;
+}
+
+.total-seleccion-alumnos strong {
+  color: var(--texto);
+}
+
+.pie-seleccion-alumnos>div {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.pie-seleccion-alumnos button {
+  min-height: 44px;
+  padding-inline: 20px;
+}
+
+.listado-seleccion-alumnos .vacio {
+  padding: 24px 12px;
+}
+
+@media (max-width: 600px) {
+  .dialogo.dialogo-agregar-alumnos {
+    width: calc(100vw - 20px);
+    height: calc(100dvh - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 26px;
+  }
+
+  .dialogo.dialogo-agregar-alumnos>.titulo-dialogo {
+    padding: 16px 20px;
+  }
+
+  .seleccion-alumnos {
+    padding: 20px 20px 0;
+    gap: 16px;
+  }
+
+  .simbolo-destino {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .herramientas-seleccion-alumnos {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .registrar-nuevo-alumno {
+    align-self: flex-start;
+    background: transparent;
+    color: var(--acento-texto);
+    padding-inline: 2px;
+  }
+
+  .dialogo .fila-seleccion-alumno {
+    padding: 12px 8px;
+    gap: 10px;
+  }
+
+  .avatar-seleccion-alumno .foto-persona {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 11px;
+    font-size: .75rem;
+  }
+
+  .pie-seleccion-alumnos {
+    margin-inline: -20px;
+    padding: 14px 20px max(18px, env(safe-area-inset-bottom));
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .total-seleccion-alumnos {
+    max-width: none;
+  }
+
+  .pie-seleccion-alumnos>div {
+    width: 100%;
+  }
+
+  .pie-seleccion-alumnos button {
+    flex: 1;
+    padding-inline: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fila-seleccion-alumno {
+    transition: none;
+  }
+}
+
 @media (forced-colors: active) {
-  .casilla-alumno input { appearance: auto; }
-  .casilla-alumno > svg { display: none; }
-  .fila-seleccion-alumno[data-seleccionado="true"] { border-color: Highlight; }
+  .casilla-alumno input {
+    appearance: auto;
+  }
+
+  .casilla-alumno>svg {
+    display: none;
+  }
+
+  .fila-seleccion-alumno[data-seleccionado="true"] {
+    border-color: Highlight;
+  }
 }

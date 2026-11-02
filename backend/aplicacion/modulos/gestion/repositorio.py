@@ -3,6 +3,7 @@ from ...models import (
     Rol,
     Persona,
     Usuario,
+    SesionAcceso,
     Horario,
     TramoHorario,
     AsignacionHorario,
@@ -21,6 +22,14 @@ from ...compartido.repositorio import RepositorioBase
 
 
 class RepositorioGestion(RepositorioBase):
+
+    def revocar_sesiones(self, cuenta):
+        # cierra todas las sesiones del usuario tras cambiar la contrasena
+        sesiones = self._base.scalars(
+            select(SesionAcceso).where(SesionAcceso.usuario_id == cuenta.id)
+        ).all()
+        for sesion in sesiones:
+            self._base.delete(sesion)
 
     def bloquear_carrera(self, identificador):
         return self._base.scalar(select(Carrera).where(Carrera.id == identificador).with_for_update())

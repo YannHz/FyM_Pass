@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Configuracion(BaseSettings):
     clave_qr: str = ""
     cookie_segura: bool = False
+    # habilitar solo cuando nginx u otro proxy entrega la IP real en X-Forwarded-For
+    proxy_confiable: bool = False
     bd_host: str = "127.0.0.1"
     bd_puerto: int = 3306
     bd_usuario: str = "fym_pass"

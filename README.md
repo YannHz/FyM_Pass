@@ -143,9 +143,19 @@ BD_NOMBRE=fym_pass
 
 CLAVE_QR=
 COOKIE_SEGURA=false
+PROXY_CONFIABLE=false
 ```
 
 `CLAVE_QR` debe contener una clave aleatoria de al menos 32 caracteres. Debe conservarse para que los carnets emitidos sigan siendo válidos.
+
+- `COOKIE_SEGURA=false` entrega la cookie sin el atributo `Secure`; útil en desarrollo local. Antes de servir en producción por HTTPS se define `COOKIE_SEGURA=true`, con lo que la API además envía el encabezado `Strict-Transport-Security` y registra un aviso si se arranca sin esa configuración.
+- `PROXY_CONFIABLE=false` limita los intentos de acceso por la IP directa del cliente. Colócalo en `true` solo cuando la API corra detrás de un proxy que entrega la IP real en `X-Forwarded-For` (por ejemplo nginx); si no, alguien podría falsear esa cabecera para burlar el límite.
+
+Respuestas de la API y restauración:
+
+- Cambiar la contraseña de una persona por Personas y carnets cierra de inmediato todas las sesiones abiertas de esa cuenta; quien la tuviera abierta debe iniciar sesión de nuevo.
+- La ruta pública `/api/salud` solo indica vida de la API; el estado de la base de datos quedó en `/api/salud/base-datos`, que ahora exige sesión de encargado.
+- La API agrega `X-Content-Type-Options`, `X-Frame-Options` y `Referrer-Policy` a todas las respuestas.
 
 ### 3. Aplicar las migraciones
 
@@ -220,3 +230,7 @@ Si Cloudflared está instalado en su ubicación habitual de Windows pero no est�
 ```
 
 Cloudflare mostrará una URL HTTPS temporal. Ábrela en el teléfono para utilizar la cámara o instalar la PWA. La terminal del túnel y los servicios locales deben permanecer abiertos durante el uso.
+
+### 6. Actualización de la aplicación instalada
+
+Cuando se publica una versión nueva, las pestañas y equipos instalados con la PWA muestran un mensaje "FyM Pass se actualizó" con el botón "Recargar ahora". El contenido sigue usándose hasta que alguien acepte recargar, así que ninguna operación en curso se interrumpe a mitad de guardado.
