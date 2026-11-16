@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  GraduationCap,
   Presentation,
   BriefcaseBusiness,
   Clock3,
@@ -17,8 +16,7 @@ import { Tabla, Vacio, type Registro } from "./componentesGestion";
 import { SelectorFiltro } from "./SelectorFiltro";
 import "./ToleranciasReglas.css";
 
-const iconosRol: Record<string, typeof GraduationCap> = {
-  estudiante: GraduationCap,
+const iconosRol: Record<string, typeof Presentation> = {
   docente: Presentation,
   administrativo: BriefcaseBusiness,
 };

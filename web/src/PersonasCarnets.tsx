@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Search,
   Plus,
-  GraduationCap,
   Presentation,
   BriefcaseBusiness,
   ContactRound,
@@ -19,7 +18,6 @@ const normalizar = (texto: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 const roles = [
-  { codigo: "estudiante", nombre: "Estudiantes", icono: GraduationCap },
   { codigo: "docente", nombre: "Docentes", icono: Presentation },
   {
     codigo: "administrativo",
@@ -43,15 +41,8 @@ export function PersonasCarnets({
   const [buscar, cambiarBuscar] = useState(""),
     [rol, cambiarRol] = useState(""),
     [estado, cambiarEstado] = useState(""),
-    [cuenta, cambiarCuenta] = useState(""),
-    [carrera, cambiarCarrera] = useState("");
+    [cuenta, cambiarCuenta] = useState("");
   const personas: Registro[] = catalogo.personas;
-  const grupoDe = (persona: Registro) =>
-    catalogo.grupos.find((grupo: Registro) => grupo.id === persona.grupo_id);
-  const carreraDe = (persona: Registro) =>
-    catalogo.carreras.find(
-      (dato: Registro) => dato.id === grupoDe(persona)?.carrera_id,
-    );
   const filtradas = personas
     .filter(
       (persona) =>
@@ -61,20 +52,17 @@ export function PersonasCarnets({
           ).includes(normalizar(buscar))) &&
         (!rol || persona.rol_codigo === rol) &&
         (!estado || Boolean(persona.activa) === (estado === "activos")) &&
-        (!cuenta || Boolean(persona.nombre_usuario) === (cuenta === "con")) &&
-        (!carrera || carreraDe(persona)?.id === Number(carrera)),
+        (!cuenta || Boolean(persona.nombre_usuario) === (cuenta === "con")),
     )
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   function seleccionarRol(valor: string) {
     cambiarRol(valor);
-    cambiarCarrera("");
   }
   function limpiar() {
     cambiarBuscar("");
     cambiarRol("");
     cambiarEstado("");
     cambiarCuenta("");
-    cambiarCarrera("");
   }
   return (
     <div className="personas-carnets">
@@ -157,26 +145,12 @@ export function PersonasCarnets({
               { valor: "sin", texto: "Sin cuenta" },
             ]}
           />
-          {rol === "estudiante" && (
-            <SelectorFiltro
-              etiqueta="Carrera del estudiante"
-              valor={carrera}
-              alCambiar={cambiarCarrera}
-              opciones={[
-                { valor: "", texto: "Todas las carreras" },
-                ...catalogo.carreras.map((dato: Registro) => ({
-                  valor: String(dato.id),
-                  texto: dato.nombre,
-                })),
-              ]}
-            />
-          )}
         </div>
         <div className="resultados-directorio">
           <span>
             {filtradas.length} de {personas.length} personas
           </span>
-          {(buscar || rol || estado || cuenta || carrera) && (
+          {(buscar || rol || estado || cuenta) && (
             <button className="boton-texto" onClick={limpiar}>
               Limpiar filtros
             </button>
@@ -220,19 +194,6 @@ export function PersonasCarnets({
               {
                 titulo: "Asignación",
                 mostrar: (persona) => {
-                  if (persona.rol_codigo === "estudiante") {
-                    const grupo = grupoDe(persona);
-                    return grupo ? (
-                      <>
-                        {carreraDe(persona)?.nombre || "Carrera no disponible"}
-                        <small>
-                          Ciclo {grupo.ciclo} · {grupo.turno}
-                        </small>
-                      </>
-                    ) : (
-                      <span className="nota">Sin carrera asignada</span>
-                    );
-                  }
                   const horario = catalogo.horarios.find(
                     (dato: Registro) => dato.id === persona.horario_id,
                   );
@@ -301,8 +262,8 @@ export function PersonasCarnets({
           />
         )}
         <p className="nota">
-          Pulsa el nombre para abrir el expediente. Los cambios de grupo y
-          horario se confirman en Carreras y horarios.
+          Pulsa el nombre para abrir el expediente. Los cambios de horario se
+          confirman en Horarios laborales.
         </p>
       </section>
     </div>

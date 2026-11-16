@@ -212,6 +212,8 @@ def registrar_lectura(
     if persona and (not rechazo):
         if not persona.activa:
             rechazo = "Persona desactivada"
+        elif rol.codigo not in ("docente", "administrativo"):
+            rechazo = "Este sistema registra únicamente asistencia del personal."
         elif persona.sede_id != punto.sede_id:
             rechazo = "La persona pertenece a otra sede"
     if persona and (not rechazo):

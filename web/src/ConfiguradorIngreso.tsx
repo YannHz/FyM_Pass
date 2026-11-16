@@ -14,7 +14,7 @@ export function ConfiguradorIngreso({
         ? tramos.filter((tramo) => tramo.dia_semana !== dia)
         : [
             ...tramos,
-            { dia_semana: dia, hora_entrada: "08:00", hora_salida: null },
+            { dia_semana: dia, hora_entrada: "08:00", hora_salida: "17:00" },
           ].sort((a, b) => a.dia_semana - b.dia_semana),
     );
   }
@@ -23,7 +23,7 @@ export function ConfiguradorIngreso({
       <div
         className="dias-configurables"
         role="group"
-        aria-label="Días de ingreso"
+        aria-label="Días de trabajo"
       >
         {diasHorario.map((dia, indice) => (
           <button
@@ -37,6 +37,7 @@ export function ConfiguradorIngreso({
           </button>
         ))}
       </div>
+      <div className="cabecera-horas-laborales" aria-hidden="true"><span>Día</span><span>Entrada</span><span>Salida</span></div>
       <div className="horas-ingreso-grupo">
         {tramos.map((tramo, indice) => (
           <div className="campo-hora" key={tramo.dia_semana}>
@@ -48,11 +49,17 @@ export function ConfiguradorIngreso({
                 cambiar(
                   tramos.map((valor, posicion) =>
                     posicion === indice
-                      ? { ...valor, hora_entrada: hora, hora_salida: null }
+                      ? { ...valor, hora_entrada: hora }
                       : valor,
                   ),
                 )
               }
+            />
+            <SelectorHora
+              etiqueta={`Salida del ${diasHorario[tramo.dia_semana]}`}
+              valor={tramo.hora_salida || ""}
+              alCambiar={hora => cambiar(tramos.map((valor, posicion) =>
+                posicion === indice ? { ...valor, hora_salida: hora } : valor))}
             />
           </div>
         ))}

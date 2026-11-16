@@ -7,12 +7,12 @@
 - Mantener textos de interfaz y documentacion en espanol con ortografia normal.
 - Para el diseno y revision de interfaces, seguir C:/Users/yann_/.codex/skills/apple-design/SKILL.md y leer las referencias pertinentes antes de aplicar sus recomendaciones.
 - Etapa vigente: version 1.0.0, primera version funcional con ejecucion local y datos ficticios conservados. No es demo ni beta. No desplegar en el VPS por ahora.
-- Alcance inicial: sede principal, estudiantes con entrada, docentes y administrativos con entrada y salida, ambas modalidades QR configurables, tolerancia por rol y carga manual auditada.
-- Incorporar los modulos administrativos de D:/dev_/sistema_asistencia_fym segun la ampliacion autorizada: personas, carreras y horarios, diario, manual, reportes, justificaciones, preplanilla estimada, dispositivos y reglas. Operar con QR; la integracion fisica ZKTeco no esta solicitada. Mantener el ingreso al instituto separado de asistencia a clases y no inferir sanciones academicas.
+- Alcance inicial: sede principal, docentes y administrativos con entrada y salida, ambas modalidades QR configurables, tolerancia por rol y carga manual auditada.
+- Incorporar los modulos administrativos de D:/dev_/sistema_asistencia_fym segun la ampliacion autorizada: personas y horarios laborales, diario, manual, reportes, justificaciones, preplanilla estimada, dispositivos y reglas. Operar con QR; la integracion fisica ZKTeco no esta solicitada. Mantener el ingreso al instituto separado de asistencia a clases y no inferir sanciones academicas.
 - No guardar credenciales en el repositorio.
 
 - Por decisión del usuario, el repositorio no incluye pruebas automatizadas ni configuración Docker; no recrearlas sin solicitud.
-- Las cuentas ficticias locales usan usuario sin puntos y contraseña con primer nombre sin tildes en minúsculas + fym. Mantener credenciales completas fuera de Git.
+- Las cuentas nuevas usan inicial del primer nombre + primer apellido + fym, sin tildes y en minusculas. Ante coincidencia, agregar iniciales de los apellidos restantes antes de fym. Clave inicial: primer nombre + iniciales de apellidos; cambio obligatorio al ingresar, con confirmacion y minimo 8 caracteres. Mantener credenciales completas fuera de Git.
 
 - Documentacion unica de uso, instalacion y arquitectura: README.md. Mantener CONTEXTO_PROYECTO.md aparte para el agente y AGENTS.md para convenciones. Actualizar esos archivos antes de crear guias nuevas que dupliquen informacion.
 

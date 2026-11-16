@@ -1,10 +1,14 @@
 # FyM Pass
 
+El usuario inicial se genera con la inicial del primer nombre, el primer apellido y `fym`, en minúsculas y sin tildes. Si coincide con otra cuenta, se añaden las iniciales de los apellidos restantes antes de `fym`. Una coincidencia adicional requiere revisar los datos con administración. La contraseña inicial combina el primer nombre y las iniciales de los apellidos.
+
+En el primer ingreso es obligatorio establecer una contraseña distinta, de al menos 8 caracteres, y escribirla de nuevo para confirmarla. Hasta completar ese paso, la API bloquea el acceso a los módulos. La migración 0006 incorpora el indicador de cambio pendiente; las nuevas cuentas lo activan automáticamente.
+
 ## Resumen
 
 FyM Pass es un sistema web para registrar y administrar la asistencia de ingreso al Instituto de Educación Superior Tecnológico Finney y Miller. Permite trabajar con carnets y códigos QR, consultar la jornada diaria, organizar personas y horarios, gestionar justificaciones y generar reportes en Excel.
 
-La aplicación incluye un panel administrativo y un espacio personal para estudiantes, docentes y personal administrativo. Puede utilizarse desde el navegador o instalarse como una aplicación web progresiva (PWA).
+La aplicación incluye un panel administrativo y un espacio personal para docentes y personal administrativo. Puede utilizarse desde el navegador o instalarse como una aplicación web progresiva (PWA).
 
 ## Stack de desarrollo
 

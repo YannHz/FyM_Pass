@@ -1,4 +1,5 @@
 import { MenuCuenta } from "./MenuCuenta";
+import { CambiarClaveInicial } from "./CambiarClaveInicial";
 import { EspacioPersonal } from "./EspacioPersonal";
 import { LogoInstitucional, MarcaInstitucional } from "./LogoInstitucional";
 import { InstalarAplicacion } from "./InstalarAplicacion";
@@ -20,6 +21,7 @@ type Usuario = {
   permiso: string;
   sede: string;
   destino: string;
+  debe_cambiar_clave: boolean;
 };
 export function Aplicacion() {
   const [usuario, establecerUsuario] = useState<Usuario | null>(null);
@@ -30,13 +32,21 @@ export function Aplicacion() {
   const [visible, establecerVisible] = useState(false);
   const [error, establecerError] = useState("");
   const [caducada, establecerCaducada] = useState(false);
+  useEffect(() => {
+    const cambiar = () => {
+      establecerUsuario(actual => actual ? { ...actual, debe_cambiar_clave: true } : actual);
+      window.history.replaceState(null, "", "/cambiar-clave");
+    };
+    window.addEventListener("fym-clave-pendiente", cambiar);
+    return () => window.removeEventListener("fym-clave-pendiente", cambiar);
+  }, []);
   function mostrarDestino(datos: Usuario) {
     establecerUsuario(datos);
     if (window.location.pathname !== "/mi-carne")
       window.history.replaceState(
         null,
         "",
-        datos.destino + window.location.hash,
+        datos.debe_cambiar_clave ? "/cambiar-clave" : datos.destino + window.location.hash,
       );
   }
   useEffect(() => {
@@ -141,7 +151,7 @@ export function Aplicacion() {
               <span className="acento-titulo">Finney y Miller.</span>
             </h1>
             <p>
-              El sistema de asistencia para estudiantes, docentes y personal
+              El sistema de asistencia para docentes y personal
               administrativo.
               <br />
               Usa tu carnet virtual y revisa tus registros.
@@ -233,6 +243,8 @@ export function Aplicacion() {
         </main>
       </div>
     );
+  if (usuario.debe_cambiar_clave)
+    return <CambiarClaveInicial alCambiar={mostrarDestino} alCerrar={() => void cerrarSesion()} />;
   const administrativo =
     usuario.permiso !== "personal" && window.location.pathname !== "/mi-carne";
   return (

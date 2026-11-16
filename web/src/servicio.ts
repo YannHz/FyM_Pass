@@ -53,6 +53,8 @@ export async function solicitar(ruta: string, opciones: RequestInit = {}) {
   }
   if (!respuesta.ok) {
     const datos = await respuesta.json().catch(() => ({}));
+    if (respuesta.status === 403 && datos.detail === "Establece tu nueva contraseña para continuar.")
+      window.dispatchEvent(new Event("fym-clave-pendiente"));
     const campos: Record<string, string> = {};
     if (Array.isArray(datos.detail))
       for (const error of datos.detail) {

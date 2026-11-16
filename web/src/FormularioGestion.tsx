@@ -1,4 +1,5 @@
 import { SelectorFecha } from "./SelectorFecha";
+import { ConfiguradorIngreso } from "./ConfiguradorIngreso";
 import { SelectorFiltro } from "./SelectorFiltro";
 import { EditorHorario, type Tramo } from "./EditorHorario";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -34,6 +35,7 @@ export type Formulario = {
   campos: Campo[];
   datos: Registro;
   preparar?: (datos: Registro) => Registro;
+  alGuardar?: (respuesta: Registro, datos: Registro) => void;
 };
 export function FormularioGestion({
   formulario,
@@ -127,6 +129,7 @@ export function FormularioGestion({
         body: JSON.stringify(salida),
       });
       guardado(respuesta.mensaje || "Cambios guardados.");
+      formulario.alGuardar?.(respuesta, datos);
       cerrar();
     } catch (problema) {
       establecerError((problema as Error).message);
@@ -177,7 +180,7 @@ export function FormularioGestion({
     };
     return (
       <div
-        className={`campo ${["textarea", "dias", "tramos"].includes(campo.tipo || "") ? "ancho" : ""}`}
+        className={`campo ${["textarea", "dias", "tramos", "horario-directo"].includes(campo.tipo || "") ? "ancho" : ""}`}
         key={campo.nombre}
       >
         {campo.tipo === "booleano" ? (
@@ -189,6 +192,10 @@ export function FormularioGestion({
             />
             {campo.etiqueta}
           </label>
+        ) : campo.tipo === "horario-directo" ? (
+          <fieldset><legend>{campo.etiqueta}</legend>
+            <ConfiguradorIngreso tramos={datos[campo.nombre] || []} cambiar={valor => cambiar(campo, valor)} />
+          </fieldset>
         ) : campo.tipo === "tramos" ? (
           <fieldset aria-describedby={descripcion}>
             <legend>{campo.etiqueta}</legend>
@@ -279,7 +286,10 @@ export function FormularioGestion({
       cerrar={cerrar}
       bloqueado={ocupado}
       clase={
-        formulario.campos.some((campo) => campo.tipo === "tramos")
+        formulario.campos.some((campo) => campo.tipo === "horario-directo")
+          ? "dialogo-horario dialogo-horario-directo"
+          :
+        formulario.campos.some((campo) => ["tramos", "horario-directo"].includes(campo.tipo || ""))
           ? "dialogo-horario"
           : ""
       }

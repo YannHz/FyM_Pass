@@ -1,10 +1,10 @@
 import { Justificaciones } from "./Justificaciones";
+import { HorariosLaborales } from "./HorariosLaborales";
 import { PersonasCarnets } from "./PersonasCarnets";
 import { ToleranciasReglas } from "./ToleranciasReglas";
 import { ReportesAsistencia } from "./ReportesAsistencia";
 import { PreplanillaDocente } from "./PreplanillaDocente";
 import { MenuCuenta } from "./MenuCuenta";
-import { CarrerasHorarios, type ContextoCarreras } from "./CarrerasHorarios";
 import { RegistroManual } from "./RegistroManual";
 import { SelectorFecha } from "./SelectorFecha";
 import { SelectorFiltro } from "./SelectorFiltro";
@@ -35,7 +35,6 @@ import {
   BadgeDollarSign,
   FileCheck2,
   Users,
-  GraduationCap,
   Settings2,
   LogOut,
   X,
@@ -77,6 +76,10 @@ const navegacion: {
   descripcion: string;
 }[] = [
   {
+    id: "horarios", titulo: "Horarios laborales", icono: CalendarDays,
+    grupo: "Instituto", descripcion: "Organiza la entrada y salida del personal.",
+  },
+  {
     id: "inicio",
     titulo: "Resumen",
     icono: LayoutDashboard,
@@ -104,7 +107,7 @@ const navegacion: {
     icono: PenLine,
     grupo: "Jornada",
     descripcion:
-      "Registra el ingreso de estudiantes que no pueden utilizar su QR.",
+      "Registra el ingreso del personal cuando no puede utilizar su QR.",
   },
   {
     id: "reportes",
@@ -134,14 +137,7 @@ const navegacion: {
     titulo: "Personas y carnets",
     icono: Users,
     grupo: "Instituto",
-    descripcion: "Estudiantes, docentes y personal administrativo.",
-  },
-  {
-    id: "horarios",
-    titulo: "Carreras y horarios",
-    icono: GraduationCap,
-    grupo: "Instituto",
-    descripcion: "Organiza carreras, grupos y jornadas de ingreso.",
+    descripcion: "Docentes y personal administrativo de la institución.",
   },
   {
     id: "reglas",
@@ -473,8 +469,6 @@ export function PanelAdministrativo({
   >();
   const [grupoAbierto, establecerGrupoAbierto] = useState<string | null>(null);
   const [exportando, establecerExportando] = useState(false);
-  const [contextoCarreras, establecerContextoCarreras] =
-    useState<ContextoCarreras>({ carreraId: null, vista: "carreras" });
   const [revision, establecerRevision] = useState(0),
     [formulario, establecerFormulario] = useState<Formulario | null>(null),
     [expediente, establecerExpediente] = useState<Registro | null>(null);
@@ -575,7 +569,7 @@ export function PanelAdministrativo({
     { titulo: "Resumen", icono: LayoutDashboard },
     { titulo: "Jornada", icono: CalendarDays },
     { titulo: "Gestión", icono: BarChart3 },
-    { titulo: "Instituto", icono: GraduationCap },
+    { titulo: "Instituto", icono: Users },
   ];
   function guardado(mensaje: string) {
     establecerAviso(mensaje);
@@ -591,31 +585,19 @@ export function PanelAdministrativo({
         texto: `${persona.nombre} · ${persona.codigo}`,
       })),
   ];
-  function nuevaPersona(persona?: Registro, grupoInicial?: Registro) {
+  function nuevaPersona(persona?: Registro) {
     establecerFormulario({
-      titulo: persona
-        ? "Editar persona y cuenta"
-        : grupoInicial
-          ? "Registrar alumno"
-          : "Registrar persona",
-      accion: persona
-        ? "Guardar cambios"
-        : grupoInicial
-          ? "Agregar alumno"
-          : "Registrar persona",
+      titulo: persona ? "Editar persona y cuenta" : "Registrar persona",
+      accion: persona ? "Guardar cambios" : "Registrar persona",
       ruta: "/api/gestion/personas",
-      aviso:
-        "Estudiantes: selecciona carrera, ciclo y turno; después confirma el horario desde Carreras y horarios. Docentes y administrativos: asigna su horario desde Horarios laborales.",
+      aviso: "La cuenta se genera automáticamente con el nombre y los apellidos. En el primer ingreso deberá establecer una contraseña personal. Asigna su horario desde Horarios laborales.",
       datos: {
         codigo: "",
         nombres: "",
         apellidos: "",
         documento: "",
-        rol_id: grupoInicial
-          ? catalogo.roles.find((rol: Registro) => rol.codigo === "estudiante")
-              .id
-          : catalogo.roles[0].id,
-        grupo_id: grupoInicial?.id || "",
+        rol_id: catalogo.roles[0].id,
+        grupo_id: null,
         activa: true,
         permiso: "personal",
         tarifa_hora: 0,
@@ -629,7 +611,6 @@ export function PanelAdministrativo({
         { nombre: "apellidos", etiqueta: "Apellidos", requerido: true },
         {
           nombre: "rol_id",
-          visible: () => !grupoInicial,
           etiqueta: "Rol institucional",
           tipo: "select",
           requerido: true,
@@ -640,54 +621,10 @@ export function PanelAdministrativo({
           })),
         },
         {
-          nombre: "grupo_id",
-          visible: (valores) =>
-            catalogo.roles.find(
-              (rol: Registro) => rol.id === Number(valores.rol_id),
-            )?.codigo === "estudiante",
-          etiqueta: "Carrera · Ciclo · Turno",
-          tipo: "select",
-          requerido: true,
-          numerico: true,
-          opciones: [
-            { valor: "", texto: "Selecciona carrera, ciclo y turno" },
-            ...catalogo.grupos
-              .filter(
-                (grupo: Registro) =>
-                  grupo.activo || grupo.id === persona?.grupo_id,
-              )
-              .map((grupo: Registro) => ({
-                valor: grupo.id,
-                texto: `${catalogo.carreras.find((carrera: Registro) => carrera.id === grupo.carrera_id)?.nombre} · Ciclo ${grupo.ciclo} · ${grupo.turno}`,
-              })),
-          ],
-        },
-        {
           nombre: "identificador_biometrico",
           etiqueta: "ID biométrico opcional",
           avanzado: true,
           longitudMaxima: 40,
-        },
-        {
-          nombre: "nombre_usuario",
-          etiqueta: "Usuario de acceso",
-          longitudMinima: 3,
-          longitudMaxima: 80,
-          patron: "[a-z0-9_-]{3,80}",
-          ayuda:
-            "Cuenta opcional. Usa letras minúsculas, números, guion o guion bajo, sin puntos.",
-        },
-        {
-          nombre: "clave",
-          etiqueta: persona
-            ? "Nueva contraseña (opcional)"
-            : "Contraseña de la cuenta",
-          tipo: "password",
-          longitudMinima: 6,
-          longitudMaxima: 256,
-          ayuda: persona
-            ? "Mínimo 6 caracteres. Vacío conserva la contraseña actual."
-            : "Opcional: introduce usuario y contraseña para crear el acceso. Mínimo 6 caracteres.",
         },
         {
           nombre: "permiso",
@@ -718,12 +655,7 @@ export function PanelAdministrativo({
       preparar: (valores) => ({
         ...valores,
         documento: valores.documento || null,
-        grupo_id:
-          catalogo.roles.find(
-            (rol: Registro) => rol.id === Number(valores.rol_id),
-          )?.codigo === "estudiante"
-            ? valores.grupo_id || null
-            : null,
+        grupo_id: null,
         horario_id: persona?.horario_id || null,
         identificador_biometrico: valores.identificador_biometrico || null,
         nombre_usuario: valores.nombre_usuario || null,
@@ -773,66 +705,6 @@ export function PanelAdministrativo({
           requerido: true,
         },
       ],
-    });
-  }
-  function nuevaCarrera(valor?: Registro) {
-    establecerFormulario({
-      titulo: valor ? "Editar carrera" : "Registrar carrera",
-      ruta: "/api/gestion/carreras",
-      datos: { codigo: "", nombre: "", activa: true, ...valor },
-      campos: [
-        { nombre: "codigo", etiqueta: "Código", requerido: true },
-        { nombre: "nombre", etiqueta: "Nombre de la carrera", requerido: true },
-        { nombre: "activa", etiqueta: "Carrera activa", tipo: "booleano" },
-      ],
-    });
-  }
-  function nuevoHorario(valor?: Registro) {
-    establecerFormulario({
-      titulo: valor
-        ? "Crear copia de horario laboral"
-        : "Crear horario laboral",
-      ruta: "/api/gestion/horarios",
-      requiereSalida: true,
-      accion: "Crear horario",
-      aviso:
-        "Después de crearlo, selecciona el personal y confirma la fecha de inicio. El historial anterior se conserva.",
-      datos: {
-        nombre: valor ? valor.nombre.slice(0, 92) + " (copia)" : "",
-        tramos: valor
-          ? valor.tramos.map((tramo: Registro) => ({
-              dia_semana: tramo.dia_semana,
-              hora_entrada: tramo.hora_entrada.slice(0, 5),
-              hora_salida: tramo.hora_salida?.slice(0, 5) || null,
-            }))
-          : [0, 1, 2, 3, 4].map((dia) => ({
-              dia_semana: dia,
-              hora_entrada: "08:00",
-              hora_salida: "17:00",
-            })),
-      },
-      campos: [
-        {
-          nombre: "nombre",
-          etiqueta: "Nombre del horario laboral",
-          requerido: true,
-          longitudMaxima: 100,
-        },
-        {
-          nombre: "tramos",
-          etiqueta: "Días, entrada y salida",
-          tipo: "tramos",
-          ayuda:
-            "Incluye entrada y salida en todos los días para poder asignarlo al personal.",
-        },
-      ],
-      preparar: (valores) => ({
-        nombre: valores.nombre,
-        tramos: valores.tramos.map((tramo: Registro) => ({
-          ...tramo,
-          hora_salida: tramo.hora_salida || null,
-        })),
-      }),
     });
   }
   function nuevoDispositivo(valor?: Registro) {
@@ -1383,7 +1255,7 @@ export function PanelAdministrativo({
                       <PenLine />
                       <span>
                         Registrar entrada manual
-                        <small>Para estudiantes sin teléfono o QR</small>
+                        <small>Para personal sin teléfono o QR</small>
                       </span>
                       <ArrowUpRight />
                     </button>
@@ -1597,24 +1469,15 @@ export function PanelAdministrativo({
                 }}
               />
             )}
-            {seccion === "horarios" && catalogo && (
-              <CarrerasHorarios
-                catalogo={catalogo}
-                administrador={administrador}
-                nuevaCarrera={nuevaCarrera}
-                nuevoHorario={nuevoHorario}
-                nuevaPersona={nuevaPersona}
-                guardado={guardado}
-                contexto={contextoCarreras}
-                cambiarContexto={establecerContextoCarreras}
-              />
-            )}
             {seccion === "reglas" && catalogo && (
               <ToleranciasReglas
                 catalogo={catalogo}
                 editar={editarReglas}
                 editarDia={editarDiaNoLectivo}
               />
+            )}
+            {seccion === "horarios" && catalogo && (
+              <HorariosLaborales catalogo={catalogo} administrador={administrador} guardado={guardado} />
             )}
           </div>
         </main>

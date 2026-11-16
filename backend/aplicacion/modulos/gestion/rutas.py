@@ -15,12 +15,8 @@ from .repositorio import RepositorioGestion
 from . import servicios
 from .esquemas import (
     DatosPersona,
-    DatosCarrera,
-    DatosGrupo,
     DatosHorario,
-    DatosUsarHorarioGrupo,
     DatosAsignacionLaboral,
-    DatosAgregarAlumnos,
     DatosManual,
     DatosJustificacion,
     ResolverJustificacion,
@@ -51,36 +47,6 @@ def guardar_persona(
     return servicios.guardar_persona(
         datos=datos, usuario=usuario, repositorio=RepositorioGestion(base)
     )
-
-
-@rutas_gestion.post("/carreras", dependencies=[Depends(validar_peticion)])
-def guardar_carrera(
-    datos: DatosCarrera,
-    usuario: Usuario = Depends(administrador),
-    base: Session = Depends(obtener_base_datos),
-):
-    return servicios.guardar_carrera(
-        datos=datos, usuario=usuario, repositorio=RepositorioGestion(base)
-    )
-
-
-@rutas_gestion.post("/grupos", dependencies=[Depends(validar_peticion)])
-def guardar_grupo(
-    datos: DatosGrupo,
-    usuario: Usuario = Depends(administrador),
-    base: Session = Depends(obtener_base_datos),
-):
-    return servicios.guardar_grupo(
-        datos=datos, usuario=usuario, repositorio=RepositorioGestion(base)
-    )
-
-
-@rutas_gestion.post("/grupos/{identificador}/usar-horario", dependencies=[Depends(validar_peticion)])
-def usar_horario_grupo(
-    identificador: int, datos: DatosUsarHorarioGrupo,
-    usuario: Usuario = Depends(administrador), base: Session = Depends(obtener_base_datos),
-):
-    return servicios.usar_horario_grupo(identificador, datos, usuario, RepositorioGestion(base))
 
 
 @rutas_gestion.post("/horarios", dependencies=[Depends(validar_peticion)])
@@ -324,11 +290,3 @@ def asignar_horario_laboral(
     base: Session = Depends(obtener_base_datos),
 ):
     return servicios.asignar_horario_laboral(datos, usuario, RepositorioGestion(base))
-
-
-@rutas_gestion.post("/grupos/{identificador}/alumnos", dependencies=[Depends(validar_peticion)])
-def agregar_alumnos_grupo(
-    identificador: int, datos: DatosAgregarAlumnos,
-    usuario: Usuario = Depends(administrador), base: Session = Depends(obtener_base_datos),
-):
-    return servicios.agregar_alumnos_grupo(identificador, datos, usuario, RepositorioGestion(base))

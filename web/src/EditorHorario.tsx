@@ -166,8 +166,7 @@ export function EditorHorario({
           Aplicar a {seleccion.length} días
         </button>
         <small>
-          Reemplaza los tramos de los días elegidos. Para estudiantes, conserva
-          solo la entrada.
+          Reemplaza los tramos de los días elegidos con su entrada y salida.
         </small>
         {error && (
           <p className="error-campo" role="alert">

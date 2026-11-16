@@ -31,12 +31,15 @@ from .models import (
     SesionAcceso,
 )
 from .seguridad import generar_hash_clave
+from .compartido.credenciales import credenciales_iniciales
 
 ADMINISTRATIVOS = [
     ("María Elena", "Salazar Rojas", "mariasalazar", "administrador"),
-    ("Jorge Luis", "Mendoza Paredes", "jorgemendoza", "administrador"),
+    ("Ana Isabel", "Mendoza Paredes", "anamendoza", "administrador"),
     ("Rosa Patricia", "Quispe Torres", "rosaquispe", "operador"),
-    ("Carlos Alberto", "Vargas Medina", "carlosvargas", "personal"),
+    ("Carla Beatriz", "Vargas Medina", "carlavargas", "operador"),
+    ("Lucía Fernanda", "Ramos Flores", "luciaramos", "operador"),
+    ("Elena Victoria", "Castro Pérez", "elenacastro", "operador"),
 ]
 DOCENTES = [
     ("Luis Fernando", "Huamán Castro", "luishuaman"),
@@ -45,33 +48,11 @@ DOCENTES = [
     ("Patricia Isabel", "Díaz Herrera", "patriciadiaz"),
     ("José Antonio", "Pérez Valdivia", "joseperez"),
     ("Claudia Milagros", "Sánchez León", "claudiasanchez"),
+    ("Roberto Carlos", "Vega Torres", "robertovega"),
+    ("Diana Mercedes", "Flores Rojas", "dianaflores"),
+    ("Javier Alonso", "Medina Quispe", "javiermedina"),
+    ("Teresa Beatriz", "Castro Salas", "teresacastro"),
 ]
-ESTUDIANTES = [
-    ("Diego Alejandro", "Flores Quispe", "diegoflores"),
-    ("Valeria Fernanda", "Torres Huamán", "valeriatorres"),
-    ("Sebastián Andrés", "Rojas Medina", "sebastianrojas"),
-    ("Camila Lucía", "Castro Vargas", "camilacastro"),
-    ("Rodrigo Gabriel", "Mamani Paredes", "rodrigomamani"),
-    ("Luciana Sofía", "Mendoza Ramos", "lucianamendoza"),
-    ("Adrián Mateo", "García Salas", "adriangarcia"),
-    ("Daniela Alejandra", "Vega Cárdenas", "danielavega"),
-    ("Joaquín Alonso", "Huamán Ríos", "joaquinhuaman"),
-    ("Renata Isabel", "Pérez Flores", "renataperez"),
-    ("Nicolás Eduardo", "Salazar Díaz", "nicolassalazar"),
-    ("Antonella María", "Quispe León", "antonellaquispe"),
-    ("Gabriel Esteban", "Sánchez Torres", "gabrielsanchez"),
-    ("Mariana Belén", "Ramos Gutiérrez", "marianaramos"),
-    ("Leonardo Daniel", "Vargas Rojas", "leonardovargas"),
-    ("Ariana Valentina", "Medina Castro", "arianamedina"),
-    ("Thiago Sebastián", "Paredes Vega", "thiagoparedes"),
-    ("Ximena Nicole", "Cárdenas Salas", "ximenacardenas"),
-]
-
-
-def clave_inicial(nombres):
-    nombre = unicodedata.normalize("NFKD", nombres.split()[0].lower())
-    return nombre.encode("ascii", "ignore").decode() + "fym"
-
 
 def reemplazar_personas(base):
     # conserva los catalogos y retira primero las referencias a las cuentas antiguas
@@ -111,21 +92,21 @@ def crear_personas_iniciales(base, inicio):
             "Primero aplica las migraciones para crear la sede y los roles."
         )
     roles = {rol.codigo: rol.id for rol in base.scalars(select(Rol))}
-    if not {"administrativo", "docente", "estudiante"}.issubset(roles):
+    if not {"administrativo", "docente"}.issubset(roles):
         raise RuntimeError("Faltan los roles institucionales requeridos.")
     horarios = {}
     for codigo, nombre, entrada, salida in [
         ("administracion", "Administración · 08:00 a 17:00", 8, 17),
         ("docentes_manana", "Docentes · mañana 08:00 a 13:00", 8, 13),
         ("docentes_tarde", "Docentes · tarde 14:00 a 19:00", 14, 19),
-        ("alumnos_manana", "Estudiantes · ingreso mañana 08:00", 8, None),
-        ("alumnos_tarde", "Estudiantes · ingreso tarde 14:00", 14, None),
     ]:
         horario = base.scalar(
             select(Horario).where(Horario.sede_id == sede.id, Horario.nombre == nombre)
         )
         if horario is None:
-            horario = Horario(nombre=nombre, sede_id=sede.id)
+            horario = Horario(nombre=nombre, sede_id=sede.id,
+                tipo_personal="docente" if codigo.startswith("docentes") else "administrativo",
+                turno="tarde" if codigo.endswith("tarde") else "manana" if codigo.startswith("docentes") else "completo")
             base.add(horario)
             base.flush()
             for dia in range(5):
@@ -138,38 +119,6 @@ def crear_personas_iniciales(base, inicio):
                     )
                 )
         horarios[codigo] = horario.id
-    grupos = []
-    for codigo, nombre in [
-        ("DSI", "Desarrollo de Sistemas de Información"),
-        ("CON", "Contabilidad"),
-        ("ADM", "Administración de Empresas"),
-    ]:
-        carrera = base.scalar(
-            select(Carrera).where(Carrera.sede_id == sede.id, Carrera.codigo == codigo)
-        )
-        if carrera is None:
-            carrera = Carrera(sede_id=sede.id, nombre=nombre, codigo=codigo)
-            base.add(carrera)
-            base.flush()
-        for turno, sufijo in [("Mañana", "M"), ("Tarde", "T")]:
-            horario = horarios["alumnos_manana" if sufijo == "M" else "alumnos_tarde"]
-            codigo_grupo = f"{codigo}-I-{sufijo}"
-            grupo = base.scalar(
-                select(Grupo).where(
-                    Grupo.carrera_id == carrera.id, Grupo.codigo == codigo_grupo
-                )
-            )
-            if grupo is None:
-                grupo = Grupo(
-                    carrera_id=carrera.id,
-                    horario_id=horario,
-                    codigo=codigo_grupo,
-                    ciclo="I",
-                    turno=turno,
-                )
-                base.add(grupo)
-                base.flush()
-            grupos.append((grupo.id, horario, codigo_grupo))
     for rol in roles.values():
         if (
             base.scalar(
@@ -198,7 +147,8 @@ def crear_personas_iniciales(base, inicio):
         )
         base.add(persona)
         base.flush()
-        clave = clave_inicial(nombres)
+        usuario, clave = credenciales_iniciales(nombres, apellidos,
+            lambda nombre: base.scalar(select(Usuario.id).where(Usuario.nombre_usuario == nombre)) is None)
         base.add(
             Usuario(
                 persona_id=persona.id,
@@ -241,19 +191,7 @@ def crear_personas_iniciales(base, inicio):
             "docente",
             "personal",
             f"DOC-{numero:04}",
-            horarios["docentes_manana" if numero <= 3 else "docentes_tarde"],
-        )
-    for numero, (nombres, apellidos, usuario) in enumerate(ESTUDIANTES, 1):
-        grupo, horario, _ = grupos[(numero - 1) // 3]
-        agregar(
-            nombres,
-            apellidos,
-            usuario,
-            "estudiante",
-            "personal",
-            f"EST-{inicio.year}-{numero:04}",
-            horario,
-            grupo,
+            horarios["docentes_manana" if numero <= 5 else "docentes_tarde"],
         )
     base.flush()
     return cuentas
@@ -325,7 +263,7 @@ def guardar_listado(cuentas, archivo, respaldo, inicio):
         f"Usuario: {configuracion.bd_usuario}",
         f"Contraseña: {configuracion.bd_clave}",
         "",
-        "Horarios ficticios de lunes a viernes; administración 08–17, docentes 08–13 o 14–19, estudiantes ingreso 08 o 14. Inicio de vigencia: "
+        "Horarios ficticios de lunes a viernes; administración 08–17 y docentes 08–13 o 14–19. Inicio de vigencia: "
         + inicio.isoformat(),
         "",
         "Respaldo anterior: " + str(respaldo),
@@ -436,8 +374,12 @@ def actualizar_accesos_iniciales(confirmar_base):
             cuentas = []
             for (usuario, persona, rol), nombre in zip(filas, usuarios):
                 usuario.nombre_usuario = nombre
-                clave = clave_inicial(persona.nombres)
+                nombre, clave = credenciales_iniciales(persona.nombres, persona.apellidos,
+                    lambda candidato: base.scalar(select(Usuario.id).where(
+                        Usuario.nombre_usuario == candidato, Usuario.id != usuario.id)) is None)
+                usuario.nombre_usuario = nombre
                 usuario.clave_hash = generar_hash_clave(clave)
+                usuario.debe_cambiar_clave = True
                 cuentas.append(
                     {
                         "nombre": f"{persona.nombres} {persona.apellidos}",

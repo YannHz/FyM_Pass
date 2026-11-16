@@ -67,12 +67,12 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
       window.removeEventListener("fym-sesion-renovada", renovar);
     };
   }, []);
-  const estudiantes = (catalogo.personas as Registro[]).filter(
-    (dato) => dato.activa && dato.rol_codigo === "estudiante",
+  const personal = (catalogo.personas as Registro[]).filter(
+    (dato) => dato.activa,
   );
   const palabras = normalizar(buscar).split(/\s+/).filter(Boolean);
   const coincidencias = palabras.length
-    ? estudiantes.filter((dato) =>
+    ? personal.filter((dato) =>
         palabras.every((palabra) =>
           normalizar(`${dato.nombre} ${dato.codigo}`).includes(palabra),
         ),
@@ -82,12 +82,6 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
   const estadoPersona = persona
     ? filas.find((fila) => fila.persona_id === persona.id)
     : null;
-  function grupo(dato: Registro) {
-    return (
-      catalogo.grupos.find((grupo: Registro) => grupo.id === dato.grupo_id)
-        ?.codigo || "Sin grupo"
-    );
-  }
   function seleccionar(dato: Registro) {
     establecerPersona(dato);
     establecerError("");
@@ -136,7 +130,7 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
         <div className="cabecera">
           <div>
             <h2 id="titulo-registro-manual">Registrar asistencia</h2>
-            <p>Busca al estudiante y registra su entrada de hoy.</p>
+            <p>Busca a una persona y registra su entrada de hoy.</p>
           </div>
           <span className="etiqueta">
             {new Intl.DateTimeFormat("es-PE", {
@@ -148,13 +142,13 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
         <label className="buscador buscador-manual">
           <Search size={20} aria-hidden="true" />
           <span className="solo-lector">
-            Buscar estudiante por nombre, apellido o código
+            Buscar persona por nombre, apellido o código
           </span>
           <input
             ref={buscador}
             type="search"
             autoComplete="off"
-            placeholder="Buscar estudiante por nombre, apellido o código"
+            placeholder="Buscar persona por nombre, apellido o código"
             value={buscar}
             disabled={ocupado}
             onChange={(evento) => {
@@ -188,9 +182,9 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
             <p className="nota" role="status">
               {coincidencias.length
                 ? `${coincidencias.length} ${coincidencias.length === 1 ? "coincidencia" : "coincidencias"}${coincidencias.length > 8 ? " · Mostrando las primeras 8; afina la búsqueda." : ""}`
-                : "No se encontraron estudiantes activos con esos datos."}
+                : "No se encontraron personas activas con esos datos."}
             </p>
-            <ul aria-label="Estudiantes encontrados">
+            <ul aria-label="Personas encontradas">
               {coincidencias.slice(0, 8).map((dato) => {
                 const estado = filas.find(
                   (fila) => fila.persona_id === dato.id,
@@ -209,7 +203,7 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
                       <span>
                         <strong>{dato.nombre}</strong>
                         <small>
-                          {dato.codigo} · {grupo(dato)}
+                          {dato.codigo} · {dato.rol}
                         </small>
                       </span>
                       <Insignia
@@ -230,13 +224,13 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
         )}
         {!persona && !palabras.length && !confirmacion && (
           <p className="nota ayuda-manual">
-            Escribe un nombre, apellido o código para encontrar al estudiante.
+            Escribe un nombre, apellido o código para encontrar a una persona.
           </p>
         )}
         {persona && (
           <article
             className="seleccion-manual"
-            aria-label="Estudiante seleccionado"
+            aria-label="Persona seleccionada"
           >
             <div className="identidad-manual">
               <span className="avatar-manual" aria-hidden="true">
@@ -245,7 +239,7 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
               <div>
                 <h3>{persona.nombre}</h3>
                 <p>
-                  {persona.codigo} · {grupo(persona)}
+                  {persona.codigo} · {persona.rol}
                 </p>
               </div>
             </div>
@@ -253,7 +247,7 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
               {registrado
                 ? `Entrada registrada hoy a las ${horaLocal(estadoPersona!.entrada)}.`
                 : vencido
-                  ? "El plazo de ingreso terminó. El estudiante debe acudir a administración para justificar su falta."
+                  ? "El plazo de ingreso terminó. Revisa la justificación desde administración."
                   : "Sin ingreso registrado hoy. La entrada se guardará con la hora actual del servidor."}
             </p>
             {estadoPersona && <Insignia texto={estadoPersona.estado} />}
@@ -281,7 +275,7 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
                   buscador.current?.focus();
                 }}
               >
-                Buscar otro estudiante
+                Buscar otra persona
               </button>
             </div>
           </article>
@@ -305,7 +299,7 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
             )}
             columnas={[
               {
-                titulo: "Estudiante",
+                titulo: "Persona",
                 mostrar: (fila) => (
                   <>
                     {fila.nombre}

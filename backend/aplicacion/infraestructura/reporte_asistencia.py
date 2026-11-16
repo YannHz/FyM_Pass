@@ -126,7 +126,7 @@ def construir_reporte_asistencia(filas, desde=None, hasta=None, filtros=""):
     for (mes, rol), registros in sorted(meses_roles.items()):
         anio, numero_mes = map(int, mes.split("-"))
         dias = monthrange(anio, numero_mes)[1]
-        etiqueta_rol = {"estudiante": "Estudiantes", "docente": "Docentes", "administrativo": "Administrativos"}.get(rol, "Personal")
+        etiqueta_rol = {"docente": "Docentes", "administrativo": "Administrativos"}.get(rol, "Personal")
         hoja = libro.create_sheet(f"{mes} {etiqueta_rol}"[:31])
         preparar_hoja(hoja, [6, 22, 38, 26] + [4.5] * dias)
         titulo(hoja, f"{etiqueta_rol} · {MESES[numero_mes]} {anio}", periodo, dias + 4)
@@ -135,7 +135,7 @@ def construir_reporte_asistencia(filas, desde=None, hasta=None, filtros=""):
         hoja.cell(4, 1).font = Font(size=10, color="444444")
         hoja.cell(4, 1).alignment = Alignment(wrap_text=True)
         hoja.row_dimensions[4].height = 30
-        cabecera(hoja, 6, ["N.º", "ID institucional", "Nombre completo", "Carrera / ciclo / turno" if rol == "estudiante" else "Rol"] + list(range(1, dias + 1)))
+        cabecera(hoja, 6, ["N.º", "ID institucional", "Nombre completo", "Rol"] + list(range(1, dias + 1)))
         for dia in range(1, dias + 1):
             celda = hoja.cell(7, dia + 4, ["L", "M", "X", "J", "V", "S", "D"][date(anio, numero_mes, dia).weekday()])
             celda.fill = PatternFill("solid", fgColor="EDF3FF")
@@ -145,7 +145,7 @@ def construir_reporte_asistencia(filas, desde=None, hasta=None, filtros=""):
             grupos[registro["persona_id"]][int(registro["fecha"][-2:])] = registro
         for numero, mapa in enumerate(sorted(grupos.values(), key=lambda datos: next(iter(datos.values()))["nombre"]), 1):
             persona = next(iter(mapa.values()))
-            grupo = f'{persona.get("carrera", "")} · {persona.get("ciclo", "")} · {persona.get("turno", "")}' if rol == "estudiante" else persona["rol"]
+            grupo = persona["rol"]
             fila_excel = numero + 7
             for indice, valor in enumerate([numero, persona["codigo"], persona["nombre"], grupo], 1):
                 celda = hoja.cell(fila_excel, indice, texto_seguro(valor))
@@ -164,8 +164,8 @@ def construir_reporte_asistencia(filas, desde=None, hasta=None, filtros=""):
         hoja.print_title_rows = "1:7"
         hoja.print_area = f"A1:{get_column_letter(dias + 4)}{hoja.max_row}"
     diaria = libro.create_sheet("Detalle diario")
-    campos = ["codigo", "nombre", "rol", "fecha", "entrada", "salida", "estado", "minutos_tardanza", "carrera", "ciclo", "turno", "horas_programadas", "horas_permanencia"]
-    tabla(diaria, filas, campos, ["ID institucional", "Nombre completo", "Rol", "Fecha", "Entrada", "Salida", "Estado", "Tardanza (min)", "Carrera", "Ciclo", "Turno", "Horas programadas", "Permanencia (h)"], periodo)
+    campos = ["codigo", "nombre", "rol", "fecha", "entrada", "salida", "estado", "minutos_tardanza", "horas_programadas", "horas_permanencia"]
+    tabla(diaria, filas, campos, ["ID institucional", "Nombre completo", "Rol", "Fecha", "Entrada", "Salida", "Estado", "Tardanza (min)", "Horas programadas", "Permanencia (h)"], periodo)
     archivo = BytesIO()
     libro.save(archivo)
     archivo.seek(0)

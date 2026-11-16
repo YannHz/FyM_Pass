@@ -30,9 +30,14 @@ def limitar_intentos(request: Request):
 
 
 def obtener_usuario(request: Request, base: Session = Depends(obtener_base_datos)):
-    return servicios.obtener_usuario(
+    usuario = servicios.obtener_usuario(
         request.cookies.get("fym_sesion"), RepositorioAcceso(base)
     )
+    if usuario.debe_cambiar_clave and request.url.path not in (
+        "/api/acceso/actual", "/api/acceso/cambiar-clave", "/api/acceso/cerrar",
+    ):
+        raise HTTPException(403, "Establece tu nueva contraseña para continuar.")
+    return usuario
 
 
 def obtener_encargado(usuario: Usuario = Depends(obtener_usuario)):

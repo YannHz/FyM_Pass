@@ -42,6 +42,7 @@ def describir_usuario(repositorio: RepositorioAcceso, usuario: Usuario):
     }
     return {
         "id": usuario.id,
+        "debe_cambiar_clave": usuario.debe_cambiar_clave,
         "usuario": usuario.nombre_usuario,
         "iniciales": iniciales_persona(persona),
         "nombre": f"{persona.nombres} {persona.apellidos}",
@@ -59,7 +60,15 @@ def obtener_usuario(token: str, repositorio: RepositorioAcceso):
     usuario = repositorio.obtener_usuario(sesion.usuario_id) if sesion else None
     persona = repositorio.obtener_persona(usuario.persona_id) if usuario else None
     sede = repositorio.obtener_sede(persona.sede_id) if persona else None
-    if not usuario or not usuario.activo or (not persona.activa) or (not sede.activa):
+    rol = repositorio.obtener_rol(persona.rol_id) if persona else None
+    if (
+        not usuario
+        or not usuario.activo
+        or (not persona.activa)
+        or (not sede.activa)
+        or (not rol)
+        or rol.codigo not in ("docente", "administrativo")
+    ):
         raise ErrorAplicacion(401, "La sesión expiró o la cuenta no está disponible.")
     return usuario
 
@@ -79,12 +88,15 @@ def iniciar_sesion(
     )
     persona = repositorio.obtener_persona(usuario.persona_id) if usuario else None
     sede = repositorio.obtener_sede(persona.sede_id) if persona else None
+    rol = repositorio.obtener_rol(persona.rol_id) if persona else None
     if (
         not correcta
         or not usuario
         or (not usuario.activo)
         or (not persona.activa)
         or (not sede.activa)
+        or (not rol)
+        or rol.codigo not in ("docente", "administrativo")
     ):
         raise ErrorAplicacion(401, "Usuario o contraseña incorrectos.")
     if anterior:
@@ -105,6 +117,25 @@ def iniciar_sesion(
 
 def consultar_sesion(usuario: Usuario = None, repositorio: RepositorioAcceso = None):
     return describir_usuario(repositorio, usuario)
+
+
+def cambiar_clave(datos, usuario, repositorio):
+    if datos.clave != datos.confirmacion:
+        raise ErrorAplicacion(422, "Las contraseñas no coinciden.")
+    if not datos.clave.strip():
+        raise ErrorAplicacion(422, "La contraseña no puede contener solo espacios.")
+    if verificar_clave(datos.clave, usuario.clave_hash):
+        raise ErrorAplicacion(422, "Elige una contraseña diferente de la inicial.")
+    usuario.clave_hash = generar_hash_clave(datos.clave)
+    usuario.debe_cambiar_clave = False
+    repositorio.revocar_sesiones(usuario)
+    token = secrets.token_urlsafe(32)
+    repositorio.agregar(SesionAcceso(
+        usuario_id=usuario.id, token_hash=resumir_token(token),
+        vence_en=obtener_hora_utc() + timedelta(hours=8),
+    ))
+    repositorio.confirmar()
+    return describir_usuario(repositorio, usuario), token
 
 
 def cerrar_sesion(token: str, repositorio: RepositorioAcceso):

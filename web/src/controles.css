@@ -63,7 +63,7 @@ body:has(dialog[open]) {
   padding-bottom: 4px;
 }
 
-.dialogo:not(.dialogo-agregar-alumnos):not(.expediente) {
+.dialogo:not(.expediente) {
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
 }

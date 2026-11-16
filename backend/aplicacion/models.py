@@ -53,6 +53,7 @@ class Usuario(Base):
     persona_id: Mapped[int] = mapped_column(ForeignKey("personas.id", ondelete="RESTRICT"), unique=True)
     nombre_usuario: Mapped[str] = mapped_column(String(80), unique=True)
     clave_hash: Mapped[str] = mapped_column(String(255))
+    debe_cambiar_clave: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
     permiso: Mapped[str] = mapped_column(String(20), default="personal")
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
     __table_args__ = (CheckConstraint("permiso IN ('personal','operador','administrador')", name="ck_usuarios_permiso"),)
@@ -62,6 +63,9 @@ class Horario(Base):
     __tablename__ = "horarios"
     id: Mapped[int] = mapped_column(primary_key=True)
     nombre: Mapped[str] = mapped_column(String(100))
+    tipo_personal: Mapped[str] = mapped_column(String(20), default="administrativo", server_default="administrativo")
+    carrera: Mapped[str | None] = mapped_column(String(120))
+    turno: Mapped[str] = mapped_column(String(20), default="manana", server_default="manana")
     sede_id: Mapped[int] = mapped_column(ForeignKey("sedes.id", ondelete="RESTRICT"))
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
 

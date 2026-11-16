@@ -5,13 +5,11 @@ import { consultar } from "./servicio";
 import { resumenHorario } from "./EditorHorario";
 
 export function ConfirmarHorario({
-  grupo,
   horario,
   personas,
   cerrar,
   guardado,
 }: {
-  grupo?: Registro;
   horario: Registro;
   personas: Registro[];
   cerrar: () => void;
@@ -43,17 +41,13 @@ export function ConfirmarHorario({
     establecerError("");
     try {
       const respuesta = await consultar(
-        grupo
-          ? `/api/gestion/grupos/${grupo.id}/usar-horario`
-          : "/api/gestion/horarios/asignar-personal",
+        "/api/gestion/horarios/asignar-personal",
         {
           method: "POST",
           body: JSON.stringify({
             persona_ids: seleccion,
             vigente_desde: fecha,
-            ...(grupo
-              ? { horario_esperado: horario.id }
-              : { horario_id: horario.id }),
+            horario_id: horario.id,
           }),
         },
       );
@@ -68,14 +62,15 @@ export function ConfirmarHorario({
   }
   return (
     <Dialogo
-      titulo={grupo ? "Confirmar horario del grupo" : "Asignar horario laboral"}
+      titulo="Asignar horario laboral"
       cerrar={cerrar}
       bloqueado={ocupado}
+      clase="dialogo-asignacion-laboral"
     >
       <div className="revision-excepciones">
-        <p>
+        <p className="identidad-horario-asignacion">
           <strong>
-            {grupo ? `Ciclo ${grupo.ciclo} · ${grupo.turno}` : horario.nombre}
+            {horario.nombre}
           </strong>
         </p>
         <p className="resumen-grupo">{resumenHorario(horario.tramos)}</p>
@@ -117,7 +112,7 @@ export function ConfirmarHorario({
             </button>
             <div className="lista-excepciones">
               {visibles.map((persona) => (
-                <label key={persona.id}>
+                <label key={persona.id} data-seleccionado={seleccion.includes(persona.id)}>
                   <input
                     type="checkbox"
                     checked={seleccion.includes(persona.id)}

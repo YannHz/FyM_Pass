@@ -6,6 +6,10 @@ from ...compartido.repositorio import RepositorioBase
 
 class RepositorioAcceso(RepositorioBase):
 
+    def revocar_sesiones(self, usuario):
+        for sesion in self._base.scalars(select(SesionAcceso).where(SesionAcceso.usuario_id == usuario.id)).all():
+            self._base.delete(sesion)
+
     def sesion_vigente(self, hora_consulta, token):
         return self._base.scalar(
             select(SesionAcceso).where(

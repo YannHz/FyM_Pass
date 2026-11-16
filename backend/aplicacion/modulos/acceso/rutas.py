@@ -11,9 +11,21 @@ from ...compartido.dependencias import (
 )
 from .repositorio import RepositorioAcceso
 from . import servicios
-from .esquemas import Credenciales
+from .esquemas import Credenciales, CambioClave
 
 rutas = APIRouter(prefix="/api", tags=["Acceso"])
+
+
+@rutas.post("/acceso/cambiar-clave", dependencies=[Depends(validar_peticion), Depends(limitar_intentos)])
+def cambiar_clave(datos: CambioClave, respuesta: Response,
+                  usuario: Usuario = Depends(obtener_usuario),
+                  base: Session = Depends(obtener_base_datos)):
+    identidad, token = servicios.cambiar_clave(datos, usuario, RepositorioAcceso(base))
+    respuesta.set_cookie("fym_sesion", token, httponly=True,
+                        secure=configuracion.cookie_segura, samesite="strict",
+                        max_age=28800, path="/api")
+    respuesta.headers["Cache-Control"] = "no-store"
+    return identidad
 
 
 @rutas.post(

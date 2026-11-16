@@ -48,9 +48,6 @@ export function ReportesAsistencia({
   const [buscar, cambiarBuscar] = useState(""),
     [rol, cambiarRol] = useState(""),
     [estado, cambiarEstado] = useState(""),
-    [carrera, cambiarCarrera] = useState(""),
-    [ciclo, cambiarCiclo] = useState(""),
-    [turno, cambiarTurno] = useState(""),
     [incluir, cambiarIncluir] = useState(false);
   const [exportando, cambiarExportando] = useState(false),
     [errorExportacion, cambiarErrorExportacion] = useState(""),
@@ -64,23 +61,6 @@ export function ReportesAsistencia({
     revision,
   );
   const filas: Registro[] = Array.isArray(datos) ? datos : [];
-  const estudiantes = rol === "estudiante";
-  const grupos = catalogo.grupos.filter(
-    (grupo: Registro) =>
-      !carrera ||
-      catalogo.carreras.find((valor: Registro) => valor.id === grupo.carrera_id)
-        ?.nombre === carrera,
-  );
-  const ciclos = [
-    ...new Set<string>(grupos.map((grupo: Registro) => String(grupo.ciclo))),
-  ].sort();
-  const turnos = [
-    ...new Set<string>(
-      grupos
-        .filter((grupo: Registro) => !ciclo || grupo.ciclo === ciclo)
-        .map((grupo: Registro) => String(grupo.turno)),
-    ),
-  ];
   const visibles = filas
     .filter(
       (fila) =>
@@ -90,11 +70,7 @@ export function ReportesAsistencia({
             .toLowerCase()
             .includes(buscar.toLowerCase())) &&
         (!rol || fila.rol_codigo === rol) &&
-        (!estado || fila.estado === estado) &&
-        (!estudiantes ||
-          ((!carrera || fila.carrera === carrera) &&
-            (!ciclo || fila.ciclo === ciclo) &&
-            (!turno || fila.turno === turno))),
+        (!estado || fila.estado === estado),
     )
     .sort(
       (a, b) =>
@@ -119,9 +95,6 @@ export function ReportesAsistencia({
     cambiarBuscar("");
     cambiarRol("");
     cambiarEstado("");
-    cambiarCarrera("");
-    cambiarCiclo("");
-    cambiarTurno("");
     cambiarIncluir(false);
   }
   async function exportar() {
@@ -137,9 +110,6 @@ export function ReportesAsistencia({
         buscar,
         rol,
         estado,
-        carrera: estudiantes ? carrera : "",
-        ciclo: estudiantes ? ciclo : "",
-        turno: estudiantes ? turno : "",
         incluir_no_programados: String(incluir),
       });
       const respuesta = await solicitar("/api/gestion/exportar?" + parametros, {
@@ -260,9 +230,6 @@ export function ReportesAsistencia({
             valor={rol}
             alCambiar={(valor) => {
               cambiarRol(valor);
-              cambiarCarrera("");
-              cambiarCiclo("");
-              cambiarTurno("");
             }}
             opciones={[
               { valor: "", texto: "Todos los roles" },
@@ -291,50 +258,6 @@ export function ReportesAsistencia({
               ].map((valor) => ({ valor, texto: valor })),
             ]}
           />
-          {estudiantes && (
-            <>
-              <SelectorFiltro
-                etiqueta="Carrera del estudiante"
-                valor={carrera}
-                alCambiar={(valor) => {
-                  cambiarCarrera(valor);
-                  cambiarCiclo("");
-                  cambiarTurno("");
-                }}
-                opciones={[
-                  { valor: "", texto: "Todas las carreras" },
-                  ...catalogo.carreras.map((dato: Registro) => ({
-                    valor: dato.nombre,
-                    texto: dato.nombre,
-                  })),
-                ]}
-              />
-              <SelectorFiltro
-                etiqueta="Ciclo del estudiante"
-                valor={ciclo}
-                alCambiar={(valor) => {
-                  cambiarCiclo(valor);
-                  cambiarTurno("");
-                }}
-                opciones={[
-                  { valor: "", texto: "Todos los ciclos" },
-                  ...ciclos.map((valor) => ({
-                    valor,
-                    texto: `Ciclo ${valor}`,
-                  })),
-                ]}
-              />
-              <SelectorFiltro
-                etiqueta="Turno del estudiante"
-                valor={turno}
-                alCambiar={cambiarTurno}
-                opciones={[
-                  { valor: "", texto: "Todos los turnos" },
-                  ...turnos.map((valor) => ({ valor, texto: valor })),
-                ]}
-              />
-            </>
-          )}
         </div>
         <div className="opciones-reportes">
           <label>
@@ -352,9 +275,6 @@ export function ReportesAsistencia({
           {(buscar ||
             rol ||
             estado ||
-            carrera ||
-            ciclo ||
-            turno ||
             incluir) && (
             <button className="boton-texto" onClick={limpiar}>
               Limpiar filtros
@@ -410,16 +330,9 @@ export function ReportesAsistencia({
                   ),
                 },
                 {
-                  titulo: "Rol / grupo",
+                  titulo: "Rol",
                   mostrar: (fila) => (
-                    <>
-                      {fila.rol}
-                      {fila.rol_codigo === "estudiante" && fila.grupo && (
-                        <small>
-                          {fila.carrera} · Ciclo {fila.ciclo} · {fila.turno}
-                        </small>
-                      )}
-                    </>
+                    fila.rol
                   ),
                 },
                 { titulo: "Fecha", mostrar: (fila) => fechaBreve(fila.fecha) },

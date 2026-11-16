@@ -40,6 +40,9 @@ class DatosTramo(Formulario):
 
 class DatosHorario(Formulario):
     nombre: str = Field(min_length=1, max_length=100)
+    tipo_personal: Literal["docente", "administrativo"]
+    carrera: str | None = Field(default=None, max_length=120)
+    turno: Literal["manana", "tarde", "noche", "completo"]
     tramos: list[DatosTramo] = Field(min_length=1, max_length=14)
 
 
@@ -107,12 +110,3 @@ class DatosDispositivo(Formulario):
     direccion_ip: str | None = None
     puerto: int = Field(default=4370, ge=1, le=65535)
     activo: bool = True
-
-
-class DatosAlumnoExistente(Formulario):
-    persona_id: int = Field(gt=0)
-    grupo_esperado: int | None
-
-
-class DatosAgregarAlumnos(Formulario):
-    alumnos: list[DatosAlumnoExistente] = Field(min_length=1, max_length=500)

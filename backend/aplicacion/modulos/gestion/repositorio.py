@@ -23,6 +23,9 @@ from ...compartido.repositorio import RepositorioBase
 
 class RepositorioGestion(RepositorioBase):
 
+    def usuario_disponible(self, nombre):
+        return self._base.scalar(select(Usuario.id).where(Usuario.nombre_usuario == nombre)) is None
+
     def revocar_sesiones(self, cuenta):
         # cierra todas las sesiones del usuario tras cambiar la contrasena
         sesiones = self._base.scalars(

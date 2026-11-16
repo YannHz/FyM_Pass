@@ -3,6 +3,7 @@ import { Copy, RefreshCw, Server, Database, Smartphone } from "lucide-react";
 type Resultado = {
   estado?: string;
   motor?: string;
+  restringido?: boolean;
 };
 async function comprobar(ruta: string): Promise<Resultado | null> {
   try {
@@ -10,6 +11,8 @@ async function comprobar(ruta: string): Promise<Resultado | null> {
       credentials: "same-origin",
       signal: AbortSignal.timeout(5000),
     });
+    if (respuesta.status === 401 || respuesta.status === 403)
+      return { restringido: true };
     if (!respuesta.ok) return null;
     return await respuesta.json();
   } catch {
@@ -114,6 +117,8 @@ export function DiagnosticoConexion() {
           >
             {!hora
               ? "Sin comprobar"
+              : base?.restringido
+                ? "Acceso restringido"
               : disponible
                 ? "Disponible"
                 : api
@@ -128,7 +133,10 @@ export function DiagnosticoConexion() {
           marcados requieren conexión.
         </p>
       )}
-      {api && hora && !disponible && (
+      {api && hora && base?.restringido && (
+        <p>Completa el cambio de contraseña o vuelve a iniciar sesión para comprobar la base de datos.</p>
+      )}
+      {api && hora && !disponible && !base?.restringido && (
         <p>
           La API responde, pero la base no está disponible. Revisa el servicio
           de base de datos y la configuración del servidor.
