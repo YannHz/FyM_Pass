@@ -47,6 +47,7 @@ export function FormularioGestion({
   guardado: (mensaje: string) => void;
 }) {
   const [datos, establecerDatos] = useState<Registro>({ ...formulario.datos });
+  const [accesoTemporal, cambiarAccesoTemporal] = useState<Registro | null>(null);
   const [errores, establecerErrores] = useState<Record<string, string>>({});
   const [error, establecerError] = useState(""),
     [ocupado, establecerOcupado] = useState(false);
@@ -130,7 +131,8 @@ export function FormularioGestion({
       });
       guardado(respuesta.mensaje || "Cambios guardados.");
       formulario.alGuardar?.(respuesta, datos);
-      cerrar();
+      if (respuesta.clave_temporal) cambiarAccesoTemporal(respuesta);
+      else cerrar();
     } catch (problema) {
       establecerError((problema as Error).message);
       if (problema instanceof ErrorSolicitud) {
@@ -280,6 +282,13 @@ export function FormularioGestion({
       </div>
     );
   }
+  if (accesoTemporal) return <Dialogo titulo="Entrega el acceso temporal" cerrar={cerrar}>
+    <div className="formulario-gestion"><p>Se muestra una sola vez. Entrégalo personalmente; vence en 48 horas y exige cambio de contraseña.</p>
+      <p>Usuario: <code>{accesoTemporal.usuario}</code></p>
+      <p>Contraseña temporal: <code>{accesoTemporal.clave_temporal}</code></p>
+      <p>Vence: {new Date(accesoTemporal.vence).toLocaleString("es-PE")}</p>
+      <button onClick={cerrar}>Ya entregué el acceso</button>
+    </div></Dialogo>;
   return (
     <Dialogo
       titulo={formulario.titulo}

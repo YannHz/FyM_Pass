@@ -1,74 +1,108 @@
 # Contexto para continuar FyM Pass
 
-Actualizado: 21 de octubre de 2026 · **versión 1.0.0, primera versión funcional**.
+Actualizado: **18 de noviembre de 2026**, America/Lima. Versión funcional **1.0.0**, ejecución local.
 
-## Estado y ubicación
+## Punto de entrada y límites
 
-Proyecto activo: `D:/dev_/FyM_Pass`. La versión ya no es demo ni beta; sigue ejecutándose localmente y conserva personas ficticias y marcados realizados por el usuario. No sustituir ni reiniciar datos por cambiar de versión. No se ha desplegado en VPS. Administración prevé operación en línea; Hostinger/Contabo fueron evaluados, sin elección ni dominio confirmados.
+Proyecto activo en esta computadora: `D:/dev_/FyM_Pass`. En otro equipo utilizar la ruta del clon. Leer `AGENTS.md`, este documento y `README.md`; comprobar Git antes de editar. El README es la documentación única de instalación, uso, arquitectura y base de datos. No crear guías duplicadas.
 
-`README.md` es la documentación única de instalación, uso, arquitectura y limitaciones. `AGENTS.md` conserva instrucciones para agentes. No recrear docs/ ni una guía por cada cambio. Las credenciales locales son documentos privados, no documentación pública duplicada.
+No desplegar, hacer commit/push, regenerar usuarios, restaurar una base ni crear asistencias artificiales sin solicitud. No trasladar secretos a documentación. El usuario publicará el código en GitHub; las claves y la base local están excluidas. No convertir una verificación histórica en una prueba nueva.
 
-La referencia `D:/dev_/sistema_asistencia_fym` no es el proyecto activo. Flutter fue descartado; el prototipo `D:/dev_/FyM_Pass_Movil` queda fuera de este repositorio. Todo el acceso es React/PWA para PC, Android e iPhone.
+Flutter fue descartado. La app es React/PWA para escritorio y teléfonos. La referencia antigua y el prototipo móvil no son el proyecto activo.
 
-## Tecnología y arquitectura
+## Alcance vigente
 
-React 19, TypeScript, Vite 6, Tailwind, Lucide, QRCode y ZXing. FastAPI, SQLAlchemy/PyMySQL, Alembic y MySQL/MariaDB de XAMPP. Excel con openpyxl. Migración vigente **0005**. Versiones: `web/package.json`, su lock y `backend/aplicacion/version.py`; se eliminó el version.ts sin uso.
+- Solo docentes y personal administrativo; secretarias con permiso operador, administradoras con permiso administrador y docentes con acceso personal.
+- Una entrada y una salida general al instituto por día, incluso si hay varias carreras o turnos. Sin asistencia por clase, sanciones académicas ni múltiples reingresos.
+- Sede principal. Sin sincronización multisede ni cola offline de marcados.
+- QR dinámico del puesto y cámara para leer el carné, habilitables por separado. Firma HMAC, rotación del puesto cada 30 s, UUID e idempotencia.
+- Carné fijo hasta revocación; renovación administrativa ya implementada. La firma/rotación no prueban presencia física frente a copia o reenvío. No prometer que evitan completamente la suplantación.
+- Puesto con token en sessionStorage, duración máxima 16 h. Cerrar su ventana no lo pausa.
+- Confirmación de tres segundos, iniciales, nombre, rol, movimiento, hora, resultado y sonido. No hay carga actual de fotos; el acceso histórico está autenticado.
+- Registro manual limitado a entradas de hoy con hora del servidor; no permite carga retroactiva ni faltas ya evaluadas.
+- Reportes Excel, justificaciones y preplanilla docente estimada, sin pagos ni descuentos automáticos.
+- ZKTeco es solo inventario/configuración; no hay integración física.
 
-Monolito modular por capas: `acceso`, `asistencia`, `gestion`, `diagnostico`. Rutas/esquemas → servicios → repositorios → base. SQL en repositorios, no en rutas ni servicios HTTP. Servicios coordinan transacciones y errores de aplicación; modelos ORM compartidos. No es arquitectura hexagonal ni microservicios.
+## Horarios e interfaz
 
-`PanelAdministrativo.tsx` compone módulos; `PersonasCarnets`, `ReportesAsistencia`, `PreplanillaDocente`, `Justificaciones` y `ToleranciasReglas` contienen sus interfaces. `FormularioGestion` reutiliza formularios; `componentesGestion` reúne tablas, diálogos y `useDatos`; `servicio` centraliza solicitudes/errores/sesión. `SelectorFiltro`, `SelectorFecha`, `SelectorHora` y `usarPanelFlotante` comparten controles y superposición dentro de diálogos. `controles.css` complementa el CSS general.
+Horarios separados visualmente entre Docentes y Personal administrativo. Los docentes se organizan por carrera y turno; administrativos por turno. El nombre se genera automáticamente. La carrera se guarda como texto en horarios, sin reabrir el flujo de alumnado.
 
-## Comportamiento aprobado
+Activar días y definir entrada/salida directamente; asignación posterior con fecha. “Configurar horario” sustituye a “Crear copia”. Si ya hay asignaciones, guardar crea otra versión; nunca modificar el horario histórico en sitio. Los horarios docentes heredados sin carrera deben configurarse, no asignarles carreras inventadas.
 
-- Horarios separados visualmente entre docentes y personal administrativo. Migracion 0007: tipo_personal, carrera y turno en horarios. Para docentes se pide carrera; el nombre se genera con carrera/administracion y turno. Asignacion restringida al rol del horario. Sigue una sola entrada/salida general diaria; carrera y turno organizan el horario, no generan marcados adicionales.
+Conservar temas, contraste, selección y modificaciones visuales del usuario. Días no seleccionados neutros, seleccionados azules. Menús y selectores flotantes dentro de diálogos; horas visibles en 12 h y valores HH:mm. Aviso de actualización PWA flotante inferior, con recarga manual.
 
-- Acceso actualizado: nuevas cuentas generadas por nombre y apellidos, con cambio obligatorio de clave inicial. La migracion 0006 agrega debe_cambiar_clave. El servidor restringe las sesiones pendientes a consultar identidad, cambiar clave y cerrar sesion. La base nueva y su carga inicial quedan pendientes por decision del usuario.
+## Acceso y seguridad
 
-- Sede principal. Docentes y personal administrativo: entrada y salida. No hay reingresos ni jornadas nocturnas. Asistencia al instituto, sin inferir asistencia a clases o sanciones.
-- Permisos distintos del rol: administrador, operador y personal. Inicio de sesión sin selector de rol. Sesión con cookie; no guardar tokens de cuenta en localStorage. Caducidad abre renovación de la misma cuenta y no reenvía escrituras automáticamente.
-- QR dinámico y cámara del puesto habilitables por separado. Rotación cada 30 segundos, firma HMAC, bloqueo de duplicados y UUID de evento. Puesto limitado a 16 horas, token en sessionStorage. Cerrar ventana no pausa el puesto. Decisión de diseño 31/10/2026: el QR del carné es fijo a propósito porque es la identidad de la persona; solo rota el QR del puesto para impedir marcar asistencia con una foto tomada a otro. Revocar un carné perdido queda como mejora futura, sin rotación periódica.
-- Confirmación de tres segundos con nombre, iniciales, rol, movimiento, hora y resultado. Verde puntual, ámbar tardanza, azul otros aceptados/repetidos y rojo rechazo. Audio siempre activo tras la interacción requerida por el navegador. Cámara centrada con video cover y visor cuadrado en teléfono.
-- Solo iniciales: primera letra del primer nombre y del primer apellido. Sin carga de fotos. Se retiró el procesador de fotos y Pillow; la ruta de archivos históricos se conserva para compatibilidad. No borrar archivos históricos ni columna de datos por limpieza visual.
-- Asistencia diaria solo muestra personas con marcados; orden por movimiento reciente, actualización al confirmar y cambio visual de jornada en Lima. Historial intacto. Avisos por long polling en memoria de un proceso, compatibles con Quick Tunnel; recuperación/reintento de conexión.
-- Personas: tarjetas por rol, búsqueda por nombre/ID/documento/usuario, estado/cuenta, iniciales y asignación legible. Sin fecha de consulta ni duplicado de seguimiento. Nombre abre expediente; Carnet abre directamente su pestaña. Expediente con calendario, carnet y horario; sin impresión ni citación.
-- Docentes y administrativos: horario laboral con entrada y salida por día, selección y confirmación con vigencia. La migración 0005 completa asignaciones heredadas sin borrar historial. No revertirla eliminando asignaciones.
-- Reportes: periodos rápidos, rango hasta 62 días, resumen de registros (no personas únicas), fechas recientes, filtros por rol y expediente del intervalo. No programado oculto por defecto. Exportación respeta todos los filtros y páginas.
-- Excel de asistencia: consolidado por persona, cuadrícula por mes/rol y detalle diario en Lima. Azul institucional, leyenda A/T/F/J/P y celdas neutras para días fuera del resultado. No se copió información del colegio de referencia. Preplanilla tiene su exportación independiente.
-- Preplanilla: minutos/días de tardanza como principal, observaciones, detalle diario y estimación secundaria sin descuentos automáticos. Sin tarifa se muestra explícitamente; tardanza justificada no suma al total pendiente.
-- Justificaciones: faltas después del límite y tardanzas llegan a una bandeja del periodo. Buscar por nombre/ID, elegir día/tipo y registrar motivo/referencia; no crear solicitudes automáticamente. Operadores registran, administradores aprueban/observan. Previene duplicados pendientes/aprobados y casos obsoletos. Se consulta con avisos de marcado y cada 30 segundos para detectar vencimientos sin escaneos.
-- Reglas: edición separada de tolerancias, marcado y seguimiento. Días no lectivos con próxima fecha, búsqueda y filtro desde hoy/todas; edición del motivo conserva la fecha. Las tolerancias se aplican desde hoy y los resultados de marcados previos se mantienen.
-- Mi carnet/Mis asistencias: navegación visible, calendario mensual con deslizamiento, flechas y selector mes/año integrado. Fechas futuras deshabilitadas, detalle al elegir día y salida según rol. La API deriva la persona de la sesión; no acepta otra identidad.
+- Usuario: inicial del primer nombre + primer apellido + fym, sin tildes y minúsculas. Ante coincidencia, iniciales de apellidos restantes; no añadir números por iniciativa propia.
+- Clave temporal aleatoria, vigencia 48 h, cambio obligatorio. La contraseña personal es de **8–256 caracteres**, confirmada, con rechazo de patrones débiles y datos personales. El mínimo de ocho fue una decisión explícita posterior al refuerzo inicial.
+- Hash Argon2id; scrypt heredado se actualiza al ingresar correctamente.
+- MFA TOTP obligatorio para administradoras y opcional para otros perfiles. Secretos cifrados, prevención de reutilización y ocho códigos de recuperación de un uso. La configuración se confirma desde el autenticador del usuario; no activarlo en su nombre.
+- Sesión absoluta de ocho horas, inactividad 30 min, aviso previo y cierre de otras sesiones. Las consultas en segundo plano no cuentan como interacción.
+- Límites persistentes por cuenta/IP, esperas progresivas y auditoría. No volver al contador solo en memoria.
+- Cuenta → Seguridad de mi cuenta agrupa gestión propia; administradoras ven restablecimientos, revocación de carné, auditoría paginada y alertas por rechazos QR.
+- Cambiar/restablecer clave revoca sesiones; un restablecimiento web conserva MFA. Recuperación completa de administradora solo con herramienta local y verificación de identidad.
+- No permitir cambios administrativos de contraseña por el formulario Personas: utilizar el acceso temporal.
+- HTTP y cookie Secure quedaron fuera del cambio por solicitud explícita. No habilitarlos ni presentar su configuración actual como producción validada.
 
-## Diseño
+## Arquitectura y archivos
 
-Seguir apple-design según AGENTS.md. Azul claro `#003397`; logo oscuro `#3B82F6`, controles oscuros `#4F8BFF`, logo sobre azul `#E3EDFF`. Transparencias y degradado suave, temas persistentes y preferencias de accesibilidad. No reintroducir barras azul noche rechazadas.
+Monolito modular: acceso, asistencia, gestion, diagnostico; rutas/esquemas → servicios → repositorios → ORM. Mantener SQL en repositorios.
 
-Logo SVG transparente mediante máscara CSS; no poner fondo blanco. Icono PWA: escudo azul sobre `#0B1220`, sin texto, PNG 180/192/512 y maskable con margen. SVG para logos/QR; WebP para imágenes rasterizadas nuevas; PNG por compatibilidad de instalación.
+Backend: FastAPI, SQLAlchemy, PyMySQL, Alembic, Argon2id, PyOTP, cryptography, openpyxl. Frontend: React 19, TypeScript, Vite 6, Tailwind, Lucide, qrcode.react, ZXing.
 
-Login aprobado: «Tu ingreso a / Finney y Miller.», etiqueta ISTP FINNEY & MILLER, descripción del sistema y «Usa tu carnet virtual y revisa tus registros.», tarjeta «Tu ingreso, / a un escaneo.». Sin pie sede/versión; instalación centrada bajo ayuda de cuenta. PC horizontal/vertical conserva dos columnas con contenido centrado verticalmente y textos a la izquierda; móvil según ancho, no por orientación.
+Archivos clave:
+- `backend/aplicacion/models.py`, `seguridad.py`, `config.py`, `database.py`.
+- `modulos/acceso/rutas_seguridad.py`, `repositorio_seguridad.py`, `repositorio_proteccion.py`, `proteccion.py`.
+- `compartido/dependencias.py`: permisos y restricciones de cambio/MFA.
+- `administrar_seguridad.py`: preparación local, cifrado, respaldos y recuperación.
+- `HorariosLaborales.tsx`, `ConfiguradorIngreso.tsx`, `ConfirmarHorario.tsx`.
+- `CentroSeguridad.tsx`, `CambiarClaveInicial.tsx`, `App.tsx`.
+- `FormularioGestion.tsx`: formularios y entrega de acceso temporal.
 
-Hover conserva fondo/contraste del control; no aplicar una regla genérica que pinte todos los botones de azul sólido. Conservar selección de tarjetas, pestañas y calendarios. Menús flotantes no expanden formularios y se mantienen dentro de la pantalla; hora visible en 12 h con AM/PM e interna HH:mm.
+## Base y datos locales
 
-## Datos privados y ejecución
+Revisión Alembic vigente: **0008**. Hay 23 tablas de aplicación más alembic_version. El README contiene el mapa completo y las ocho migraciones. Migraciones/modelos son el esquema publicable; no subir un volcado de la instalación.
 
-Base local nueva creada el 14/11/2026 con migraciones hasta 0006. Tiene 16 personas ficticias: 4 secretarias (administrativo/operador), 2 administradoras (administrativo/administrador) y 10 docentes (docente/personal), todas con cambio de clave obligatorio. Accesos vigentes en backend/archivos/accesos_iniciales_20261114.local.md, ignorado por Git. Los listados privados anteriores son historicos. Horarios de lunes a viernes: administracion 08–17, cinco docentes 08–13 y cinco 14–19. Sin asistencias precargadas.
+0006: cambio de contraseña; 0007: carrera/turno/tipo en horarios; 0008: MFA, vigencia temporal, actividad de sesión, eventos de seguridad y límites. Carreras/grupos/rol estudiantil históricos se conservan por compatibilidad sin exponer flujo de alumnado. No borrar tablas por limpieza visual.
 
-Conjunto inicial: personal administrativo y docentes ficticios. No inventar registros ni afirmar que la base está vacía. Credenciales completas en `README_CREDENCIALES.local.md`, `backend/.credenciales_beta.local.txt` y `.env`; no imprimirlas ni publicarlas. Mantener `CLAVE_QR`.
+Base local creada el 14/11/2026, migrada el 18/11. Se conservaron 16 personas ficticias: 4 secretarias, 2 administradoras y 10 docentes. Se invalidaron los 15 accesos temporales predecibles pendientes; se conservó la contraseña personal ya establecida de una administradora. Debe configurar su MFA y emitir nuevos temporales. No asumir que ya lo hizo: verificar estado solo si es necesario, sin imprimir secretos.
 
-`aplicacion.datos_iniciales` prepara una base local explícitamente y exige respaldo. No se ejecuta al arrancar. `--actualizar-accesos` conserva personas/asistencias, revoca sesiones y pausa puestos. `--reemplazar-usuarios` es destructivo y necesita solicitud expresa. No combinar opciones. El nombre histórico del archivo privado de credenciales se conserva.
+Horarios ficticios: administración lunes–viernes 08–17, cinco docentes 08–13 y cinco 14–19. No generar marcados para demostrar indicadores.
 
-`iniciar.sh` es el único lanzador pedido: se invoca directamente desde fish, necesita Bash. Windows usa Uvicorn/Vite manual. MySQL 3306, API 8000, desarrollo 5173, Preview 4173. No duplicar procesos ni iniciar MySQL sobre otro activo. Compilar web antes de probar PWA/túnel. No iniciar un túnel salvo solicitud; URL temporal cambia al recrearlo. No registrar una URL efímera como configuración permanente.
+## Secretos, copias y permisos
 
-`.registros/`, entornos, dependencias, dist, credenciales y `backend/archivos/` están ignorados. Conservar base, respaldos y archivos privados. No recorrer junctions al borrar cachés. `web/dist` es la compilación vigente que usa Preview, no un archivo de prueba. Las cachés pueden regenerarse al ejecutar.
+Todo lo siguiente es privado, no se transfiere por Git:
+- backend/.env.
+- backend/archivos/seguridad/clave_mfa.key y clave_respaldos.key.
+- administracion_bd.local.json y migraciones_bd.local.json.
+- Respaldos/listados .fernet, fotos y registros locales.
 
-## Pendientes reales
+MariaDB escucha en localhost. La cuenta operativa tiene SELECT/INSERT/UPDATE/DELETE sobre fym_pass; la cuenta separada fym_migracion aplica Alembic con FYM_MIGRACION=1. Root protegido; phpMyAdmin local utiliza autenticación por cookie.
 
-Aplicado el 01/11/2026 (puntos criticos de auditoria): C1 service worker con skipWaiting/claim y aviso "FyM Pass se actualizó" con recarga manual; C2 guardar_persona revoca todas las sesiones de la cuenta al cambiar clave (RepositorioGestion.revocar_sesiones); C3 config PROXY_CONFIABLE para limitar_intentos con X-Forwarded-For, middleware de encabezados de seguridad, avisos de arranque por CLAVE_QR/COOKIE_SEGURA y /api/salud/base-datos ahora exige encargado. README actualizado con estas variables. Pendiente de auditoria a futuro: indices de auditoria/justificaciones/sesiones (migracion 0006, sesiones nunca purgadas), backoff del puesto, stale-while-revalidate en useDatos.
+Los listados y volcados históricos fueron cifrados y los originales de texto retirados después de verificar la copia. Son recuperables con la clave de respaldos. No se han purgado definitivamente. Conservar claves separadas de una copia externa; no descifrarlas para “documentar” el proyecto.
 
-VPS/dominio/HTTPS permanente, respaldo externo y restauración validada, múltiples sedes, recuperación de contraseñas, canal compartido de avisos/límites para varios procesos, validación de carga y dispositivos. Sin cola offline; ante caída, registro externo para revisión. El manual actual solo admite entradas de hoy con hora del servidor y rechaza faltas ya evaluadas; no prometer carga retroactiva que aún no existe.
+La herramienta preparar es administrativa y modifica permisos SQL; no ejecutarla como comprobación rutinaria. Las claves se generan manualmente con administrar_seguridad claves y nunca se reemplazan al arrancar.
 
-No hay suites automatizadas ni Docker por decisión del usuario. Se verificaron compilación, flujos locales y escrituras con rollback sin datos de prueba persistidos. No confundir compilación con validación física de cámara/iOS ni de despliegue público. No hacer commit ni push sin solicitud.
+## Arranque y transferencia
 
-Limpieza 1.0.0: la revision automatica rechazo el borrado. Se uso retirada reversible a `.registros/retirados_1_0_0/` para documentacion duplicada, fuentes obsoletas, caches propios de Python y artefactos de verificaciones. El archivo privado sigue ignorado y no forma parte de Git; no afirmar que se purgo del disco. Los respaldos SQL, datos, credenciales y archivos historicos se conservaron. La API local se arranco con -B para evitar nuevos bytecodes; otros procesos pueden regenerar caches.
+iniciar.sh sigue siendo el lanzador Bash de Linux/macOS y se invoca como ./iniciar.sh desde fish. Windows mantiene comandos manuales del README; Vite debe ejecutarse con carpeta de trabajo web.
 
-Lanzador actualizado el 22/10/2026: `./iniciar.sh` compila e inicia Preview en 4173 y API en localhost:8000; `--desarrollo` usa 5173, `--sin-compilar` reutiliza dist completo y vigente, `--sin-navegador` evita apertura. `--red auto|IP` publica la web en IP privada sin exponer directamente la API. Comprueba entorno, base, revision Alembic y versiones sin migrar ni sembrar datos; termina grupos de procesos propios con Ctrl+C. Requiere Linux/macOS con Bash/Python y se invoca directamente desde fish. `.gitattributes` conserva LF. El README ya refleja este arranque e incluye la guia del tunel HTTPS de Cloudflare. No se ejecuto un arranque real bajo Linux desde este equipo Windows; se verificaron compilacion, comprobaciones y cierre con simulaciones en memoria.
+Normal: Preview 4173 y API localhost:8000. --desarrollo usa 5173 y no acepta --red. --sin-compilar verifica dist completo/vigente. --red auto|IP expone solo la web compilada. --sin-navegador evita apertura. Ctrl+C termina solo procesos propios; no detiene MySQL.
+
+El lanzador revisa dependencias, claves de seguridad, conexión SQL y revisión de migraciones, compila y verifica la API directa y por proxy. No usa la ruta autenticada de salud de base para arrancar. No migra, instala, siembra datos ni genera claves automáticamente.
+
+Al clonar se requiere preparar una base nueva o restaurar privadamente una existente, instalar dependencias y aportar claves. El README distingue bootstrap de migraciones posteriores y explica el listado cifrado de datos iniciales.
+
+## Evidencia y pendientes
+
+Verificado en Windows: compilación web, compatibilidad scrypt/Argon2id, política de ocho caracteres, MFA, recuperación de un uso, restablecimiento, permisos, inactividad y límites persistentes en bases aisladas de MariaDB. También se restauró un respaldo de 16 cuentas en una base aislada que después se retiró. Alembic check no detectó diferencias; pip check sin conflictos.
+
+No hay suites versionadas ni Docker por decisión del usuario. No confundir comprobaciones aisladas con pruebas de carga, cámara, iOS o pentest completo. No se ha ejecutado un arranque nativo completo bajo Linux/macOS; validar allí después de transferir.
+
+Auditoría del 18/11: Python lock y frontend de producción sin avisos conocidos; npm completo conserva GHSA-fc5q-39xc-vjpf en picomatch 4.0.7 de desarrollo, sin parche disponible en el registro consultado. No degradar Vite ni ocultar el aviso.
+
+Pendientes: VPS/dominio/despliegue estable, copia externa y custodia, pruebas de carga y dispositivos, varios procesos para avisos de asistencia y múltiples sedes. La restauración local ya se verificó; no listarla como inexistente.
+
+## Antes de publicar
+
+Revisar git status, diff y archivos versionados. Excluir .env, claves, JSON locales, datos SQL, respaldos incluso cifrados, fotos, logs, entornos, node_modules y dist. .gitignore no sanea el historial; si se descubre un secreto previamente publicado, acordar rotación y retirada. No hacer commit/push por iniciativa propia.

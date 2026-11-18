@@ -1,4 +1,5 @@
 from .asignaciones import asignar_desde, hoy_sede, validar_fecha
+from ..acceso import proteccion
 from ...compartido.credenciales import credenciales_iniciales
 from ...compartido.avisos_asistencia import notificar_marcado
 from ...compartido.identidad import iniciales_persona
@@ -225,6 +226,9 @@ def guardar_persona(
         if datos.id
         else Persona(sede_id=sede)
     )
+    cuenta_previa = repositorio.cuenta_de_persona(persona) if datos.id else None
+    if cuenta_previa and cuenta_previa.permiso != datos.permiso:
+        proteccion.reautenticar(repositorio._base, usuario, datos.actual, datos.codigo_verificacion)
     campos = datos.model_dump(
         exclude={
             "id",
@@ -233,6 +237,8 @@ def guardar_persona(
             "nombre_usuario",
             "clave",
             "permiso",
+            "actual",
+            "codigo_verificacion",
         }
     )
     for campo, valor in campos.items():
@@ -246,6 +252,10 @@ def guardar_persona(
         repositorio.revertir()
         raise ErrorAplicacion(409, "El código, documento o ID biométrico ya existe.")
     cuenta = repositorio.cuenta_de_persona(persona)
+    clave_entrega = None
+    if cuenta and cuenta.permiso != datos.permiso:
+        proteccion.registrar(repositorio._base, "permiso_modificado", usuario, f"Persona: {persona.id}. Permiso: {datos.permiso}")
+        proteccion.revocar(repositorio._base, cuenta)
     if persona.id == usuario.persona_id and (
         not persona.activa or datos.permiso != "administrador"
     ):
@@ -263,15 +273,16 @@ def guardar_persona(
         nombre_inicial, clave_inicial = credenciales_iniciales(
             persona.nombres, persona.apellidos, repositorio.usuario_disponible)
         cuenta = Usuario(persona_id=persona.id, nombre_usuario=nombre_inicial,
-                         clave_hash=generar_hash_clave(clave_inicial), debe_cambiar_clave=True)
+                         clave_hash=generar_hash_clave(clave_inicial), debe_cambiar_clave=True,
+                         clave_temporal_vence=obtener_hora_utc() + timedelta(hours=48))
+        clave_entrega = clave_inicial
     cuenta.permiso = datos.permiso
+    if cuenta.activo and not datos.activa:
+        proteccion.revocar(repositorio._base, cuenta)
+        proteccion.registrar(repositorio._base, "cuenta_desactivada", usuario, f"Persona: {persona.id}")
     cuenta.activo = datos.activa
     if datos.clave:
-        # una clave nueva invalida las sesiones abiertas de la cuenta
-        if cuenta.id:
-            repositorio.revocar_sesiones(cuenta)
-        cuenta.clave_hash = generar_hash_clave(datos.clave)
-        cuenta.debe_cambiar_clave = True
+        raise ErrorAplicacion(422, "Utiliza Generar acceso temporal desde Seguridad para restablecer una contraseña.")
     repositorio.agregar(cuenta)
     actual = repositorio.asignacion_vigente(hoy_sede(repositorio, sede), persona)
     if datos.horario_id != (actual.horario_id if actual else None):
@@ -291,7 +302,9 @@ def guardar_persona(
         {campo: valor for campo, valor in campos.items() if campo != "documento"},
     )
     confirmar(repositorio)
-    return {"id": persona.id, "mensaje": "Persona guardada."}
+    return {"id": persona.id, "mensaje": "Persona guardada.",
+            **({"usuario": cuenta.nombre_usuario, "clave_temporal": clave_entrega,
+                "vence": cuenta.clave_temporal_vence.replace(tzinfo=timezone.utc).isoformat()} if clave_entrega else {})}
 
 
 

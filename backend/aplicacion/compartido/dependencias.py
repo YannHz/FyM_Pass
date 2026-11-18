@@ -17,7 +17,7 @@ def validar_peticion(request: Request):
         raise HTTPException(403, "Solicitud no permitida.")
 
 
-def limitar_intentos(request: Request):
+async def limitar_intentos(request: Request, base: Session = Depends(obtener_base_datos)):
     # detras de un proxy confiable la IP real llega en X-Forwarded-For
     if configuracion.proxy_confiable:
         reenviadas = request.headers.get("x-forwarded-for", "")
@@ -26,7 +26,18 @@ def limitar_intentos(request: Request):
         )
     else:
         cliente = request.client.host if request.client else "local"
-    servicios.limitar_intentos(cliente)
+    from ..modulos.acceso.proteccion import limitar
+    import json
+    try:
+        datos = json.loads(await request.body())
+    except (ValueError, TypeError):
+        datos = {}
+    usuario = str(datos.get("usuario", "")).strip().lower()[:80] if isinstance(datos, dict) else ""
+    claves = [("ip", cliente, 120)]
+    if usuario:
+        claves.append(("cuenta", usuario, 10))
+    from starlette.concurrency import run_in_threadpool
+    await run_in_threadpool(limitar, base, claves)
 
 
 def obtener_usuario(request: Request, base: Session = Depends(obtener_base_datos)):
@@ -34,9 +45,14 @@ def obtener_usuario(request: Request, base: Session = Depends(obtener_base_datos
         request.cookies.get("fym_sesion"), RepositorioAcceso(base)
     )
     if usuario.debe_cambiar_clave and request.url.path not in (
-        "/api/acceso/actual", "/api/acceso/cambiar-clave", "/api/acceso/cerrar",
+        "/api/acceso/actual", "/api/acceso/cambiar-clave", "/api/acceso/cerrar", "/api/seguridad/actividad",
     ):
         raise HTTPException(403, "Establece tu nueva contraseña para continuar.")
+    if usuario.permiso == "administrador" and not usuario.mfa_secreto and not (
+        request.url.path.startswith("/api/seguridad/mfa/") or request.url.path in (
+            "/api/acceso/actual", "/api/acceso/cambiar-clave", "/api/acceso/cerrar", "/api/seguridad/actividad")
+    ):
+        raise HTTPException(403, "Configura la verificación en dos pasos para continuar.")
     return usuario
 
 

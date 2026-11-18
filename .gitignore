@@ -52,6 +52,8 @@ backend/archivos/
 *.key
 *.p12
 *.pfx
+*.fernet
+*.local.json
 
 # archivos temporales del editor y del sistema
 .DS_Store

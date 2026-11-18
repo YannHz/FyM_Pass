@@ -6,6 +6,9 @@ from ...compartido.repositorio import RepositorioBase
 
 class RepositorioAcceso(RepositorioBase):
 
+    def bloquear_usuario(self, usuario):
+        return self._base.scalar(select(Usuario).where(Usuario.id == usuario.id).with_for_update().execution_options(populate_existing=True))
+
     def revocar_sesiones(self, usuario):
         for sesion in self._base.scalars(select(SesionAcceso).where(SesionAcceso.usuario_id == usuario.id)).all():
             self._base.delete(sesion)

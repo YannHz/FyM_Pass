@@ -210,8 +210,11 @@ def registrar_lectura(
     tipo = None
     rol = repositorio.obtener_rol(persona.rol_id) if persona else None
     if persona and (not rechazo):
+        cuenta = repositorio.cuenta_persona(persona)
         if not persona.activa:
             rechazo = "Persona desactivada"
+        elif cuenta and not cuenta.activo:
+            rechazo = "Cuenta desactivada"
         elif rol.codigo not in ("docente", "administrativo"):
             rechazo = "Este sistema registra únicamente asistencia del personal."
         elif persona.sede_id != punto.sede_id:
@@ -286,6 +289,10 @@ def registrar_lectura(
         aceptado=not bool(rechazo),
     )
     repositorio.agregar(evento)
+    if rechazo:
+        from ..acceso.proteccion import registrar
+        registrar(repositorio._base, "qr_rechazado", None,
+                  f"Puesto: {puesto.id}. Persona: {persona.id if persona else 'no identificada'}. {rechazo}", sede_id=punto.sede_id)
     sede_id = persona.sede_id if marcado else None
     repositorio.confirmar()
     if sede_id is not None:

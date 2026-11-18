@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import os
@@ -155,6 +155,7 @@ def crear_personas_iniciales(base, inicio):
                 nombre_usuario=usuario,
                 clave_hash=generar_hash_clave(clave),
                 permiso=permiso,
+                clave_temporal_vence=datetime.now(ZoneInfo("UTC")).replace(tzinfo=None) + timedelta(hours=48),
             )
         )
         base.add(
@@ -198,48 +199,21 @@ def crear_personas_iniciales(base, inicio):
 
 
 def respaldar_base(carpeta):
-    ejecutable = shutil.which("mariadb-dump") or shutil.which("mysqldump")
-    if not ejecutable and Path("C:/xampp/mysql/bin/mysqldump.exe").exists():
-        ejecutable = "C:/xampp/mysql/bin/mysqldump.exe"
-    if not ejecutable:
-        raise RuntimeError(
-            "Instala mysqldump o mariadb-dump antes de reemplazar los usuarios."
-        )
-    destino = carpeta / "antes_de_beta.sql"
-    entorno = dict(os.environ, MYSQL_PWD=configuracion.bd_clave)
-    resultado = subprocess.run(
-        [
-            ejecutable,
-            "--host",
-            configuracion.bd_host,
-            "--port",
-            str(configuracion.bd_puerto),
-            "--user",
-            configuracion.bd_usuario,
-            "--single-transaction",
-            "--skip-lock-tables",
-            "--hex-blob",
-            "--result-file",
-            str(destino),
-            configuracion.bd_nombre,
-        ],
-        env=entorno,
-        capture_output=True,
-    )
-    if resultado.returncode or not destino.exists() or destino.stat().st_size == 0:
-        raise RuntimeError(
-            "No se pudo completar el respaldo. No se modificaron los datos."
-        )
-    return destino
+    from .administrar_seguridad import conexion_admin, respaldo, claves
+    claves()
+    with conexion_admin() as conexion:
+        return respaldo(conexion)
 
 
 def guardar_listado(cuentas, archivo, respaldo, inicio):
+    from .administrar_seguridad import proteger, carpeta
+    from cryptography.fernet import Fernet
     lineas = [
         "# Accesos privados · FyM Pass",
         "",
         "Personas completamente ficticias para pruebas. No publicar este archivo.",
         "",
-        f"Versión: {VERSION}. Usuarios sin puntos. Contraseña: primer nombre en minúsculas sin tildes + fym.",
+        f"Versión: {VERSION}. Contraseñas temporales aleatorias de 48 horas; cambio obligatorio al ingresar.",
         "",
         "| Persona | Usuario | Contraseña | Rol | Permiso |",
         "| --- | --- | --- | --- | --- |",
@@ -261,14 +235,16 @@ def guardar_listado(cuentas, archivo, respaldo, inicio):
         f"Puerto: {configuracion.bd_puerto}",
         f"Base: {configuracion.bd_nombre}",
         f"Usuario: {configuracion.bd_usuario}",
-        f"Contraseña: {configuracion.bd_clave}",
+        "Credenciales de base: consultar la configuración privada protegida.",
         "",
         "Horarios ficticios de lunes a viernes; administración 08–17 y docentes 08–13 o 14–19. Inicio de vigencia: "
         + inicio.isoformat(),
         "",
         "Respaldo anterior: " + str(respaldo),
     ]
-    archivo.write_text("\n".join(lineas) + "\n", encoding="utf-8")
+    destino = archivo.with_name(archivo.name + ".fernet")
+    destino.write_bytes(Fernet((carpeta / "clave_respaldos.key").read_bytes()).encrypt(("\n".join(lineas) + "\n").encode()))
+    proteger(destino)
 
 
 def preparar_datos_iniciales(reemplazar=False, confirmar_base=""):
@@ -305,20 +281,11 @@ def preparar_datos_iniciales(reemplazar=False, confirmar_base=""):
                 reemplazar_personas(base)
             cuentas = crear_personas_iniciales(base, momento.date())
             guardar_listado(cuentas, archivo, respaldo, momento.date())
-        # conserva una copia recuperable incluso si falla la escritura del acceso rapido
-        shutil.copy2(archivo, raiz / "README_CREDENCIALES.local.md")
-        (raiz / "backend/.credenciales_beta.local.txt").write_text(
-            "\n".join(f"{cuenta['usuario']}: {cuenta['clave']}" for cuenta in cuentas)
-            + "\n",
-            encoding="utf-8",
-        )
-        anterior_demo = raiz / "backend/.credenciales_demo.local.txt"
-        if anterior_demo.exists():
-            anterior_demo.unlink()
     print(
-        f"Beta local preparada: {len(cuentas)} cuentas ficticias. No se generaron asistencias."
+        f"Datos locales preparados: {len(cuentas)} cuentas ficticias. No se generaron asistencias."
     )
-    print("Credenciales: README_CREDENCIALES.local.md")
+    print("Accesos iniciales guardados cifrados junto al respaldo.")
+    print("Listado cifrado:", archivo.with_name(archivo.name + ".fernet"))
     print("Respaldo privado:", respaldo)
     return cuentas
 
@@ -380,6 +347,7 @@ def actualizar_accesos_iniciales(confirmar_base):
                 usuario.nombre_usuario = nombre
                 usuario.clave_hash = generar_hash_clave(clave)
                 usuario.debe_cambiar_clave = True
+                usuario.clave_temporal_vence = datetime.now(ZoneInfo("UTC")).replace(tzinfo=None) + timedelta(hours=48)
                 cuentas.append(
                     {
                         "nombre": f"{persona.nombres} {persona.apellidos}",
@@ -396,16 +364,10 @@ def actualizar_accesos_iniciales(confirmar_base):
             ):
                 puesto.activo = False
             guardar_listado(cuentas, archivo, respaldo, momento.date())
-        shutil.copy2(archivo, raiz / "README_CREDENCIALES.local.md")
-        (raiz / "backend/.credenciales_beta.local.txt").write_text(
-            "\n".join(f"{cuenta['usuario']}: {cuenta['clave']}" for cuenta in cuentas)
-            + "\n",
-            encoding="utf-8",
-        )
     print(
         f"Actualizados {len(cuentas)} accesos; se conservaron personas, horarios y asistencias."
     )
-    print("Credenciales: README_CREDENCIALES.local.md")
+    print("Accesos iniciales guardados cifrados junto al respaldo.")
     print("Respaldo privado:", respaldo)
 
 

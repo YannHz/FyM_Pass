@@ -64,6 +64,7 @@ export function MenuCuenta({
               }
             }}
           >
+            <button className="boton-texto" onClick={() => { cerrar(); window.dispatchEvent(new Event("fym-abrir-seguridad")); }}>Seguridad de mi cuenta</button>
             {children}
           </div>,
           contenedor,

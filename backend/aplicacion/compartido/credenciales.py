@@ -1,4 +1,5 @@
 import unicodedata
+import secrets
 from .errores import ErrorAplicacion
 
 
@@ -18,5 +19,5 @@ def credenciales_iniciales(nombres, apellidos, disponible):
         candidatos.append(raiz + "".join(parte[0] for parte in partes[1:]) + "fym")
     for candidato in candidatos:
         if len(candidato) <= 80 and disponible(candidato):
-            return candidato, nombre + "".join(parte[0] for parte in partes)
+            return candidato, secrets.token_urlsafe(18)
     raise ErrorAplicacion(409, "Ya existe una cuenta con estas iniciales y apellidos. Revisa los datos con administración.")

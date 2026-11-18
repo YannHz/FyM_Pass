@@ -1,131 +1,124 @@
 # FyM Pass
 
-El usuario inicial se genera con la inicial del primer nombre, el primer apellido y `fym`, en minúsculas y sin tildes. Si coincide con otra cuenta, se añaden las iniciales de los apellidos restantes antes de `fym`. Una coincidencia adicional requiere revisar los datos con administración. La contraseña inicial combina el primer nombre y las iniciales de los apellidos.
+Sistema web de asistencia de ingreso al Instituto de Educación Superior Tecnológico Finney y Miller. Versión funcional **1.0.0**, con ejecución local y acceso desde navegador o PWA.
 
-En el primer ingreso es obligatorio establecer una contraseña distinta, de al menos 8 caracteres, y escribirla de nuevo para confirmarla. Hasta completar ese paso, la API bloquea el acceso a los módulos. La migración 0006 incorpora el indicador de cambio pendiente; las nuevas cuentas lo activan automáticamente.
+Actualizado el **18 de noviembre de 2026**. El sistema registra una entrada y una salida general por día de **docentes y personal administrativo**. Carrera y turno organizan los horarios; no generan marcados por clase ni entradas adicionales. La operación actual corresponde a la sede principal.
 
-## Resumen
+## Funciones y permisos
 
-FyM Pass es un sistema web para registrar y administrar la asistencia de ingreso al Instituto de Educación Superior Tecnológico Finney y Miller. Permite trabajar con carnets y códigos QR, consultar la jornada diaria, organizar personas y horarios, gestionar justificaciones y generar reportes en Excel.
-
-La aplicación incluye un panel administrativo y un espacio personal para docentes y personal administrativo. Puede utilizarse desde el navegador o instalarse como una aplicación web progresiva (PWA).
-
-## Stack de desarrollo
-
-| Área | Tecnologías |
+| Cuenta | Alcance |
 | --- | --- |
-| Frontend | React 19, TypeScript, Vite 6 y Tailwind CSS 4 |
-| Interfaz | Lucide React, QRCode y ZXing |
-| Backend | Python, FastAPI, Uvicorn y Pydantic |
-| Persistencia | MySQL o MariaDB, SQLAlchemy, PyMySQL y Alembic |
-| Reportes | openpyxl |
-| Aplicación instalable | Web App Manifest y service worker |
+| Administradora | Gestión de personas, horarios, reglas, preplanilla, seguridad y revisión de justificaciones |
+| Operadora / secretaria | Puesto QR, consultas, registro manual y solicitudes de justificación |
+| Personal | Carné virtual, marcado propio e historial personal |
 
-## Arquitectura
+El rol institucional (docente o administrativo) es diferente del permiso de la cuenta. Las secretarias y administradoras tienen rol administrativo.
 
-El proyecto usa un monolito modular con arquitectura por capas. El frontend consume una única API y el backend agrupa los módulos de acceso, asistencia, gestión y diagnóstico. Todos los módulos comparten la misma base de datos.
+- Puesto con QR dinámico y lectura de carné por cámara; modalidades configurables.
+- Jornada diaria, reportes Excel, justificaciones, tolerancias y calendario institucional.
+- Horarios separados entre docentes (carrera y turno) y personal administrativo (turno), con asignación desde una fecha.
+- Cambiar un horario utilizado conserva la versión anterior; después se confirma la nueva asignación.
+- Preplanilla docente estimada, sin pago ni descuentos automáticos.
+- No hay integración física ZKTeco, operación multisede ni cola de marcados sin servidor.
 
-```text
-Navegador o PWA
-       │
-       ▼
-Frontend React
-       │ HTTP / JSON
-       ▼
-Rutas y esquemas FastAPI
-       │
-       ▼
-Servicios y reglas de negocio
-       │
-       ▼
-Repositorios y modelos SQLAlchemy
-       │
-       ▼
-MySQL o MariaDB
-```
+## Tecnología y estructura
 
-- Las rutas reciben las peticiones, verifican permisos y preparan las respuestas.
-- Los esquemas validan los datos de entrada y salida.
-- Los servicios coordinan las reglas del sistema y las transacciones.
-- Los repositorios concentran las consultas y operaciones de persistencia.
-- Alembic mantiene la evolución del esquema de la base de datos.
-- La generación de reportes Excel se encuentra en la capa de infraestructura.
+React 19, TypeScript, Vite 6, Tailwind CSS 4, Lucide, qrcode.react y ZXing. Backend Python/FastAPI, SQLAlchemy, PyMySQL, Alembic, Argon2id, PyOTP, cryptography y openpyxl. Persistencia MySQL/MariaDB.
 
-## Estructura del backend
+Monolito modular por capas: navegador/PWA → API → servicios → repositorios → MySQL/MariaDB. Solo el backend accede a la base.
 
 ```text
 backend/
-├── aplicacion/
-│   ├── main.py                 punto de entrada de la API
-│   ├── config.py               configuración del entorno
-│   ├── database.py             conexión y sesión de base de datos
-│   ├── models.py               modelos ORM
-│   ├── seguridad.py            autenticación, sesiones y contraseñas
-│   ├── datos_iniciales.py      carga opcional de datos iniciales
-│   ├── compartido/             utilidades comunes y dependencias
-│   ├── infraestructura/        generación de reportes Excel
-│   └── modulos/
-│       ├── acceso/             cuentas y sesiones
-│       ├── asistencia/         carnets, puestos y marcados
-│       ├── gestion/            personas, horarios y reportes
-│       └── diagnostico/        estado de la aplicación y la base
-├── migraciones/                revisiones de Alembic
-├── .env.example                variables de entorno de referencia
-├── alembic.ini                 configuración de migraciones
-├── requirements.txt            rangos de dependencias
-└── requirements.lock           dependencias fijadas
-```
-
-Los módulos aplican la misma separación cuando corresponde: `rutas.py` expone la API, `esquemas.py` valida los datos, `servicios.py` contiene las reglas y `repositorio.py` accede a la base.
-
-## Estructura del frontend
-
-```text
+  aplicacion/
+    main.py                    API, errores y cabeceras
+    models.py                  modelos y restricciones
+    config.py / database.py    configuración y conexión
+    seguridad.py               hash y política de contraseñas
+    administrar_seguridad.py   claves, respaldos y recuperación local
+    datos_iniciales.py         carga ficticia opcional
+    compartido/                dependencias, identidad y firma QR
+    infraestructura/           reportes Excel
+    modulos/
+      acceso/                  autenticación, MFA, sesiones y auditoría
+      asistencia/              puesto, carnés y marcados
+      gestion/                 personas, horarios y administración
+      diagnostico/             salud y conexión
+  migraciones/versiones/       0001 a 0008
+  requirements.txt / requirements.lock
+  .env.example                ejemplo sin secretos
 web/
-├── src/
-│   ├── main.tsx                inicio de React
-│   ├── App.tsx                 sesión y navegación principal
-│   ├── PanelAdministrativo.tsx panel de administración
-│   ├── EspacioPersonal.tsx     carnet y asistencia personal
-│   ├── PuestoAsistencia.tsx    pantalla del puesto de ingreso
-│   ├── servicio.ts             comunicación con la API
-│   ├── componentesGestion.tsx  componentes administrativos comunes
-│   ├── controles.css           estilos de controles compartidos
-│   └── index.css               tema y estilos generales
-├── public/                     iconos, manifest y página sin conexión
-├── pwa.ts                      preparación de la PWA
-├── service-worker.js           caché de recursos públicos
-├── index.html                  documento principal
-├── package.json                scripts y dependencias
-├── tsconfig.json               configuración de TypeScript
-└── vite.config.ts              compilación, servidor y proxy local
+  src/                        pantallas y controles React
+  public/                     manifest, iconos y página sin conexión
+  pwa.ts / service-worker.js  preparación y caché pública
+  vite.config.ts              proxy local y cabeceras de Preview
+iniciar.sh                    lanzador Bash para Linux/macOS
+AGENTS.md                     convenciones de trabajo
+CONTEXTO_PROYECTO.md           traspaso para el agente
 ```
 
-Las pantallas y sus estilos se organizan por función dentro de `web/src`. Los controles reutilizables para fechas, horas, filtros, tema y menús también se encuentran en esa carpeta.
+## Seguridad y acceso
 
-## Requisitos para ejecutarlo en local
+El usuario se genera con inicial del primer nombre + primer apellido + `fym`, en minúsculas y sin tildes. Ante coincidencia se añaden las iniciales de los apellidos restantes; otra coincidencia requiere revisar los datos con administración.
 
-- Python 3 compatible con `backend/requirements.lock`.
-- Node.js 22 o superior con npm.
-- MySQL 8 o MariaDB 10.4 o superior.
-- Bash y Python 3 para utilizar `iniciar.sh` en Linux o macOS.
-- Cloudflared en el `PATH` si se necesita acceso HTTPS desde un teléfono.
-- Una base de datos llamada `fym_pass` y un usuario con permisos sobre ella.
+- Contraseña temporal aleatoria, válida por 48 horas, con cambio obligatorio.
+- Contraseña personal de **8 a 256 caracteres**, confirmada dos veces. Se permiten espacios; se rechazan patrones comunes, repeticiones y datos personales. No se exige una mezcla fija de símbolos y números.
+- Argon2id para hashes nuevos. Los hashes scrypt anteriores se actualizan al autenticar correctamente.
+- MFA TOTP obligatorio para administradoras, opcional para las otras cuentas. Ocho códigos de recuperación de un solo uso, mostrados al configurarlos o renovarlos.
+- Sesión de hasta ocho horas, con vencimiento tras 30 minutos sin interacción y aviso previo. Las consultas automáticas no prolongan la actividad.
+- Límites persistentes por cuenta y por IP, con esperas progresivas.
+- Reautenticación para cambiar contraseñas, cerrar otras sesiones, modificar permisos, emitir accesos temporales o renovar carnés.
+- Permisos aplicados en la API, cookie HttpOnly/SameSite Strict, cabecera propia en mutaciones y respuestas privadas sin caché.
+- Auditoría de accesos y operaciones sensibles; alertas al acumular cinco rechazos QR similares en 15 minutos.
+- Las fotos históricas requieren autenticación y autorización; ya no se cargan fotos nuevas desde la interfaz.
 
-## Guía para ejecutarlo en local
+En **Cuenta → Seguridad de mi cuenta** están las sesiones, el autenticador y la contraseña. Las administradoras también pueden restablecer accesos, revocar carnés y consultar eventos. Un restablecimiento no elimina el MFA del destinatario.
 
-### 1. Instalar las dependencias
+El QR del puesto rota cada 30 segundos y está firmado. El carné es fijo hasta su revocación. Estas medidas no impiden fotografiar un carné ni reenviar un QR vigente: la comprobación presencial sigue dependiendo de la supervisión del puesto.
 
-En Linux o macOS, desde la raíz del proyecto:
+HTTP y la configuración de cookie Secure se mantienen por decisión del proyecto. Preview aplica CSP y otras cabeceras al frontend; si se utiliza otro servidor, hay que trasladar esa configuración. No se ha realizado un despliegue público.
 
-```sh
-python3 -m venv backend/.venv
-backend/.venv/bin/python -m pip install -r backend/requirements.lock
-npm --prefix web ci
-cp backend/.env.example backend/.env
-```
+## Base de datos
 
-En Windows, desde PowerShell:
+**La definición publicable de la base está en las migraciones Alembic y los modelos**, no en un volcado local. Revisión vigente: `0008`. Hay 23 tablas de aplicación, más `alembic_version`.
+
+| Tablas | Finalidad |
+| --- | --- |
+| `sedes`, `roles` | Institución y roles institucionales |
+| `personas`, `usuarios` | Identidad, permiso, hash, vigencia temporal y configuración MFA cifrada |
+| `horarios`, `tramos_horarios`, `asignaciones_horarios` | Carrera, tipo de personal, turno, días, horas y vigencias |
+| `tolerancias_roles`, `reglas_sedes`, `dias_no_lectivos` | Evaluación de puntualidad, ausencia y calendario |
+| `puntos_asistencia`, `puestos_abiertos`, `eventos_puesto` | Puesto operativo, token resumido y resultado de lecturas |
+| `marcados` | Entrada/salida, modalidad, responsable y resultado original |
+| `sesiones_acceso` | Tokens resumidos, vencimiento y última actividad |
+| `eventos_seguridad`, `limites_acceso` | Auditoría de seguridad y límites persistentes |
+| `justificaciones`, `tarifas_docentes` | Revisión de incidencias y tarifa referencial |
+| `dispositivos`, `auditoria` | Inventario y trazabilidad administrativa |
+| `carreras`, `grupos` | Compatibilidad histórica del esquema; sin flujo de alumnado |
+
+Las tablas históricas y el rol antiguo de estudiante se conservan para compatibilidad de migraciones y referencias; no habilitan acceso ni marcado estudiantil. La carrera de un horario docente se guarda actualmente como texto en `horarios.carrera`.
+
+| Migración | Cambio |
+| --- | --- |
+| 0001 | Estructura inicial y catálogos |
+| 0002 | Sesiones de acceso |
+| 0003 | Puestos y carnés |
+| 0004 | Administración, horarios y reportes |
+| 0005 | Asignaciones heredadas de horarios |
+| 0006 | Cambio obligatorio de contraseña |
+| 0007 | Tipo de personal, carrera y turno de horarios |
+| 0008 | MFA, vigencia temporal, actividad de sesión, eventos de seguridad y límites |
+
+Los eventos se guardan en UTC; los horarios son horas locales y la interfaz usa Lima. Se conserva el resultado original del marcado. No se soportan tramos que crucen medianoche.
+
+La instalación ficticia puede crear **4 secretarias operadoras, 2 administradoras y 10 docentes**, con horarios de lunes a viernes y sin asistencias precargadas. Sus contraseñas se generan en cada carga; no existen credenciales universales en GitHub. La carga rechaza una base con personas existentes salvo opciones destructivas explícitas, que no deben utilizarse sobre datos a conservar.
+
+## Instalación después de clonar
+
+### 1. Dependencias y entorno
+
+Se verificó el desarrollo en Windows con Python 3.14 y MariaDB 10.4.32 de XAMPP. Para Linux/macOS se proporciona el lanzador; no se ha validado una instalación nativa completa en esos sistemas. Se necesita Node.js 22 o superior y Python compatible con el lock.
+
+Desde la raíz, en PowerShell:
 
 ```powershell
 py -m venv backend/.venv
@@ -134,107 +127,177 @@ npm --prefix web ci
 Copy-Item backend/.env.example backend/.env
 ```
 
-### 2. Configurar la base de datos
-
-Inicia MySQL o MariaDB, crea la base `fym_pass` y completa `backend/.env`:
-
-```dotenv
-BD_HOST=127.0.0.1
-BD_PUERTO=3306
-BD_USUARIO=fym_pass
-BD_CLAVE=
-BD_NOMBRE=fym_pass
-
-CLAVE_QR=
-COOKIE_SEGURA=false
-PROXY_CONFIABLE=false
-```
-
-`CLAVE_QR` debe contener una clave aleatoria de al menos 32 caracteres. Debe conservarse para que los carnets emitidos sigan siendo válidos.
-
-- `COOKIE_SEGURA=false` entrega la cookie sin el atributo `Secure`; útil en desarrollo local. Antes de servir en producción por HTTPS se define `COOKIE_SEGURA=true`, con lo que la API además envía el encabezado `Strict-Transport-Security` y registra un aviso si se arranca sin esa configuración.
-- `PROXY_CONFIABLE=false` limita los intentos de acceso por la IP directa del cliente. Colócalo en `true` solo cuando la API corra detrás de un proxy que entrega la IP real en `X-Forwarded-For` (por ejemplo nginx); si no, alguien podría falsear esa cabecera para burlar el límite.
-
-Respuestas de la API y restauración:
-
-- Cambiar la contraseña de una persona por Personas y carnets cierra de inmediato todas las sesiones abiertas de esa cuenta; quien la tuviera abierta debe iniciar sesión de nuevo.
-- La ruta pública `/api/salud` solo indica vida de la API; el estado de la base de datos quedó en `/api/salud/base-datos`, que ahora exige sesión de encargado.
-- La API agrega `X-Content-Type-Options`, `X-Frame-Options` y `Referrer-Policy` a todas las respuestas.
-
-### 3. Aplicar las migraciones
-
-En Linux o macOS:
+En Linux/macOS:
 
 ```sh
-cd backend
-.venv/bin/python -m alembic upgrade head
-cd ..
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -r backend/requirements.lock
+npm --prefix web ci
+cp backend/.env.example backend/.env
 ```
 
-En Windows:
+No sobrescribir un `backend/.env` existente. Configurarlo privadamente con host, puerto, base, usuario operativo y contraseña. Generar `CLAVE_QR` aleatoria de al menos 32 caracteres. Mantener esa clave si se conservarán carnés existentes.
+
+`INACTIVIDAD_MINUTOS=30` controla la sesión. `CLAVE_SEGURIDAD` puede contener una clave Fernet; si queda vacía, se utiliza `backend/archivos/seguridad/clave_mfa.key`. No cambiar esa clave sin planificar la recuperación de los autenticadores.
+
+`PROXY_CONFIABLE=false` usa la IP directa. Habilitarlo solo tras un proxy configurado para sobrescribir las cabeceras de origen. `COOKIE_SEGURA` conserva su configuración actual; el lanzador no la cambia.
+
+### 2. Base y preparación de seguridad
+
+El clon no contiene la base local, usuarios SQL, claves ni respaldos. Un responsable de MySQL/MariaDB debe crear `fym_pass` con `utf8mb4` y la cuenta operativa configurada en `.env`.
+
+Para la preparación inicial, esa cuenta puede tener permisos de esquema sobre **esta base únicamente**. Después se separan los permisos. No usar `root` como cuenta operativa de la app.
+
+Desde `backend`:
 
 ```powershell
-Set-Location backend
-.\.venv\Scripts\python.exe -m alembic upgrade head
-Set-Location ..
+.\.venv\Scripts\python.exe -B -m alembic upgrade head
+.\.venv\Scripts\python.exe -B -m aplicacion.administrar_seguridad claves
 ```
 
-En una instalación vacía se pueden cargar los datos iniciales desde `backend`:
+En Linux/macOS, reemplazar `.\.venv\Scripts\python.exe` por `.venv/bin/python`.
+
+Para respaldos y preparación de permisos se necesita una cuenta administrativa SQL local. Si ya tiene contraseña, configurar privadamente `backend/archivos/seguridad/administracion_bd.local.json` con las propiedades `usuario` y `clave`, y volver a ejecutar `claves` para proteger sus permisos de archivo. Esta cuenta es de la base, distinta de las cuentas de la interfaz.
+
+La herramienta contempla un XAMPP local recién instalado con `root` sin contraseña cuando ese archivo aún no existe. Al ejecutar lo siguiente protege el acceso administrativo, crea la cuenta `fym_migracion` y reduce la cuenta operativa a SELECT/INSERT/UPDATE/DELETE:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m aplicacion.administrar_seguridad preparar
+```
+
+`preparar` realiza un respaldo cifrado antes de modificar permisos. Está limitado a la base `fym_pass` en localhost y requiere privilegios administrativos SQL y `mariadb-dump` o `mysqldump`. En Linux con autenticación de root por socket, el responsable debe proporcionar una cuenta administrativa compatible con conexión local TCP; la herramienta no configura ese acceso del sistema.
+
+En XAMPP ya protegido, phpMyAdmin debe usar autenticación por cookie y una contraseña no vacía. El archivo de acceso SQL privado no debe copiarse al repositorio.
+
+### 3. Migraciones posteriores
+
+Después de separar los permisos, utilizar la cuenta de migraciones. Desde `backend`, en PowerShell:
+
+```powershell
+$env:FYM_MIGRACION = "1"
+.\.venv\Scripts\python.exe -B -m alembic upgrade head
+.\.venv\Scripts\python.exe -B -m alembic check
+Remove-Item Env:FYM_MIGRACION
+```
+
+En Bash:
 
 ```sh
-.venv/bin/python -m aplicacion.datos_iniciales --confirmar-base fym_pass
+FYM_MIGRACION=1 .venv/bin/python -B -m alembic upgrade head
+FYM_MIGRACION=1 .venv/bin/python -B -m alembic check
 ```
 
-En Windows, reemplaza `.venv/bin/python` por `.\.venv\Scripts\python.exe`.
+En fish, usar `env FYM_MIGRACION=1 .venv/bin/python -B -m alembic upgrade head`. No ejecutar migraciones automáticamente al arrancar ni utilizar las credenciales administrativas para servir la API.
 
-### 4. Iniciar la aplicación
+### 4. Carga ficticia opcional y primer ingreso
 
-En Linux o macOS, con MySQL activo:
+Solo para una base vacía, desde `backend`:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m aplicacion.datos_iniciales --confirmar-base fym_pass
+```
+
+Se crea un respaldo previo y se muestra la ruta del listado cifrado de accesos iniciales. Para verlo localmente:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m aplicacion.administrar_seguridad mostrar-accesos --archivo RUTA_DEL_LISTADO.local.md.fernet
+```
+
+El listado se muestra en esa terminal privada; no pegarlo en incidencias ni subir capturas. Las contraseñas caducan a las 48 horas. El flujo normal de creación/restablecimiento desde la web muestra la contraseña una sola vez y no genera un listado.
+
+La primera administradora cambia su contraseña y configura el autenticador antes de acceder al panel. Guardar sus códigos de recuperación fuera del teléfono. Las demás cuentas pueden gestionarse desde Cuenta → Seguridad.
+
+## Arranque diario
+
+MySQL/MariaDB debe estar activo. El lanzador no instala dependencias, inicia MySQL, modifica permisos, ejecuta migraciones ni carga datos.
+
+En Linux/macOS, desde Bash o fish:
 
 ```sh
 ./iniciar.sh
-```
-
-El script comprueba la configuración, las migraciones y las versiones; después compila la web e inicia la API en `127.0.0.1:8000` y la web en `127.0.0.1:4173`. Desde fish debe ejecutarse como `./iniciar.sh`, porque el propio archivo utiliza Bash.
-
-Para trabajar con recarga automática y sin PWA:
-
-```sh
+./iniciar.sh --sin-compilar --sin-navegador
 ./iniciar.sh --desarrollo
+./iniciar.sh --red auto
 ```
 
-En Windows, inicia la API desde una terminal PowerShell:
+- Modo normal: compila y sirve la web en 4173; API en localhost:8000.
+- `--sin-compilar`: exige un `web/dist` completo y vigente.
+- `--desarrollo`: puerto 5173, sin PWA; se mantiene en localhost.
+- `--red auto|IP`: publica únicamente la web compilada en una IPv4 privada; la API permanece local.
+- `--sin-navegador`: no abre una ventana.
+- Comprueba dependencias, claves, conexión SQL, revisión Alembic y coincidencia de versiones.
+- La disponibilidad SQL se comprueba desde el backend, sin consultar anónimamente rutas autenticadas ni iniciar sesión con una cuenta.
+- Ctrl+C detiene solo los procesos creados por el lanzador. No cierra MySQL ni mata instancias ajenas.
+- Registros en `.registros/`. No iniciar otra instancia si los puertos están ocupados.
+
+En Windows se mantienen los comandos manuales, en dos terminales desde la raíz:
 
 ```powershell
+# terminal de la API
 Set-Location backend
 .\.venv\Scripts\python.exe -B -m uvicorn aplicacion.main:aplicacion --host 127.0.0.1 --port 8000
 ```
 
-Luego compila y sirve la web desde otra terminal situada en la raíz:
-
 ```powershell
+# terminal de la web
 npm --prefix web run build
-node .\web\node_modules\vite\bin\vite.js preview --host 127.0.0.1 --port 4173 --strictPort
+Set-Location web
+node .\node_modules\vite\bin\vite.js preview --host 127.0.0.1 --port 4173 --strictPort
 ```
 
-La aplicación queda disponible en `http://127.0.0.1:4173` y la documentación de la API en `http://127.0.0.1:8000/docs`.
+La carpeta de trabajo de Vite es `web`; ejecutarlo en la raíz puede provocar que no encuentre `dist`. Abrir [FyM Pass](http://127.0.0.1:4173). API: [documentación local](http://127.0.0.1:8000/docs). `/api/salud` indica vida de la API; no demuestra disponibilidad SQL. `/api/salud/base-datos` exige sesión de encargado y los controles de acceso completados.
 
-### 5. Abrir un túnel HTTPS con Cloudflare
-
-Con MySQL, la API y la web activos, ejecuta en otra terminal:
+Para un acceso temporal desde teléfono, con los servicios ya activos y solo cuando se solicite:
 
 ```sh
 cloudflared tunnel --url http://127.0.0.1:4173 --http-host-header localhost
 ```
 
-Si Cloudflared está instalado en su ubicación habitual de Windows pero no está en el `PATH`:
+La URL cambia al recrear el túnel. La cámara y la instalación móvil necesitan un contexto seguro. No exponer el servidor de desarrollo ni MySQL. No hay despliegue VPS configurado.
+
+La PWA almacena recursos públicos, no respuestas de la API. Una actualización muestra el aviso flotante “FyM Pass se actualizó”; la recarga es manual para preservar formularios abiertos.
+
+## Respaldos y recuperación
+
+Desde `backend`:
 
 ```powershell
-& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://127.0.0.1:4173 --http-host-header localhost
+.\.venv\Scripts\python.exe -B -m aplicacion.administrar_seguridad respaldo
+.\.venv\Scripts\python.exe -B -m aplicacion.administrar_seguridad recuperar-admin --usuario NOMBRE_DE_CUENTA
 ```
 
-Cloudflare mostrará una URL HTTPS temporal. Ábrela en el teléfono para utilizar la cámara o instalar la PWA. La terminal del túnel y los servicios locales deben permanecer abiertos durante el uso.
+La segunda orden es una recuperación administrativa local excepcional: invalida sesiones, reemplaza el segundo factor y muestra un acceso temporal una sola vez. Usarla tras verificar la identidad del titular.
 
-### 6. Actualización de la aplicación instalada
+Los respaldos nuevos se guardan como `.sql.fernet`. `clave_respaldos.key` permite descifrarlos; `clave_mfa.key` protege los secretos TOTP. Los datos cifrados sin sus claves no bastan para recuperar la instalación. Custodiar las claves por separado de una copia externa del respaldo.
 
-Cuando se publica una versión nueva, las pestañas y equipos instalados con la PWA muestran un mensaje "FyM Pass se actualizó" con el botón "Recargar ahora". El contenido sigue usándose hasta que alguien acepte recargar, así que ninguna operación en curso se interrumpe a mitad de guardado.
+La base, `.env`, claves y archivos de `backend/archivos/seguridad/` son privados. La herramienta aplica permisos del usuario local y SYSTEM en Windows; 0700 a la carpeta y 0600 a archivos en POSIX. No sobrescribirlos al actualizar el código.
+
+Se verificó una restauración de 16 cuentas en una base aislada de MariaDB, posteriormente retirada. La copia externa, conservación mensual y nuevas comprobaciones de restauración son responsabilidad operativa; no hay automatización de esas tareas. Los históricos protegidos conservan su nombre más `.fernet`, y no se borran automáticamente.
+
+## Verificaciones y límites
+
+- Compilación TypeScript/Vite.
+- Migraciones hasta 0008 y `alembic check` sin diferencias en la instalación local verificada.
+- Comprobaciones aisladas de MFA, recuperación de un uso, contraseñas, permisos, límites persistentes e inactividad.
+- Restauración de respaldo cifrado sobre una base de prueba.
+- Política actual de 8 caracteres verificada: acepta una clave válida de ocho y rechaza siete caracteres y patrones débiles.
+- No hay suites de pruebas versionadas ni Docker por decisión del proyecto.
+- No se afirma una certificación ni una prueba de penetración completa.
+- Auditoría del lock Python y de dependencias frontend de producción sin vulnerabilidades conocidas al revisarlas el 18/11/2026. El árbol completo npm conserva un aviso en picomatch 4.0.7, dependencia de desarrollo sin parche publicado en el registro consultado. No degradar Vite para ocultarlo.
+- Pendientes: despliegue estable, supervisión y copias externas, pruebas de carga, múltiples sedes y validación física en los dispositivos de destino.
+
+## Qué publicar en GitHub
+
+Publicar fuentes, migraciones 0001–0008, locks, `backend/.env.example`, lanzador y documentación. Las migraciones permiten reconstruir el esquema; la carga ficticia es opcional y genera credenciales nuevas.
+
+No publicar `.env`, claves, credenciales SQL, códigos de recuperación, listados de acceso, volcados, archivos cifrados de respaldo, fotos, registros de ejecución, entornos, `node_modules` ni `dist`. El cifrado no convierte un respaldo en un archivo público.
+
+Antes de subir:
+
+```sh
+git status --short
+git diff --check
+git ls-files backend/archivos database backend/.env README_CREDENCIALES.local.md
+```
+
+La última orden no debe listar datos privados. `.gitignore` no elimina archivos ya versionados ni borra el historial: si alguna clave llegó a publicarse, retirarla del historial y rotarla mediante un procedimiento acordado. Este trabajo no realiza commit ni push.

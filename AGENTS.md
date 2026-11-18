@@ -12,8 +12,10 @@
 - No guardar credenciales en el repositorio.
 
 - Por decisión del usuario, el repositorio no incluye pruebas automatizadas ni configuración Docker; no recrearlas sin solicitud.
-- Las cuentas nuevas usan inicial del primer nombre + primer apellido + fym, sin tildes y en minusculas. Ante coincidencia, agregar iniciales de los apellidos restantes antes de fym. Clave inicial: primer nombre + iniciales de apellidos; cambio obligatorio al ingresar, con confirmacion y minimo 8 caracteres. Mantener credenciales completas fuera de Git.
+- Las cuentas nuevas mantienen usuario por nombre/apellidos; clave temporal aleatoria con vigencia de 48 horas, entregada una sola vez. Clave personal de 8 a 256 caracteres con bloqueo de claves comunes y datos personales. Argon2id; compatibilidad scrypt con actualizacion al ingresar. No guardar credenciales completas en listados de texto. MFA obligatorio para administradoras; recuperacion local mediante administrar_seguridad, nunca restablecer MFA por API sin verificacion.
 
 - Documentacion unica de uso, instalacion y arquitectura: README.md. Mantener CONTEXTO_PROYECTO.md aparte para el agente y AGENTS.md para convenciones. Actualizar esos archivos antes de crear guias nuevas que dupliquen informacion.
+- Esquema vigente: migraciones Alembic 0001–0008; publicar migraciones/modelos, no volcados locales. La cuenta operativa solo tiene permisos DML; usar FYM_MIGRACION=1 para Alembic despues de preparar seguridad. No ejecutar preparar, recuperar-admin ni datos_iniciales como comprobacion rutinaria.
+- iniciar.sh es Bash para Linux/macOS, incluidos usuarios fish que lo ejecutan directamente; Windows conserva comandos manuales. El arranque comprueba claves y SQL sin iniciar sesion ni consultar rutas autenticadas, y no instala, migra ni genera secretos.
 
 - Usar WebP para fotografias e imagenes rasterizadas nuevas; conservar SVG para logos, iconos y QR vectoriales, y PNG para compatibilidad de iconos de instalacion PWA/Apple. No convertir vectores a mapas de bits ni modificar dependencias o respaldos para aplicar esta regla. Las nuevas fotos procesadas por el backend se guardan en WebP; conservar las rutas historicas existentes.

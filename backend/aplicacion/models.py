@@ -54,6 +54,12 @@ class Usuario(Base):
     nombre_usuario: Mapped[str] = mapped_column(String(80), unique=True)
     clave_hash: Mapped[str] = mapped_column(String(255))
     debe_cambiar_clave: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
+    clave_temporal_vence: Mapped[datetime | None] = mapped_column(DateTime)
+    mfa_secreto: Mapped[str | None] = mapped_column(Text)
+    mfa_pendiente: Mapped[str | None] = mapped_column(Text)
+    mfa_pendiente_vence: Mapped[datetime | None] = mapped_column(DateTime)
+    mfa_recuperacion: Mapped[str | None] = mapped_column(Text)
+    mfa_ultimo_paso: Mapped[int | None] = mapped_column(Integer)
     permiso: Mapped[str] = mapped_column(String(20), default="personal")
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
     __table_args__ = (CheckConstraint("permiso IN ('personal','operador','administrador')", name="ck_usuarios_permiso"),)
@@ -135,6 +141,25 @@ class SesionAcceso(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     creada_en: Mapped[datetime] = mapped_column(DateTime, default=obtener_hora_utc)
     vence_en: Mapped[datetime] = mapped_column(DateTime, index=True)
+    ultima_actividad: Mapped[datetime] = mapped_column(DateTime, default=obtener_hora_utc)
+
+
+class EventoSeguridad(Base):
+    __tablename__ = "eventos_seguridad"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    usuario_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id", ondelete="SET NULL"))
+    sede_id: Mapped[int | None] = mapped_column(ForeignKey("sedes.id", ondelete="RESTRICT"))
+    accion: Mapped[str] = mapped_column(String(80), index=True)
+    detalle: Mapped[str] = mapped_column(String(500))
+    creada_en: Mapped[datetime] = mapped_column(DateTime, default=obtener_hora_utc, index=True)
+
+
+class LimiteAcceso(Base):
+    __tablename__ = "limites_acceso"
+    clave: Mapped[str] = mapped_column(String(64), primary_key=True)
+    intentos: Mapped[int] = mapped_column(Integer, default=0)
+    inicio: Mapped[datetime] = mapped_column(DateTime)
+    bloqueado_hasta: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class PuestoAbierto(Base):

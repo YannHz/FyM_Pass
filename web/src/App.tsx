@@ -1,4 +1,5 @@
 import { MenuCuenta } from "./MenuCuenta";
+import { CentroSeguridad } from "./CentroSeguridad";
 import { CambiarClaveInicial } from "./CambiarClaveInicial";
 import { EspacioPersonal } from "./EspacioPersonal";
 import { LogoInstitucional, MarcaInstitucional } from "./LogoInstitucional";
@@ -22,6 +23,8 @@ type Usuario = {
   sede: string;
   destino: string;
   debe_cambiar_clave: boolean;
+  requiere_mfa: boolean;
+  inactividad_minutos: number;
 };
 export function Aplicacion() {
   const [usuario, establecerUsuario] = useState<Usuario | null>(null);
@@ -32,13 +35,47 @@ export function Aplicacion() {
   const [visible, establecerVisible] = useState(false);
   const [error, establecerError] = useState("");
   const [caducada, establecerCaducada] = useState(false);
+  const [codigo, establecerCodigo] = useState("");
+  const [seguridad, mostrarSeguridad] = useState(false);
+  const [avisoInactividad, mostrarAvisoInactividad] = useState(false);
+  useEffect(() => {
+    const abrir = () => mostrarSeguridad(true);
+    window.addEventListener("fym-abrir-seguridad", abrir);
+    return () => window.removeEventListener("fym-abrir-seguridad", abrir);
+  }, []);
+  useEffect(() => {
+    if (!usuario || caducada) return;
+    let ultima = Date.now(), ultimoEnvio = 0, pendiente = false;
+    const actividad = () => { ultima = Date.now(); mostrarAvisoInactividad(false); };
+    const enviar = async () => {
+      if (pendiente || Date.now() - ultimoEnvio < 60000) return;
+      pendiente = true; ultimoEnvio = Date.now();
+      try { await consultar("/api/seguridad/actividad", { method: "POST" }); }
+      catch { /* la renovacion de sesion se gestiona globalmente */ }
+      finally { pendiente = false; }
+    };
+    const registrar = () => { actividad(); void enviar(); };
+    window.addEventListener("pointerdown", registrar);
+    window.addEventListener("keydown", registrar);
+    const reloj = setInterval(() => {
+      const minutos = usuario.inactividad_minutos || 30;
+      const restante = minutos * 60000 - (Date.now() - ultima);
+      mostrarAvisoInactividad(restante <= 120000);
+      if (restante <= 0) {
+        establecerCaducada(true); establecerClave(""); establecerCodigo("");
+      }
+    }, 10000);
+    return () => { clearInterval(reloj); window.removeEventListener("pointerdown", registrar); window.removeEventListener("keydown", registrar); };
+  }, [usuario?.id, caducada]);
   useEffect(() => {
     const cambiar = () => {
       establecerUsuario(actual => actual ? { ...actual, debe_cambiar_clave: true } : actual);
       window.history.replaceState(null, "", "/cambiar-clave");
     };
     window.addEventListener("fym-clave-pendiente", cambiar);
-    return () => window.removeEventListener("fym-clave-pendiente", cambiar);
+    const factor = () => establecerUsuario(actual => actual ? { ...actual, requiere_mfa: true } : actual);
+    window.addEventListener("fym-mfa-pendiente", factor);
+    return () => { window.removeEventListener("fym-clave-pendiente", cambiar); window.removeEventListener("fym-mfa-pendiente", factor); };
   }, []);
   function mostrarDestino(datos: Usuario) {
     establecerUsuario(datos);
@@ -90,9 +127,11 @@ export function Aplicacion() {
         body: JSON.stringify({
           usuario: caducada && usuario ? usuario.usuario : nombre,
           clave,
+          codigo,
         }),
       });
       establecerClave("");
+      establecerCodigo("");
       if (caducada) {
         establecerUsuario(datos);
         establecerCaducada(false);
@@ -219,6 +258,9 @@ export function Aplicacion() {
                 {visible ? "Ocultar" : "Mostrar"}
               </button>
             </div>
+            <label htmlFor="codigo-acceso">Código del autenticador o de recuperación (si está activo)</label>
+            <input id="codigo-acceso" autoComplete="one-time-code" value={codigo} maxLength={80}
+              onChange={e => establecerCodigo(e.target.value)} disabled={ocupado} />
             {error && (
               <p role="alert" className="error">
                 {error}
@@ -245,10 +287,19 @@ export function Aplicacion() {
     );
   if (usuario.debe_cambiar_clave)
     return <CambiarClaveInicial alCambiar={mostrarDestino} alCerrar={() => void cerrarSesion()} />;
+  if ((usuario.requiere_mfa || seguridad) && !caducada)
+    return <CentroSeguridad obligatorio={usuario.requiere_mfa} alVolver={() => {
+      mostrarSeguridad(false); void consultar("/api/acceso/actual").then(mostrarDestino);
+    }} alActualizar={mostrarDestino} alCerrar={() => void cerrarSesion()} />;
   const administrativo =
     usuario.permiso !== "personal" && window.location.pathname !== "/mi-carne";
   return (
     <>
+      {avisoInactividad && !caducada && <div className="aviso-inactividad" role="status">
+        Tu sesión está por vencer por inactividad. <button className="secundario" onClick={() => {
+          void consultar("/api/seguridad/actividad", { method: "POST" }).then(() => mostrarAvisoInactividad(false));
+        }}>Continuar trabajando</button>
+      </div>}
       {administrativo ? (
         <PanelAdministrativo
           usuario={usuario}
@@ -322,6 +373,8 @@ export function Aplicacion() {
                 {error}
               </p>
             )}
+            <label htmlFor="codigo-renovar">Código del autenticador o recuperación (si está activo)</label>
+            <input id="codigo-renovar" autoComplete="one-time-code" value={codigo} maxLength={80} onChange={e => establecerCodigo(e.target.value)} />
             <footer className="acciones-dialogo">
               <button
                 type="button"

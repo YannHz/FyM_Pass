@@ -21,8 +21,10 @@ class DatosPersona(Formulario):
     identificador_biometrico: str | None = Field(default=None, max_length=40)
     tarifa_hora: Decimal = Field(default=0, ge=0, le=100000)
     nombre_usuario: str | None = Field(default=None, pattern="^[a-z0-9._-]{3,80}$")
-    clave: str | None = Field(default=None, min_length=6, max_length=256)
+    clave: str | None = Field(default=None, min_length=8, max_length=256)
     permiso: Literal["personal", "operador", "administrador"] = "personal"
+    actual: str = Field(default="", max_length=256)
+    codigo_verificacion: str = Field(default="", max_length=80)
 
 
 class DatosCarrera(Formulario):

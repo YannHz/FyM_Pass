@@ -9,26 +9,11 @@ from ...seguridad import generar_hash_clave, verificar_clave, resumir_token
 from .repositorio import RepositorioAcceso
 from ...compartido.errores import ErrorAplicacion
 from .esquemas import Credenciales
+from . import proteccion
+from ...seguridad import validar_clave_personal, requiere_actualizar_hash
+from ...config import configuracion
 
 hash_ficticio = generar_hash_clave(secrets.token_urlsafe(32))
-intentos = OrderedDict()
-bloqueo_intentos = Lock()
-
-
-def limitar_intentos(direccion: str):
-    ahora = monotonic()
-    with bloqueo_intentos:
-        contador, inicio = intentos.get(direccion, (0, ahora))
-        if ahora - inicio >= 60:
-            contador, inicio = (0, ahora)
-        if contador >= 10:
-            raise ErrorAplicacion(
-                429, "Demasiados intentos. Espera un minuto y vuelve a intentar."
-            )
-        intentos[direccion] = (contador + 1, inicio)
-        intentos.move_to_end(direccion)
-        if len(intentos) > 10000:
-            intentos.popitem(last=False)
 
 
 def describir_usuario(repositorio: RepositorioAcceso, usuario: Usuario):
@@ -43,6 +28,9 @@ def describir_usuario(repositorio: RepositorioAcceso, usuario: Usuario):
     return {
         "id": usuario.id,
         "debe_cambiar_clave": usuario.debe_cambiar_clave,
+        "requiere_mfa": usuario.permiso == "administrador" and not usuario.mfa_secreto,
+        "mfa_activo": bool(usuario.mfa_secreto),
+        "inactividad_minutos": configuracion.inactividad_minutos,
         "usuario": usuario.nombre_usuario,
         "iniciales": iniciales_persona(persona),
         "nombre": f"{persona.nombres} {persona.apellidos}",
@@ -57,6 +45,10 @@ def obtener_usuario(token: str, repositorio: RepositorioAcceso):
     if not token or len(token) > 128:
         raise ErrorAplicacion(401, "Inicia sesión para continuar.")
     sesion = repositorio.sesion_vigente(obtener_hora_utc(), token)
+    if sesion and obtener_hora_utc() - sesion.ultima_actividad > timedelta(minutes=configuracion.inactividad_minutos):
+        repositorio.eliminar(sesion)
+        repositorio.confirmar()
+        raise ErrorAplicacion(401, "Tu sesión terminó por inactividad.")
     usuario = repositorio.obtener_usuario(sesion.usuario_id) if sesion else None
     persona = repositorio.obtener_persona(usuario.persona_id) if usuario else None
     sede = repositorio.obtener_sede(persona.sede_id) if persona else None
@@ -83,6 +75,8 @@ def iniciar_sesion(
     datos: Credenciales, anterior: str | None, repositorio: RepositorioAcceso = None
 ):
     usuario = repositorio.usuario_por_nombre(datos)
+    if usuario:
+        usuario = repositorio.bloquear_usuario(usuario)
     correcta = verificar_clave(
         datos.clave, usuario.clave_hash if usuario else hash_ficticio
     )
@@ -98,7 +92,22 @@ def iniciar_sesion(
         or (not rol)
         or rol.codigo not in ("docente", "administrativo")
     ):
+        proteccion.registrar(repositorio._base, "acceso_fallido", usuario)
+        repositorio.confirmar()
         raise ErrorAplicacion(401, "Usuario o contraseña incorrectos.")
+    if usuario.debe_cambiar_clave and (not usuario.clave_temporal_vence or usuario.clave_temporal_vence <= obtener_hora_utc()):
+        proteccion.registrar(repositorio._base, "temporal_vencida", usuario)
+        repositorio.confirmar()
+        raise ErrorAplicacion(401, "El acceso temporal venció. Solicita uno nuevo a administración.")
+    if usuario.mfa_secreto:
+        try:
+            proteccion.comprobar_factor(repositorio._base, usuario, datos.codigo)
+        except ErrorAplicacion:
+            proteccion.registrar(repositorio._base, "mfa_fallido", usuario)
+            repositorio.confirmar()
+            raise
+    if requiere_actualizar_hash(usuario.clave_hash):
+        usuario.clave_hash = generar_hash_clave(datos.clave)
     if anterior:
         sesion = repositorio.sesion_anterior(anterior)
         if sesion:
@@ -111,6 +120,7 @@ def iniciar_sesion(
             vence_en=obtener_hora_utc() + timedelta(hours=8),
         )
     )
+    proteccion.registrar(repositorio._base, "acceso_correcto", usuario)
     repositorio.confirmar()
     return (describir_usuario(repositorio, usuario), token)
 
@@ -120,6 +130,13 @@ def consultar_sesion(usuario: Usuario = None, repositorio: RepositorioAcceso = N
 
 
 def cambiar_clave(datos, usuario, repositorio):
+    usuario = repositorio.bloquear_usuario(usuario)
+    if not usuario.debe_cambiar_clave:
+        proteccion.reautenticar(repositorio._base, usuario, datos.actual, datos.codigo)
+    elif not usuario.clave_temporal_vence or usuario.clave_temporal_vence <= obtener_hora_utc():
+        raise ErrorAplicacion(401, "La contraseña temporal venció. Solicita un restablecimiento.")
+    persona = repositorio.obtener_persona(usuario.persona_id)
+    validar_clave_personal(datos.clave, usuario.nombre_usuario, persona.nombres, persona.apellidos)
     if datos.clave != datos.confirmacion:
         raise ErrorAplicacion(422, "Las contraseñas no coinciden.")
     if not datos.clave.strip():
@@ -128,6 +145,9 @@ def cambiar_clave(datos, usuario, repositorio):
         raise ErrorAplicacion(422, "Elige una contraseña diferente de la inicial.")
     usuario.clave_hash = generar_hash_clave(datos.clave)
     usuario.debe_cambiar_clave = False
+    usuario.clave_temporal_vence = None
+    proteccion.registrar(repositorio._base, "clave_cambiada", usuario)
+    proteccion.revocar(repositorio._base, usuario)
     repositorio.revocar_sesiones(usuario)
     token = secrets.token_urlsafe(32)
     repositorio.agregar(SesionAcceso(
@@ -141,6 +161,8 @@ def cambiar_clave(datos, usuario, repositorio):
 def cerrar_sesion(token: str, repositorio: RepositorioAcceso):
     sesion = repositorio.sesion_por_token(token) if token else None
     if sesion:
+        usuario = repositorio.obtener_usuario(sesion.usuario_id)
+        proteccion.registrar(repositorio._base, "sesion_cerrada", usuario)
         repositorio.eliminar(sesion)
         repositorio.confirmar()
     return {"mensaje": "Sesión cerrada."}

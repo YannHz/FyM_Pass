@@ -2,6 +2,7 @@ from datetime import timedelta
 from sqlalchemy import select, update
 from ...models import (
     Persona,
+    Usuario,
     ToleranciaRol,
     PuntoAsistencia,
     Marcado,
@@ -13,6 +14,9 @@ from ...compartido.repositorio import RepositorioBase
 
 
 class RepositorioAsistencia(RepositorioBase):
+
+    def cuenta_persona(self, persona):
+        return self._base.scalar(select(Usuario).where(Usuario.persona_id == persona.id))
 
     def puesto_por_token(self, token):
         return self._base.scalar(

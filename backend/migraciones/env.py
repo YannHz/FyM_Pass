@@ -1,5 +1,12 @@
 from alembic import context
 from aplicacion.database import motor
+import os
+import json
+from pathlib import Path
+from sqlalchemy import create_engine
+if os.environ.get("FYM_MIGRACION") == "1":
+    datos = json.loads((Path(__file__).resolve().parents[1] / "archivos/seguridad/migraciones_bd.local.json").read_text())
+    motor = create_engine(motor.url.set(username=datos["usuario"], password=datos["clave"]))
 from aplicacion.models import Base
 
 def migrar_sin_conexion():

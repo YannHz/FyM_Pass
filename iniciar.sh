@@ -6,7 +6,7 @@ if ! command -v python3 >/dev/null 2>&1; then
     echo "Falta Python 3. Revisa la preparación local del proyecto." >&2
     exit 1
 fi
-exec python3 -u - "$raiz" "$@" <<'PYTHON_FYM'
+exec python3 -B -u - "$raiz" "$@" <<'PYTHON_FYM'
 from pathlib import Path
 import argparse
 import ipaddress
@@ -29,10 +29,19 @@ import sys
 try:
     from aplicacion.main import aplicacion
     from aplicacion.database import motor
+    from aplicacion.config import configuracion
+    from aplicacion.modulos.acceso.proteccion import cifrador
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     from alembic.runtime.migration import MigrationContext
     from sqlalchemy.exc import SQLAlchemyError
+    try:
+        if len(configuracion.clave_qr) < 32:
+            raise ValueError("clave QR corta")
+        cifrador()
+    except Exception:
+        print(json.dumps({"estado": "seguridad"}))
+        sys.exit(1)
     esperadas = set(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
     try:
         with motor.connect() as conexion:
@@ -83,9 +92,10 @@ def comprobar_backend(python, raiz):
     if respuesta.returncode or estado != 'disponible':
         mensajes = {
             'base': 'No se puede acceder a MySQL. Inicia su servicio y revisa backend/.env.',
-            'migraciones': 'La base no tiene las migraciones actuales. Desde backend ejecuta .venv/bin/python -m alembic upgrade head y vuelve a iniciar.',
+            'migraciones': 'La base no tiene las migraciones actuales. Aplica alembic upgrade head con la cuenta de migraciones (FYM_MIGRACION=1); consulta el README.',
             'dependencias': 'Faltan dependencias del backend. Instala backend/requirements.lock en su entorno virtual.',
             'configuracion': 'No se pudo cargar el backend. Revisa backend/.env y su configuración.',
+            'seguridad': 'Faltan claves de seguridad válidas. Revisa CLAVE_QR y la preparación inicial de claves indicada en el README. El lanzador no crea ni reemplaza claves.',
         }
         raise RuntimeError(mensajes.get(estado, 'No se pudo comprobar el backend.'))
     return datos
@@ -107,20 +117,21 @@ def comprobar_compilacion(raiz):
         raise RuntimeError('La compilación es anterior a los cambios del código. Inicia sin --sin-compilar.')
 
 
-def esperar_servicios(procesos, direccion, puerto, version):
+def esperar_servicios(procesos, direccion, puerto, version, python, raiz):
     cliente = build_opener(ProxyHandler({}))
     limite = time.monotonic() + 45
     while time.monotonic() < limite:
         if any(proceso.poll() is not None for proceso in procesos):
             raise RuntimeError('Un servicio no pudo iniciar. Revisa .registros/backend.log y .registros/web.log.')
         try:
-            with cliente.open('http://127.0.0.1:8000/api/salud/base-datos', timeout=2) as respuesta:
-                base = json.load(respuesta)
+            with cliente.open('http://127.0.0.1:8000/api/salud', timeout=2) as respuesta:
+                directa = json.load(respuesta)
             with cliente.open(f'http://{direccion}:{puerto}/api/salud', timeout=2) as respuesta:
                 api = json.load(respuesta)
             with cliente.open(f'http://{direccion}:{puerto}/', timeout=2) as respuesta:
                 pagina = respuesta.read().decode('utf-8')
-            if base.get('estado') == api.get('estado') == 'disponible' and api.get('version') == version and 'id="root"' in pagina:
+            if directa.get('estado') == api.get('estado') == 'disponible' and directa.get('version') == api.get('version') == version and 'id="root"' in pagina:
+                comprobar_backend(python, raiz)
                 return
         except (OSError, ValueError):
             pass
@@ -158,6 +169,8 @@ def iniciar():
     opciones = analizador.parse_args()
     if os.name != 'posix':
         analizador.error('Este lanzador requiere Linux/macOS con Bash y Python 3. En Windows usa los comandos del README.')
+    if opciones.desarrollo and opciones.red:
+        analizador.error('El desarrollo se mantiene en localhost. Para red utiliza la web compilada sin --desarrollo.')
     direccion = '127.0.0.1'
     if opciones.red:
         try:
@@ -221,7 +234,7 @@ def iniciar():
             procesos.append(subprocess.Popen(comando, cwd=carpeta, env=entorno, stdout=salida, stderr=salida,
                                              stdin=subprocess.DEVNULL, start_new_session=True))
         activos = procesos[-2:]
-        esperar_servicios(activos, direccion, puerto, version)
+        esperar_servicios(activos, direccion, puerto, version, python, raiz)
         url = f'http://{direccion}:{puerto}'
         print(f'Web: {url}')
         print('API local: http://127.0.0.1:8000/docs')
