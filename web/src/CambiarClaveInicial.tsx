@@ -7,7 +7,7 @@ export function CambiarClaveInicial({ alCambiar, alCerrar, requiereActual = fals
 }) {
   const [clave, cambiarClave] = useState("");
   const [confirmacion, cambiarConfirmacion] = useState("");
-  const [actual, cambiarActual] = useState(""), [codigo, cambiarCodigo] = useState("");
+  const [actual, cambiarActual] = useState("");
   const [ocupado, cambiarOcupado] = useState(false);
   const [error, cambiarError] = useState("");
   async function guardar(evento: FormEvent) {
@@ -21,7 +21,7 @@ export function CambiarClaveInicial({ alCambiar, alCerrar, requiereActual = fals
     cambiarError("");
     try {
       const datos = await consultar("/api/acceso/cambiar-clave", {
-        method: "POST", body: JSON.stringify({ clave, confirmacion, actual, codigo }),
+        method: "POST", body: JSON.stringify({ clave, confirmacion, actual }),
       });
       cambiarClave("");
       cambiarConfirmacion("");
@@ -36,8 +36,6 @@ export function CambiarClaveInicial({ alCambiar, alCerrar, requiereActual = fals
       {requiereActual && <>
         <label htmlFor="clave-actual">Contraseña actual</label>
         <input id="clave-actual" type="password" autoComplete="current-password" required value={actual} maxLength={256} onChange={e => cambiarActual(e.target.value)} />
-        <label htmlFor="codigo-clave">Código de verificación, si tienes autenticador</label>
-        <input id="codigo-clave" autoComplete="one-time-code" value={codigo} maxLength={80} onChange={e => cambiarCodigo(e.target.value)} />
       </>}
       <label htmlFor="nueva-clave">Nueva contraseña</label>
       <input id="nueva-clave" type="password" autoComplete="new-password"

@@ -28,8 +28,6 @@ def describir_usuario(repositorio: RepositorioAcceso, usuario: Usuario):
     return {
         "id": usuario.id,
         "debe_cambiar_clave": usuario.debe_cambiar_clave,
-        "requiere_mfa": usuario.permiso == "administrador" and not usuario.mfa_secreto,
-        "mfa_activo": bool(usuario.mfa_secreto),
         "inactividad_minutos": configuracion.inactividad_minutos,
         "usuario": usuario.nombre_usuario,
         "iniciales": iniciales_persona(persona),
@@ -99,13 +97,6 @@ def iniciar_sesion(
         proteccion.registrar(repositorio._base, "temporal_vencida", usuario)
         repositorio.confirmar()
         raise ErrorAplicacion(401, "El acceso temporal venció. Solicita uno nuevo a administración.")
-    if usuario.mfa_secreto:
-        try:
-            proteccion.comprobar_factor(repositorio._base, usuario, datos.codigo)
-        except ErrorAplicacion:
-            proteccion.registrar(repositorio._base, "mfa_fallido", usuario)
-            repositorio.confirmar()
-            raise
     if requiere_actualizar_hash(usuario.clave_hash):
         usuario.clave_hash = generar_hash_clave(datos.clave)
     if anterior:
@@ -132,7 +123,7 @@ def consultar_sesion(usuario: Usuario = None, repositorio: RepositorioAcceso = N
 def cambiar_clave(datos, usuario, repositorio):
     usuario = repositorio.bloquear_usuario(usuario)
     if not usuario.debe_cambiar_clave:
-        proteccion.reautenticar(repositorio._base, usuario, datos.actual, datos.codigo)
+        proteccion.reautenticar(repositorio._base, usuario, datos.actual)
     elif not usuario.clave_temporal_vence or usuario.clave_temporal_vence <= obtener_hora_utc():
         raise ErrorAplicacion(401, "La contraseña temporal venció. Solicita un restablecimiento.")
     persona = repositorio.obtener_persona(usuario.persona_id)

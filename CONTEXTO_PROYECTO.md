@@ -31,16 +31,18 @@ Activar días y definir entrada/salida directamente; asignación posterior con f
 
 Conservar temas, contraste, selección y modificaciones visuales del usuario. Días no seleccionados neutros, seleccionados azules. Menús y selectores flotantes dentro de diálogos; horas visibles en 12 h y valores HH:mm. Aviso de actualización PWA flotante inferior, con recarga manual.
 
+Instalación PWA: `instalacionPwa.ts` captura beforeinstallprompt desde main.tsx y conserva el evento entre montajes del menú Cuenta. El botón abre la confirmación nativa directamente; cada evento se consume una sola vez. Sin evento, mostrar ayuda adaptada al dispositivo y conservar la confirmación del navegador.
+
 ## Acceso y seguridad
 
 - Usuario: inicial del primer nombre + primer apellido + fym, sin tildes y minúsculas. Ante coincidencia, iniciales de apellidos restantes; no añadir números por iniciativa propia.
-- Clave temporal aleatoria, vigencia 48 h, cambio obligatorio. La contraseña personal es de **8–256 caracteres**, confirmada, con rechazo de patrones débiles y datos personales. El mínimo de ocho fue una decisión explícita posterior al refuerzo inicial.
+- Clave inicial por decisión del usuario: primer nombre + inicial de cada apellido, minúsculas y sin tildes (Ana María Pérez Rojas → anapr). Vigencia 48 h, cambio obligatorio; el restablecimiento administrativo regenera esta misma fórmula. El mínimo se aplica solo a la contraseña personal: **8–256 caracteres**, confirmada, con rechazo de patrones débiles y datos personales.
 - Hash Argon2id; scrypt heredado se actualiza al ingresar correctamente.
-- MFA TOTP obligatorio para administradoras y opcional para otros perfiles. Secretos cifrados, prevención de reutilización y ocho códigos de recuperación de un uso. La configuración se confirma desde el autenticador del usuario; no activarlo en su nombre.
+- MFA retirado por decision expresa del usuario tras la presentacion. Todos los perfiles ingresan solo con usuario y contrasena segura de 8–256 caracteres. No reintroducir autenticadores ni codigos de recuperacion.
 - Sesión absoluta de ocho horas, inactividad 30 min, aviso previo y cierre de otras sesiones. Las consultas en segundo plano no cuentan como interacción.
 - Límites persistentes por cuenta/IP, esperas progresivas y auditoría. No volver al contador solo en memoria.
 - Cuenta → Seguridad de mi cuenta agrupa gestión propia; administradoras ven restablecimientos, revocación de carné, auditoría paginada y alertas por rechazos QR.
-- Cambiar/restablecer clave revoca sesiones; un restablecimiento web conserva MFA. Recuperación completa de administradora solo con herramienta local y verificación de identidad.
+- Cambiar/restablecer clave revoca sesiones; la reautenticacion solicita solo la contrasena actual. Recuperación completa de administradora solo con herramienta local y verificación de identidad.
 - No permitir cambios administrativos de contraseña por el formulario Personas: utilizar el acceso temporal.
 - HTTP y cookie Secure quedaron fuera del cambio por solicitud explícita. No habilitarlos ni presentar su configuración actual como producción validada.
 
@@ -48,12 +50,12 @@ Conservar temas, contraste, selección y modificaciones visuales del usuario. D�
 
 Monolito modular: acceso, asistencia, gestion, diagnostico; rutas/esquemas → servicios → repositorios → ORM. Mantener SQL en repositorios.
 
-Backend: FastAPI, SQLAlchemy, PyMySQL, Alembic, Argon2id, PyOTP, cryptography, openpyxl. Frontend: React 19, TypeScript, Vite 6, Tailwind, Lucide, qrcode.react, ZXing.
+Backend: FastAPI, SQLAlchemy, PyMySQL, Alembic, Argon2id, cryptography, openpyxl. Frontend: React 19, TypeScript, Vite 6, Tailwind, Lucide, qrcode.react, ZXing.
 
 Archivos clave:
 - `backend/aplicacion/models.py`, `seguridad.py`, `config.py`, `database.py`.
 - `modulos/acceso/rutas_seguridad.py`, `repositorio_seguridad.py`, `repositorio_proteccion.py`, `proteccion.py`.
-- `compartido/dependencias.py`: permisos y restricciones de cambio/MFA.
+- `compartido/dependencias.py`: permisos y restricciones de cambio de clave.
 - `administrar_seguridad.py`: preparación local, cifrado, respaldos y recuperación.
 - `HorariosLaborales.tsx`, `ConfiguradorIngreso.tsx`, `ConfirmarHorario.tsx`.
 - `CentroSeguridad.tsx`, `CambiarClaveInicial.tsx`, `App.tsx`.
@@ -61,11 +63,11 @@ Archivos clave:
 
 ## Base y datos locales
 
-Revisión Alembic vigente: **0008**. Hay 23 tablas de aplicación más alembic_version. El README contiene el mapa completo y las ocho migraciones. Migraciones/modelos son el esquema publicable; no subir un volcado de la instalación.
+Revisión Alembic vigente: **0009**. Hay 23 tablas de aplicación más alembic_version. El README contiene el mapa completo y las nueve migraciones. Migraciones/modelos son el esquema publicable; no subir un volcado de la instalación.
 
-0006: cambio de contraseña; 0007: carrera/turno/tipo en horarios; 0008: MFA, vigencia temporal, actividad de sesión, eventos de seguridad y límites. Carreras/grupos/rol estudiantil históricos se conservan por compatibilidad sin exponer flujo de alumnado. No borrar tablas por limpieza visual.
+0006: cambio de contraseña; 0007: carrera/turno/tipo en horarios; 0008: refuerzo de acceso y sesiones. 0009: retira columnas MFA, conservando usuarios, contrasenas y asistencias. Carreras/grupos/rol estudiantil históricos se conservan por compatibilidad sin exponer flujo de alumnado. No borrar tablas por limpieza visual.
 
-Base local creada el 14/11/2026, migrada el 18/11. Se conservaron 16 personas ficticias: 4 secretarias, 2 administradoras y 10 docentes. Se invalidaron los 15 accesos temporales predecibles pendientes; se conservó la contraseña personal ya establecida de una administradora. Debe configurar su MFA y emitir nuevos temporales. No asumir que ya lo hizo: verificar estado solo si es necesario, sin imprimir secretos.
+Base local creada el 14/11/2026, migrada el 18/11. Se conservaron 16 personas ficticias: 4 secretarias, 2 administradoras y 10 docentes. Por decisión posterior del usuario se restauró la fórmula por nombre/apellidos en las 15 cuentas con cambio pendiente, renovando vigencia de 48 h y revocando sus sesiones, con respaldo cifrado previo. Se conservó la contraseña personal ya establecida de una administradora. Los nuevos usuarios y restablecimientos utilizan esa misma fórmula. No imprimir secretos.
 
 Horarios ficticios: administración lunes–viernes 08–17, cinco docentes 08–13 y cinco 14–19. No generar marcados para demostrar indicadores.
 
@@ -73,7 +75,7 @@ Horarios ficticios: administración lunes–viernes 08–17, cinco docentes 08�
 
 Todo lo siguiente es privado, no se transfiere por Git:
 - backend/.env.
-- backend/archivos/seguridad/clave_mfa.key y clave_respaldos.key.
+- backend/archivos/seguridad/clave_respaldos.key y claves historicas privadas que se conserven para respaldos.
 - administracion_bd.local.json y migraciones_bd.local.json.
 - Respaldos/listados .fernet, fotos y registros locales.
 
@@ -95,7 +97,7 @@ Al clonar se requiere preparar una base nueva o restaurar privadamente una exist
 
 ## Evidencia y pendientes
 
-Verificado en Windows: compilación web, compatibilidad scrypt/Argon2id, política de ocho caracteres, MFA, recuperación de un uso, restablecimiento, permisos, inactividad y límites persistentes en bases aisladas de MariaDB. También se restauró un respaldo de 16 cuentas en una base aislada que después se retiró. Alembic check no detectó diferencias; pip check sin conflictos.
+Verificado en Windows: compilación web, compatibilidad scrypt/Argon2id, política de ocho caracteres, acceso sin MFA, restablecimiento, permisos, inactividad y límites persistentes en bases aisladas de MariaDB. También se restauró un respaldo de 16 cuentas en una base aislada que después se retiró. Alembic check no detectó diferencias; pip check sin conflictos.
 
 No hay suites versionadas ni Docker por decisión del usuario. No confundir comprobaciones aisladas con pruebas de carga, cámara, iOS o pentest completo. No se ha ejecutado un arranque nativo completo bajo Linux/macOS; validar allí después de transferir.
 

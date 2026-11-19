@@ -1,5 +1,6 @@
 import { iniciarSonido } from "./sonidos";
 import { iniciarTema } from "./SelectorTema";
+import { iniciarInstalacionPwa } from "./instalacionPwa";
 import { PuestoAsistencia } from "./PuestoAsistencia";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -10,6 +11,7 @@ import "./AvisoActualizacion.css";
 
 iniciarTema();
 iniciarSonido();
+iniciarInstalacionPwa();
 
 if (
   import.meta.env.PROD &&

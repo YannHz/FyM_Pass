@@ -1,92 +1,42 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Download } from "lucide-react";
-
-type SolicitudInstalacion = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
+import { obtenerInstalacion, observarInstalacion, solicitarInstalacion } from "./instalacionPwa";
 
 export function InstalarAplicacion() {
-  const [solicitud, establecerSolicitud] =
-    useState<SolicitudInstalacion | null>(null);
-  const [instalada, establecerInstalada] = useState(
-    () =>
-      window.matchMedia?.("(display-mode: standalone)").matches ||
-      Boolean((navigator as Navigator & { standalone?: boolean }).standalone),
+  const { disponible, instalada, ocupada, aviso } = useSyncExternalStore(
+    observarInstalacion, obtenerInstalacion,
   );
-  const [aviso, establecerAviso] = useState("");
-  const [ocupada, establecerOcupada] = useState(false);
-  useEffect(() => {
-    function disponible(evento: Event) {
-      evento.preventDefault();
-      establecerSolicitud(evento as SolicitudInstalacion);
-    }
-    function completada() {
-      establecerInstalada(true);
-      establecerSolicitud(null);
-    }
-    window.addEventListener("beforeinstallprompt", disponible);
-    window.addEventListener("appinstalled", completada);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", disponible);
-      window.removeEventListener("appinstalled", completada);
-    };
-  }, []);
   if (instalada) return null;
-  async function instalar() {
-    if (!solicitud || ocupada) return;
-    establecerOcupada(true);
-    try {
-      await solicitud.prompt();
-      const resultado = await solicitud.userChoice;
-      if (resultado.outcome === "accepted") establecerInstalada(true);
-    } catch {
-      establecerAviso(
-        "No se pudo abrir la instalación. Intenta desde el menú del navegador.",
-      );
-    } finally {
-      establecerSolicitud(null);
-      establecerOcupada(false);
-    }
+  if (disponible || ocupada) {
+    return (
+      <div className="instalar-aplicacion">
+        <button type="button" className="boton-instalar" disabled={ocupada}
+          onClick={() => void solicitarInstalacion()}>
+          <Download size={18} aria-hidden="true" />
+          {ocupada ? "Abriendo instalación…" : "Instalar FyM Pass"}
+        </button>
+      </div>
+    );
   }
+  const esApple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const esAndroid = /Android/i.test(navigator.userAgent);
   return (
-    <details className="instalar-aplicacion">
-      <summary>
-        <Download size={18} aria-hidden="true" /> Instalar FyM Pass
-      </summary>
+    <details className="instalar-aplicacion" open={aviso ? true : undefined}>
+      <summary><Download size={18} aria-hidden="true" /> Cómo instalar FyM Pass</summary>
       <div>
-        <p>
-          Abre tu carnet o el panel desde un icono en tu teléfono o computadora.
-        </p>
-        {solicitud ? (
-          <button
-            type="button"
-            disabled={ocupada}
-            onClick={() => void instalar()}
-          >
-            {ocupada ? "Abriendo instalación…" : "Instalar aplicación"}
-          </button>
-        ) : (
-          <>
-            <p>
-              <strong>iPhone o iPad:</strong> abre esta página en Safari, toca
-              Compartir y elige «Añadir a pantalla de inicio».
-            </p>
-            <p>
-              <strong>Android:</strong> en el menú del navegador busca «Instalar
-              aplicación» o «Añadir a pantalla de inicio».
-            </p>
-            <p>
-              <strong>Computadora:</strong> en Chrome o Edge busca la opción de
-              instalar en la barra de direcciones o en el menú.
-            </p>
-          </>
-        )}
-        <small>
-          Necesitas conexión para iniciar sesión, consultar el carnet y
-          registrar asistencia. La instalación depende del navegador.
-        </small>
         {aviso && <p role="status">{aviso}</p>}
+        <p>Abre tu carnet o el panel desde un icono en tu dispositivo.</p>
+        {!window.isSecureContext ? (
+          <p>Abre la app mediante su dirección HTTPS para habilitar la instalación en este dispositivo.</p>
+        ) : esApple ? (
+          <p>En Safari, toca <strong>Compartir</strong>, elige <strong>Añadir a pantalla de inicio</strong> y confirma en <strong>Añadir</strong>.</p>
+        ) : esAndroid ? (
+          <p>Abre el menú del navegador y elige <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>. Confirma la instalación.</p>
+        ) : (
+          <p>En Chrome o Edge, abre el menú y busca la opción de instalar esta página como aplicación. Si el navegador habilita la instalación directa, aquí aparecerá el botón para instalar.</p>
+        )}
+        <small>Necesitas conexión para iniciar sesión, consultar el carnet y registrar asistencia.</small>
       </div>
     </details>
   );

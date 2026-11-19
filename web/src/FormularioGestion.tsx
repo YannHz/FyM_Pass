@@ -283,7 +283,7 @@ export function FormularioGestion({
     );
   }
   if (accesoTemporal) return <Dialogo titulo="Entrega el acceso temporal" cerrar={cerrar}>
-    <div className="formulario-gestion"><p>Se muestra una sola vez. Entrégalo personalmente; vence en 48 horas y exige cambio de contraseña.</p>
+    <div className="formulario-gestion"><p>La contraseña inicial usa el primer nombre y las iniciales de los apellidos, en minúsculas y sin tildes. Entrégala personalmente; vence en 48 horas y exige cambio de contraseña.</p>
       <p>Usuario: <code>{accesoTemporal.usuario}</code></p>
       <p>Contraseña temporal: <code>{accesoTemporal.clave_temporal}</code></p>
       <p>Vence: {new Date(accesoTemporal.vence).toLocaleString("es-PE")}</p>

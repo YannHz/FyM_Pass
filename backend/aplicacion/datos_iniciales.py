@@ -213,7 +213,7 @@ def guardar_listado(cuentas, archivo, respaldo, inicio):
         "",
         "Personas completamente ficticias para pruebas. No publicar este archivo.",
         "",
-        f"Versión: {VERSION}. Contraseñas temporales aleatorias de 48 horas; cambio obligatorio al ingresar.",
+        f"Versión: {VERSION}. Contraseñas iniciales por nombre e iniciales de apellidos, válidas por 48 horas; cambio obligatorio al ingresar.",
         "",
         "| Persona | Usuario | Contraseña | Rol | Permiso |",
         "| --- | --- | --- | --- | --- |",

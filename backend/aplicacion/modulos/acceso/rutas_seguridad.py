@@ -3,7 +3,6 @@ from uuid import uuid4
 import json
 import secrets
 import time
-import pyotp
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select, delete, func
 from sqlalchemy.orm import Session
@@ -17,7 +16,6 @@ from . import proteccion, servicios
 from .repositorio import RepositorioAcceso
 
 from . import repositorio_seguridad as implementacion
-from .repositorio_seguridad import CodigoFactor
 
 rutas_seguridad = APIRouter(prefix="/api/seguridad", tags=["Seguridad"])
 
@@ -37,17 +35,8 @@ def sesiones(request: Request, usuario=Depends(obtener_usuario), base: Session=D
 def cerrar_otras(datos: Reautenticacion, request: Request, usuario=Depends(obtener_usuario), base: Session=Depends(obtener_base_datos)):
     return implementacion.cerrar_otras(**locals())
 
-@rutas_seguridad.post('/mfa/preparar', dependencies=[Depends(validar_peticion), Depends(limitar_intentos)])
-def preparar_mfa(datos: Reautenticacion, usuario=Depends(obtener_usuario), base: Session=Depends(obtener_base_datos)):
-    return implementacion.preparar_mfa(**locals())
 
-@rutas_seguridad.post('/mfa/confirmar', dependencies=[Depends(validar_peticion), Depends(limitar_intentos)])
-def confirmar_mfa(datos: CodigoFactor, request: Request, usuario=Depends(obtener_usuario), base: Session=Depends(obtener_base_datos)):
-    return implementacion.confirmar_mfa(**locals())
 
-@rutas_seguridad.post('/mfa/recuperacion', dependencies=[Depends(validar_peticion), Depends(limitar_intentos)])
-def regenerar_recuperacion(datos: Reautenticacion, usuario=Depends(obtener_usuario), base: Session=Depends(obtener_base_datos)):
-    return implementacion.regenerar_recuperacion(**locals())
 
 @rutas_seguridad.post('/personas/{persona_id}/restablecer', dependencies=[Depends(validar_peticion), Depends(limitar_intentos)])
 def restablecer(persona_id: int, datos: Reautenticacion, usuario=Depends(administrador), base: Session=Depends(obtener_base_datos)):

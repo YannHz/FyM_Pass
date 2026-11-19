@@ -608,8 +608,6 @@ export function PanelAdministrativo({
         { nombre: "codigo", etiqueta: "ID institucional", requerido: true },
         { nombre: "actual", etiqueta: "Tu contraseña actual", tipo: "password", avanzado: true,
           ayuda: "Necesaria si cambias los permisos de una cuenta existente.", visible: () => Boolean(persona) },
-        { nombre: "codigo_verificacion", etiqueta: "Código de tu autenticador", avanzado: true,
-          ayuda: "Necesario si cambias los permisos y tienes segundo factor.", visible: () => Boolean(persona) },
         { nombre: "documento", etiqueta: "Documento de identidad" },
         { nombre: "nombres", etiqueta: "Nombres", requerido: true },
         { nombre: "apellidos", etiqueta: "Apellidos", requerido: true },

@@ -24,7 +24,6 @@ class DatosPersona(Formulario):
     clave: str | None = Field(default=None, min_length=8, max_length=256)
     permiso: Literal["personal", "operador", "administrador"] = "personal"
     actual: str = Field(default="", max_length=256)
-    codigo_verificacion: str = Field(default="", max_length=80)
 
 
 class DatosCarrera(Formulario):

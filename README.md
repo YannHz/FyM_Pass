@@ -23,7 +23,7 @@ El rol institucional (docente o administrativo) es diferente del permiso de la c
 
 ## Tecnología y estructura
 
-React 19, TypeScript, Vite 6, Tailwind CSS 4, Lucide, qrcode.react y ZXing. Backend Python/FastAPI, SQLAlchemy, PyMySQL, Alembic, Argon2id, PyOTP, cryptography y openpyxl. Persistencia MySQL/MariaDB.
+React 19, TypeScript, Vite 6, Tailwind CSS 4, Lucide, qrcode.react y ZXing. Backend Python/FastAPI, SQLAlchemy, PyMySQL, Alembic, Argon2id, cryptography y openpyxl. Persistencia MySQL/MariaDB.
 
 Monolito modular por capas: navegador/PWA → API → servicios → repositorios → MySQL/MariaDB. Solo el backend accede a la base.
 
@@ -39,11 +39,11 @@ backend/
     compartido/                dependencias, identidad y firma QR
     infraestructura/           reportes Excel
     modulos/
-      acceso/                  autenticación, MFA, sesiones y auditoría
+      acceso/                  autenticación, sesiones y auditoría
       asistencia/              puesto, carnés y marcados
       gestion/                 personas, horarios y administración
       diagnostico/             salud y conexión
-  migraciones/versiones/       0001 a 0008
+  migraciones/versiones/       0001 a 0009
   requirements.txt / requirements.lock
   .env.example                ejemplo sin secretos
 web/
@@ -60,10 +60,10 @@ CONTEXTO_PROYECTO.md           traspaso para el agente
 
 El usuario se genera con inicial del primer nombre + primer apellido + `fym`, en minúsculas y sin tildes. Ante coincidencia se añaden las iniciales de los apellidos restantes; otra coincidencia requiere revisar los datos con administración.
 
-- Contraseña temporal aleatoria, válida por 48 horas, con cambio obligatorio.
+- Contraseña inicial: primer nombre + inicial de cada apellido, todo en minúsculas y sin tildes. Ejemplo: Ana María Pérez Rojas → usuario `aperezfym`, clave inicial `anapr`. Es válida por 48 horas y exige cambio al primer ingreso; el mínimo de ocho caracteres se aplica a la nueva contraseña personal. El restablecimiento administrativo vuelve a emitir la clave inicial y renueva su vigencia.
 - Contraseña personal de **8 a 256 caracteres**, confirmada dos veces. Se permiten espacios; se rechazan patrones comunes, repeticiones y datos personales. No se exige una mezcla fija de símbolos y números.
 - Argon2id para hashes nuevos. Los hashes scrypt anteriores se actualizan al autenticar correctamente.
-- MFA TOTP obligatorio para administradoras, opcional para las otras cuentas. Ocho códigos de recuperación de un solo uso, mostrados al configurarlos o renovarlos.
+- Acceso con usuario y contraseña para todos los perfiles. El MFA y los códigos de recuperación se retiraron por decisión del proyecto; no se necesita una aplicación autenticadora.
 - Sesión de hasta ocho horas, con vencimiento tras 30 minutos sin interacción y aviso previo. Las consultas automáticas no prolongan la actividad.
 - Límites persistentes por cuenta y por IP, con esperas progresivas.
 - Reautenticación para cambiar contraseñas, cerrar otras sesiones, modificar permisos, emitir accesos temporales o renovar carnés.
@@ -71,7 +71,7 @@ El usuario se genera con inicial del primer nombre + primer apellido + `fym`, en
 - Auditoría de accesos y operaciones sensibles; alertas al acumular cinco rechazos QR similares en 15 minutos.
 - Las fotos históricas requieren autenticación y autorización; ya no se cargan fotos nuevas desde la interfaz.
 
-En **Cuenta → Seguridad de mi cuenta** están las sesiones, el autenticador y la contraseña. Las administradoras también pueden restablecer accesos, revocar carnés y consultar eventos. Un restablecimiento no elimina el MFA del destinatario.
+En **Cuenta → Seguridad de mi cuenta** están las sesiones y la contraseña. Las administradoras también pueden restablecer accesos, revocar carnés y consultar eventos.
 
 El QR del puesto rota cada 30 segundos y está firmado. El carné es fijo hasta su revocación. Estas medidas no impiden fotografiar un carné ni reenviar un QR vigente: la comprobación presencial sigue dependiendo de la supervisión del puesto.
 
@@ -79,12 +79,12 @@ HTTP y la configuración de cookie Secure se mantienen por decisión del proyect
 
 ## Base de datos
 
-**La definición publicable de la base está en las migraciones Alembic y los modelos**, no en un volcado local. Revisión vigente: `0008`. Hay 23 tablas de aplicación, más `alembic_version`.
+**La definición publicable de la base está en las migraciones Alembic y los modelos**, no en un volcado local. Revisión vigente: `0009`. Hay 23 tablas de aplicación, más `alembic_version`.
 
 | Tablas | Finalidad |
 | --- | --- |
 | `sedes`, `roles` | Institución y roles institucionales |
-| `personas`, `usuarios` | Identidad, permiso, hash, vigencia temporal y configuración MFA cifrada |
+| `personas`, `usuarios` | Identidad, permiso, hash, vigencia temporal y estado del cambio obligatorio de contraseña |
 | `horarios`, `tramos_horarios`, `asignaciones_horarios` | Carrera, tipo de personal, turno, días, horas y vigencias |
 | `tolerancias_roles`, `reglas_sedes`, `dias_no_lectivos` | Evaluación de puntualidad, ausencia y calendario |
 | `puntos_asistencia`, `puestos_abiertos`, `eventos_puesto` | Puesto operativo, token resumido y resultado de lecturas |
@@ -106,7 +106,8 @@ Las tablas históricas y el rol antiguo de estudiante se conservan para compatib
 | 0005 | Asignaciones heredadas de horarios |
 | 0006 | Cambio obligatorio de contraseña |
 | 0007 | Tipo de personal, carrera y turno de horarios |
-| 0008 | MFA, vigencia temporal, actividad de sesión, eventos de seguridad y límites |
+| 0008 | Refuerzo de acceso, vigencia temporal, actividad de sesión, eventos y límites |
+| 0009 | Retirada del MFA y sus columnas; conserva contraseñas, cuentas y asistencias |
 
 Los eventos se guardan en UTC; los horarios son horas locales y la interfaz usa Lima. Se conserva el resultado original del marcado. No se soportan tramos que crucen medianoche.
 
@@ -138,7 +139,7 @@ cp backend/.env.example backend/.env
 
 No sobrescribir un `backend/.env` existente. Configurarlo privadamente con host, puerto, base, usuario operativo y contraseña. Generar `CLAVE_QR` aleatoria de al menos 32 caracteres. Mantener esa clave si se conservarán carnés existentes.
 
-`INACTIVIDAD_MINUTOS=30` controla la sesión. `CLAVE_SEGURIDAD` puede contener una clave Fernet; si queda vacía, se utiliza `backend/archivos/seguridad/clave_mfa.key`. No cambiar esa clave sin planificar la recuperación de los autenticadores.
+`INACTIVIDAD_MINUTOS=30` controla la sesión. La API no requiere claves de autenticador. `clave_respaldos.key` se utiliza únicamente para proteger respaldos y listados privados.
 
 `PROXY_CONFIABLE=false` usa la IP directa. Habilitarlo solo tras un proxy configurado para sobrescribir las cabeceras de origen. `COOKIE_SEGURA` conserva su configuración actual; el lanzador no la cambia.
 
@@ -205,7 +206,7 @@ Se crea un respaldo previo y se muestra la ruta del listado cifrado de accesos i
 
 El listado se muestra en esa terminal privada; no pegarlo en incidencias ni subir capturas. Las contraseñas caducan a las 48 horas. El flujo normal de creación/restablecimiento desde la web muestra la contraseña una sola vez y no genera un listado.
 
-La primera administradora cambia su contraseña y configura el autenticador antes de acceder al panel. Guardar sus códigos de recuperación fuera del teléfono. Las demás cuentas pueden gestionarse desde Cuenta → Seguridad.
+La primera administradora cambia su contraseña temporal y accede directamente al panel. Las demás cuentas pueden gestionarse desde Cuenta → Seguridad.
 
 ## Arranque diario
 
@@ -257,6 +258,8 @@ La URL cambia al recrear el túnel. La cámara y la instalación móvil necesita
 
 La PWA almacena recursos públicos, no respuestas de la API. Una actualización muestra el aviso flotante “FyM Pass se actualizó”; la recarga es manual para preservar formularios abiertos.
 
+La disponibilidad de instalación se captura desde el arranque, incluso antes de abrir Cuenta. Cuando el navegador la habilita, **Instalar FyM Pass** abre directamente su confirmación nativa. Si no está disponible, **Cómo instalar FyM Pass** muestra ayuda para el dispositivo. En iPhone/iPad se utiliza Compartir en Safari. La confirmación final corresponde al usuario; instalar no habilita operaciones sin conexión.
+
 ## Respaldos y recuperación
 
 Desde `backend`:
@@ -266,9 +269,9 @@ Desde `backend`:
 .\.venv\Scripts\python.exe -B -m aplicacion.administrar_seguridad recuperar-admin --usuario NOMBRE_DE_CUENTA
 ```
 
-La segunda orden es una recuperación administrativa local excepcional: invalida sesiones, reemplaza el segundo factor y muestra un acceso temporal una sola vez. Usarla tras verificar la identidad del titular.
+La segunda orden es una recuperación administrativa local excepcional: invalida sesiones y muestra un acceso temporal una sola vez. Usarla tras verificar la identidad del titular.
 
-Los respaldos nuevos se guardan como `.sql.fernet`. `clave_respaldos.key` permite descifrarlos; `clave_mfa.key` protege los secretos TOTP. Los datos cifrados sin sus claves no bastan para recuperar la instalación. Custodiar las claves por separado de una copia externa del respaldo.
+Los respaldos nuevos se guardan como `.sql.fernet`. `clave_respaldos.key` permite descifrarlos. Conservar claves históricas privadas si se necesitan para restaurar respaldos anteriores; no se usan en el inicio de sesión actual. Los datos cifrados sin sus claves no bastan para recuperar la instalación. Custodiar las claves por separado de una copia externa del respaldo.
 
 La base, `.env`, claves y archivos de `backend/archivos/seguridad/` son privados. La herramienta aplica permisos del usuario local y SYSTEM en Windows; 0700 a la carpeta y 0600 a archivos en POSIX. No sobrescribirlos al actualizar el código.
 
@@ -277,8 +280,8 @@ Se verificó una restauración de 16 cuentas en una base aislada de MariaDB, pos
 ## Verificaciones y límites
 
 - Compilación TypeScript/Vite.
-- Migraciones hasta 0008 y `alembic check` sin diferencias en la instalación local verificada.
-- Comprobaciones aisladas de MFA, recuperación de un uso, contraseñas, permisos, límites persistentes e inactividad.
+- Migraciones hasta 0009 y `alembic check` sin diferencias en la instalación local verificada.
+- Comprobaciones aisladas del acceso sin MFA, contraseñas, permisos, límites persistentes e inactividad.
 - Restauración de respaldo cifrado sobre una base de prueba.
 - Política actual de 8 caracteres verificada: acepta una clave válida de ocho y rechaza siete caracteres y patrones débiles.
 - No hay suites de pruebas versionadas ni Docker por decisión del proyecto.
@@ -288,9 +291,9 @@ Se verificó una restauración de 16 cuentas en una base aislada de MariaDB, pos
 
 ## Qué publicar en GitHub
 
-Publicar fuentes, migraciones 0001–0008, locks, `backend/.env.example`, lanzador y documentación. Las migraciones permiten reconstruir el esquema; la carga ficticia es opcional y genera credenciales nuevas.
+Publicar fuentes, migraciones 0001–0009, locks, `backend/.env.example`, lanzador y documentación. Las migraciones permiten reconstruir el esquema; la carga ficticia es opcional y genera credenciales nuevas.
 
-No publicar `.env`, claves, credenciales SQL, códigos de recuperación, listados de acceso, volcados, archivos cifrados de respaldo, fotos, registros de ejecución, entornos, `node_modules` ni `dist`. El cifrado no convierte un respaldo en un archivo público.
+No publicar `.env`, claves, credenciales SQL, listados de acceso, volcados, archivos cifrados de respaldo, fotos, registros de ejecución, entornos, `node_modules` ni `dist`. El cifrado no convierte un respaldo en un archivo público.
 
 Antes de subir:
 

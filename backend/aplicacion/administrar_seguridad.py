@@ -33,7 +33,7 @@ def guardar_privado(archivo, contenido):
 def claves():
     carpeta.mkdir(parents=True, exist_ok=True)
     proteger(carpeta)
-    for nombre in ("clave_mfa.key", "clave_respaldos.key"):
+    for nombre in ("clave_respaldos.key",):
         archivo = carpeta / nombre
         if not archivo.exists():
             guardar_privado(archivo, Fernet.generate_key().decode())
@@ -151,12 +151,11 @@ def recuperar_admin(nombre):
             usuario = base.scalar(select(Usuario).where(Usuario.nombre_usuario == nombre, Usuario.permiso == "administrador").with_for_update())
             if not usuario or not usuario.activo:
                 raise RuntimeError("Cuenta administradora activa no encontrada.")
-            usuario.mfa_secreto = usuario.mfa_pendiente = usuario.mfa_recuperacion = usuario.mfa_ultimo_paso = usuario.mfa_pendiente_vence = None
             clave = proteccion.temporal(base, usuario)
             proteccion.registrar(base, "recuperacion_administrativa_local", usuario, "Recuperación mediante la cuenta administrativa local de la base.")
             base.commit()
             print("Acceso temporal de 48 horas, mostrado una sola vez:", clave)
-            print("El usuario deberá cambiar la contraseña y configurar otra vez su autenticador.")
+            print("El usuario deberá cambiar la contraseña antes de continuar.")
     finally:
         motor_admin.dispose()
 

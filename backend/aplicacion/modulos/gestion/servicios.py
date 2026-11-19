@@ -228,7 +228,7 @@ def guardar_persona(
     )
     cuenta_previa = repositorio.cuenta_de_persona(persona) if datos.id else None
     if cuenta_previa and cuenta_previa.permiso != datos.permiso:
-        proteccion.reautenticar(repositorio._base, usuario, datos.actual, datos.codigo_verificacion)
+        proteccion.reautenticar(repositorio._base, usuario, datos.actual)
     campos = datos.model_dump(
         exclude={
             "id",
@@ -238,7 +238,6 @@ def guardar_persona(
             "clave",
             "permiso",
             "actual",
-            "codigo_verificacion",
         }
     )
     for campo, valor in campos.items():

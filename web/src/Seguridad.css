@@ -4,9 +4,6 @@
 .formulario-seguridad { display:grid; gap:16px; max-width:520px; margin-block:20px; }
 .formulario-seguridad label { display:grid; gap:8px; }
 .acciones-seguridad { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
-.codigos-recuperacion { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:16px; list-style:none; }
-.codigos-recuperacion code, .secreto-mfa { overflow-wrap:anywhere; user-select:all; }
-.qr-configuracion { width:max-content; padding:16px; border-radius:16px; background:white; }
 .lista-sesiones,.lista-auditoria { padding:0; list-style:none; }
 .lista-sesiones li,.lista-auditoria li { padding:14px 0; border-bottom:1px solid var(--linea); }
 .aviso-inactividad { position:fixed; z-index:100; bottom:24px; left:50%; transform:translateX(-50%); max-width:calc(100vw - 32px); padding:18px; border:1px solid var(--linea); border-radius:18px; background:var(--superficie); box-shadow:0 8px 30px #0003; }

@@ -30,7 +30,6 @@ try:
     from aplicacion.main import aplicacion
     from aplicacion.database import motor
     from aplicacion.config import configuracion
-    from aplicacion.modulos.acceso.proteccion import cifrador
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     from alembic.runtime.migration import MigrationContext
@@ -38,7 +37,6 @@ try:
     try:
         if len(configuracion.clave_qr) < 32:
             raise ValueError("clave QR corta")
-        cifrador()
     except Exception:
         print(json.dumps({"estado": "seguridad"}))
         sys.exit(1)
@@ -95,7 +93,7 @@ def comprobar_backend(python, raiz):
             'migraciones': 'La base no tiene las migraciones actuales. Aplica alembic upgrade head con la cuenta de migraciones (FYM_MIGRACION=1); consulta el README.',
             'dependencias': 'Faltan dependencias del backend. Instala backend/requirements.lock en su entorno virtual.',
             'configuracion': 'No se pudo cargar el backend. Revisa backend/.env y su configuración.',
-            'seguridad': 'Faltan claves de seguridad válidas. Revisa CLAVE_QR y la preparación inicial de claves indicada en el README. El lanzador no crea ni reemplaza claves.',
+            'seguridad': 'Faltan claves de seguridad válidas. Revisa CLAVE_QR según el README. El lanzador no crea ni reemplaza claves.',
         }
         raise RuntimeError(mensajes.get(estado, 'No se pudo comprobar el backend.'))
     return datos

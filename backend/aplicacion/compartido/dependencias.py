@@ -48,11 +48,6 @@ def obtener_usuario(request: Request, base: Session = Depends(obtener_base_datos
         "/api/acceso/actual", "/api/acceso/cambiar-clave", "/api/acceso/cerrar", "/api/seguridad/actividad",
     ):
         raise HTTPException(403, "Establece tu nueva contraseña para continuar.")
-    if usuario.permiso == "administrador" and not usuario.mfa_secreto and not (
-        request.url.path.startswith("/api/seguridad/mfa/") or request.url.path in (
-            "/api/acceso/actual", "/api/acceso/cambiar-clave", "/api/acceso/cerrar", "/api/seguridad/actividad")
-    ):
-        raise HTTPException(403, "Configura la verificación en dos pasos para continuar.")
     return usuario
 
 

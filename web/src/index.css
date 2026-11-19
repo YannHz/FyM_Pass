@@ -3311,6 +3311,14 @@ button:focus-visible {
   min-height: 44px;
   font-weight: 600;
 }
+.instalar-aplicacion .boton-instalar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  width: 100%;
+}
 .formulario-acceso .instalar-aplicacion > summary {
   justify-content: center;
 }
