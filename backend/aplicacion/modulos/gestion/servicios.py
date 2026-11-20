@@ -217,6 +217,10 @@ def guardar_persona(
     rol = repositorio.obtener_rol(datos.rol_id)
     if not rol or rol.codigo not in ("docente", "administrativo"):
         raise ErrorAplicacion(422, "Selecciona un rol de docente o personal administrativo.")
+    if datos.documento:
+        datos.codigo = f"{'DOC' if rol.codigo == 'docente' else 'ADM'}-{datos.documento}"
+    elif datos.id:
+        datos.codigo = comprobar_persona(repositorio, usuario, datos.id).codigo
     if datos.grupo_id:
         raise ErrorAplicacion(422, "Los grupos académicos ya no forman parte del sistema de asistencia.")
     if datos.horario_id:
@@ -249,7 +253,7 @@ def guardar_persona(
         repositorio.sincronizar()
     except ConflictoPersistencia:
         repositorio.revertir()
-        raise ErrorAplicacion(409, "El código, documento o ID biométrico ya existe.")
+        raise ErrorAplicacion(409, "Ya existe una persona con ese DNI o ID institucional.")
     cuenta = repositorio.cuenta_de_persona(persona)
     clave_entrega = None
     if cuenta and cuenta.permiso != datos.permiso:
@@ -358,7 +362,7 @@ def guardar_horario(
 
 
 
-def asignar_horario_laboral(datos, usuario=None, repositorio=None):
+def asignar_horario_laboral(datos, usuario=None, repositorio=None, confirmar_cambios=True):
     sede = sede_usuario(repositorio, usuario)
     comprobar_horario(repositorio, sede, datos.horario_id)
     horario = repositorio.obtener_horario(datos.horario_id)
@@ -379,9 +383,34 @@ def asignar_horario_laboral(datos, usuario=None, repositorio=None):
         asignar_desde(repositorio, persona, datos.horario_id, datos.vigente_desde)
         registrar_auditoria(repositorio, usuario, "asignar_horario_laboral", "personas", persona.id,
             {"horario_id": datos.horario_id, "desde": str(datos.vigente_desde)})
-    confirmar(repositorio)
-    notificar_marcado(sede)
+    if confirmar_cambios:
+        confirmar(repositorio)
+        notificar_marcado(sede)
     return {"mensaje": f"Horario laboral confirmado para {len(personas)} personas."}
+
+
+def guardar_semana_laboral(datos, usuario, repositorio):
+    from .esquemas import DatosAsignacionLaboral
+    administrador(usuario)
+    if len({tramo.dia_semana for tramo in datos.tramos}) != len(datos.tramos):
+        raise ErrorAplicacion(422, "Configura una sola entrada y salida por día.")
+    validar_fecha(repositorio, sede_usuario(repositorio, usuario), datos.vigente_desde)
+    try:
+        resultado = guardar_horario(
+            DatosHorario(**datos.model_dump(include=set(DatosHorario.model_fields))),
+            usuario, repositorio, horario_id=datos.horario_id, confirmar_cambios=False,
+        )
+        repositorio.sincronizar()
+        if datos.persona_ids:
+            asignar_horario_laboral(DatosAsignacionLaboral(
+                persona_ids=datos.persona_ids, horario_id=resultado["id"], vigente_desde=datos.vigente_desde,
+            ), usuario, repositorio, confirmar_cambios=False)
+        confirmar(repositorio)
+    except Exception:
+        repositorio.revertir()
+        raise
+    notificar_marcado(sede_usuario(repositorio, usuario))
+    return {"id": resultado["id"], "mensaje": f"Semana guardada. Horario aplicado a {len(set(datos.persona_ids))} personas."}
 
 
 def eliminar_horario(identificador: int, usuario: Usuario = None, repositorio: RepositorioGestion = None):
@@ -721,6 +750,11 @@ def crear_justificacion(
     if not any(fila["estado"] == esperado for fila in filas):
         raise ErrorAplicacion(422, "La incidencia ya no está disponible. Actualiza los registros antes de justificar.")
     justificacion = Justificacion(**datos.model_dump(), creada_por_id=usuario.id)
+    directa = usuario.permiso == "administrador"
+    if directa:
+        justificacion.estado = "aprobada"
+        justificacion.resuelta_por_id = usuario.id
+        justificacion.observacion = "Aprobada al registrar por administración."
     repositorio.agregar(justificacion)
     repositorio.sincronizar()
     registrar_auditoria(
@@ -729,10 +763,11 @@ def crear_justificacion(
         "crear_justificacion",
         "justificaciones",
         justificacion.id,
-        {"persona_id": datos.persona_id, "fecha": datos.fecha},
+        {"persona_id": datos.persona_id, "fecha": datos.fecha,
+         "estado": "aprobada" if directa else "pendiente", "aprobacion_directa": directa},
     )
     confirmar(repositorio)
-    return {"mensaje": "Justificación registrada."}
+    return {"mensaje": "Incidencia justificada." if directa else "Justificación enviada a revisión."}
 
 
 def resolver_justificacion(
@@ -861,7 +896,7 @@ def guardar_dispositivo(
     )
     confirmar(repositorio)
     return {
-        "mensaje": "Configuración guardada. La integración con biométricos no está habilitada."
+        "mensaje": "Configuración del puesto QR guardada."
     }
 
 
@@ -932,6 +967,7 @@ def consultar_preplanilla(
         resultados.append(
             {
                 "persona_id": docente.id,
+                "codigo": docente.codigo,
                 "nombre": f"{docente.nombres} {docente.apellidos}",
                 "horas_programadas": round(
                     sum((fila["horas_programadas"] for fila in datos)), 2
@@ -998,7 +1034,7 @@ def exportar(
             {**fila, "importe_estimado": fila["importe_estimado"] if fila["tarifa_configurada"] else "Sin tarifa", "descuento_referencial": fila["descuento_referencial"] if fila["tarifa_configurada"] else "Sin tarifa"}
             for fila in filas
         ]
-        return construir_excel(resumen, tipo, detalle=detalle)
+        return construir_excel(resumen, tipo, detalle=detalle, desde=desde, hasta=hasta)
     filas.sort(key=lambda fila: (fila["fecha"], fila["entrada"] or "", fila["persona_id"]), reverse=True)
     filtros = " · ".join(valor for valor in [
         f"Rol: {rol}" if rol else "",

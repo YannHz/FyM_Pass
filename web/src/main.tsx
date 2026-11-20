@@ -8,6 +8,7 @@ import { Aplicacion } from "./App";
 import "./index.css";
 import "./controles.css";
 import "./AvisoActualizacion.css";
+import "./Formularios.css";
 
 iniciarTema();
 iniciarSonido();

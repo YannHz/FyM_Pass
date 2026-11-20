@@ -13,6 +13,10 @@ export type Campo = {
     valor: string | number;
     texto: string;
   }[];
+  opcionesSegunDatos?: (datos: Registro) => { valor: string | number; texto: string }[];
+  soloLectura?: boolean;
+  modoEntrada?: "numeric" | "text";
+  ayudaSegunDatos?: (datos: Registro) => string;
   requerido?: boolean;
   numerico?: boolean;
   ayuda?: string;
@@ -36,6 +40,7 @@ export type Formulario = {
   datos: Registro;
   preparar?: (datos: Registro) => Registro;
   alGuardar?: (respuesta: Registro, datos: Registro) => void;
+  actualizar?: (datos: Registro) => Registro;
 };
 export function FormularioGestion({
   formulario,
@@ -46,7 +51,8 @@ export function FormularioGestion({
   cerrar: () => void;
   guardado: (mensaje: string) => void;
 }) {
-  const [datos, establecerDatos] = useState<Registro>({ ...formulario.datos });
+  const [datos, establecerDatos] = useState<Registro>(() => formulario.actualizar
+    ? formulario.actualizar({ ...formulario.datos }) : { ...formulario.datos });
   const [accesoTemporal, cambiarAccesoTemporal] = useState<Registro | null>(null);
   const [errores, establecerErrores] = useState<Record<string, string>>({});
   const [error, establecerError] = useState(""),
@@ -61,10 +67,13 @@ export function FormularioGestion({
     (campo) => !campo.visible || campo.visible(datos),
   );
   function cambiar(campo: Campo, valor: unknown) {
-    establecerDatos((anterior) => ({
+    establecerDatos((anterior) => {
+      const nuevos = {
       ...anterior,
       [campo.nombre]: campo.numerico && valor !== "" ? Number(valor) : valor,
-    }));
+      };
+      return formulario.actualizar ? formulario.actualizar(nuevos) : nuevos;
+    });
     establecerErrores((anterior) => ({ ...anterior, [campo.nombre]: "" }));
   }
   function errorCampo(nombre: string) {
@@ -79,6 +88,10 @@ export function FormularioGestion({
     evento.preventDefault();
     if (ocupado) return;
     const fallos: Record<string, string> = {};
+    if (formulario.ruta.endsWith("/personas") &&
+      ((!datos.id && !datos.documento) || datos.documento && !/^[0-9]{8}$/.test(datos.documento))) {
+      fallos.documento = "El DNI debe tener exactamente 8 dígitos.";
+    }
     for (const campo of visibles) {
       if (
         campo.requerido &&
@@ -147,11 +160,12 @@ export function FormularioGestion({
     }
   }
   function presentar(campo: Campo) {
+    const ayuda = campo.ayudaSegunDatos?.(datos) || campo.ayuda;
     const identificador = `campo-${campo.nombre}`,
       aviso = errorCampo(campo.nombre);
     const descripcion =
       [
-        campo.ayuda ? `${identificador}-ayuda` : "",
+        ayuda ? `${identificador}-ayuda` : "",
         aviso ? `${identificador}-error` : "",
       ]
         .filter(Boolean)
@@ -182,7 +196,7 @@ export function FormularioGestion({
     };
     return (
       <div
-        className={`campo ${["textarea", "dias", "tramos", "horario-directo"].includes(campo.tipo || "") ? "ancho" : ""}`}
+        className={`campo ${campo.tipo === "booleano" ? "campo-booleano" : ""} ${["textarea", "dias", "tramos", "horario-directo"].includes(campo.tipo || "") ? "ancho" : ""}`}
         key={campo.nombre}
       >
         {campo.tipo === "booleano" ? (
@@ -222,7 +236,7 @@ export function FormularioGestion({
                 enFormulario
                 valor={String(datos[campo.nombre] ?? "")}
                 alCambiar={(valor) => cambiar(campo, valor)}
-                opciones={(campo.opciones || []).map((opcion) => ({
+                opciones={(campo.opcionesSegunDatos?.(datos) || campo.opciones || []).map((opcion) => ({
                   valor: String(opcion.valor),
                   texto: opcion.texto,
                 }))}
@@ -263,6 +277,17 @@ export function FormularioGestion({
                 minLength={campo.longitudMinima}
                 maxLength={campo.longitudMaxima ?? maximos[campo.nombre]}
                 pattern={campo.patron}
+                readOnly={campo.soloLectura}
+                inputMode={campo.modoEntrada}
+                title={campo.patron ? ayuda : undefined}
+                onBlur={() => {
+                  if (campo.nombre === "documento" && formulario.ruta.endsWith("/personas")) {
+                    const valor = String(datos.documento || "");
+                    establecerErrores(actual => ({ ...actual, documento:
+                      valor && !/^[0-9]{8}$/.test(valor) || !datos.id && !valor
+                        ? "El DNI debe tener exactamente 8 dígitos." : "" }));
+                  }
+                }}
                 onChange={(evento) => cambiar(campo, evento.target.value)}
                 autoComplete={
                   campo.tipo === "password" ? "new-password" : undefined
@@ -271,8 +296,8 @@ export function FormularioGestion({
             )}
           </>
         )}
-        {campo.ayuda && (
-          <small id={`${identificador}-ayuda`}>{campo.ayuda}</small>
+        {ayuda && (
+          <small id={`${identificador}-ayuda`}>{ayuda}</small>
         )}
         {aviso && (
           <small className="error-campo" id={`${identificador}-error`}>

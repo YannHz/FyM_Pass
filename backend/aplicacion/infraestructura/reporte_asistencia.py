@@ -7,6 +7,8 @@ from zoneinfo import ZoneInfo
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.page import PageMargins
+from openpyxl.comments import Comment
 
 AZUL = "003397"
 MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -28,6 +30,9 @@ def preparar_hoja(hoja, columnas):
     hoja.page_setup.fitToHeight = 0
     hoja.oddFooter.center.text = "FyM Pass · Página &P de &N"
     hoja.print_options.horizontalCentered = True
+    hoja.sheet_view.zoomScale = 85
+    hoja.page_margins = PageMargins(left=0.25, right=0.25, top=0.4, bottom=0.4, header=0.15, footer=0.2)
+    hoja.oddFooter.left.text = "Asistencia de ingreso al instituto"
     for indice, ancho in enumerate(columnas, 1):
         hoja.column_dimensions[get_column_letter(indice)].width = ancho
 
@@ -53,6 +58,7 @@ def cabecera(hoja, fila, valores):
 
 def tabla(hoja, filas, campos, etiquetas, periodo):
     preparar_hoja(hoja, [38 if campo == "nombre" else 27 if campo in ("entrada", "salida") else 24 if campo in ("carrera", "grupo") else 18 for campo in campos])
+    hoja.page_setup.paperSize = hoja.PAPERSIZE_A4
     titulo(hoja, "Detalle de asistencia al instituto", periodo, len(campos))
     cabecera(hoja, 5, etiquetas)
     for numero, registro in enumerate(filas, 6):
@@ -94,6 +100,7 @@ def construir_reporte_asistencia(filas, desde=None, hasta=None, filtros=""):
         periodo += " · " + filtros
     campos_resumen = ["N.º", "ID institucional", "Nombre completo", "Rol", "Ingresos", "Días tarde", "Tardanza (min)", "Faltas", "Justificados", "Sin salida"]
     preparar_hoja(resumen, [7, 23, 42, 26, 13, 13, 17, 12, 14, 13])
+    resumen.page_setup.paperSize = resumen.PAPERSIZE_A4
     titulo(resumen, "Consolidado de asistencia", periodo, 10)
     resumen.merge_cells("A4:J4")
     resumen["A4"] = "Solo se cuentan los resultados incluidos en la consulta. Tardanzas justificadas excluidas del total de minutos."
@@ -139,6 +146,8 @@ def construir_reporte_asistencia(filas, desde=None, hasta=None, filtros=""):
         for dia in range(1, dias + 1):
             celda = hoja.cell(7, dia + 4, ["L", "M", "X", "J", "V", "S", "D"][date(anio, numero_mes, dia).weekday()])
             celda.fill = PatternFill("solid", fgColor="EDF3FF")
+            if date(anio, numero_mes, dia).weekday() >= 5:
+                celda.fill = PatternFill("solid", fgColor="D8DFEB")
             celda.alignment = Alignment(horizontal="center")
         grupos = defaultdict(dict)
         for registro in registros:
@@ -159,8 +168,13 @@ def construir_reporte_asistencia(filas, desde=None, hasta=None, filtros=""):
                 celda.font = Font(name="Calibri", size=11, bold=bool(registro), color=tinta)
                 celda.alignment = Alignment(horizontal="center", vertical="center")
                 celda.border = Border(bottom=Side(style="hair", color="D8DFEB"))
+                if registro:
+                    def hora_visible(valor):
+                        return datetime.fromisoformat(valor.replace("Z", "+00:00")).astimezone(ZoneInfo("America/Lima")).strftime("%I:%M %p") if valor else "Sin registro"
+                    celda.comment = Comment(f"{registro['estado']}\nEntrada: {hora_visible(registro.get('entrada'))}\nSalida: {hora_visible(registro.get('salida'))}\nTardanza: {registro.get('minutos_tardanza', 0)} min", "FyM Pass")
             hoja.row_dimensions[fila_excel].height = 34
         hoja.freeze_panes = "E8"
+        hoja.auto_filter.ref = f"A6:{get_column_letter(dias + 4)}{hoja.max_row}"
         hoja.print_title_rows = "1:7"
         hoja.print_area = f"A1:{get_column_letter(dias + 4)}{hoja.max_row}"
     diaria = libro.create_sheet("Detalle diario")

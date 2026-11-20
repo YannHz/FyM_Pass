@@ -2,6 +2,16 @@
 
 Sistema web de asistencia de ingreso al Instituto de Educación Superior Tecnológico Finney y Miller. Versión funcional **1.0.0**, con ejecución local y acceso desde navegador o PWA.
 
+Las justificaciones registradas por administración quedan aprobadas en una sola acción, con motivo, documento opcional y auditoría del responsable. Las solicitudes de operadoras requieren revisión administrativa. Las solicitudes pendientes anteriores conservan su estado hasta ser revisadas.
+
+Al registrar una persona se exige un DNI de ocho dígitos; la pantalla y la API validan su formato y la base impide duplicados. El ID institucional se genera en el servidor como `DOC-DNI` para docentes o `ADM-DNI` para administrativos. No se modifica masivamente la identidad de los registros antiguos; al editar una persona con DNI válido se aplica la fórmula y, si un registro histórico no tiene DNI, se conserva su ID hasta completarlo. La validación de formato no consulta RENIEC.
+
+El rol institucional (docente/administrativo) es distinto del permiso: **Personal** consulta solo su carnet y asistencia; **Operador de asistencia** gestiona la jornada y envía justificaciones a revisión; **Administrador** añade gestión de personas, horarios, reglas, permisos, aprobación y preplanilla. Docentes solo pueden tener permiso personal. Los cambios de permisos existentes exigen reautenticación.
+
+Horarios laborales muestra una semana visual: elegir horario, carrera y turno; seleccionar uno o varios días; aplicar entrada/salida o descanso; elegir personas y fecha; guardar cambios. El horario y sus asignaciones se guardan en una sola transacción. Las personas no seleccionadas conservan sus horarios y los registros anteriores se mantienen. Si un horario ya está en uso, los cambios crean una versión para la fecha elegida. Para retirarle un horario a una persona no basta con quitar su selección: esa selección indica a quién aplicar los cambios.
+
+La compilación web minifica JavaScript y desactiva los mapas de código fuente. `web/verificar_distribucion.mjs` comprueba que `dist` no incluya mapas, archivos ocultos o tipos de archivo privados; se ejecuta con `npm run build`. Esta comprobación no sustituye una revisión de secretos dentro del código. El HTML/CSS/JavaScript enviado al navegador siempre puede inspeccionarse; no existe un script que lo cifre y lo oculte al propio navegador. Las credenciales, permisos y operaciones sensibles se resuelven en la API. Publicar únicamente la distribución compilada, nunca el repositorio ni el servidor de desarrollo.
+
 Actualizado el **18 de noviembre de 2026**. El sistema registra una entrada y una salida general por día de **docentes y personal administrativo**. Carrera y turno organizan los horarios; no generan marcados por clase ni entradas adicionales. La operación actual corresponde a la sede principal.
 
 ## Funciones y permisos
@@ -19,7 +29,7 @@ El rol institucional (docente o administrativo) es diferente del permiso de la c
 - Horarios separados entre docentes (carrera y turno) y personal administrativo (turno), con asignación desde una fecha.
 - Cambiar un horario utilizado conserva la versión anterior; después se confirma la nueva asignación.
 - Preplanilla docente estimada, sin pago ni descuentos automáticos.
-- No hay integración física ZKTeco, operación multisede ni cola de marcados sin servidor.
+- El marcado utiliza exclusivamente QR. No hay operación multisede ni cola de marcados sin servidor.
 
 ## Tecnología y estructura
 
@@ -43,7 +53,7 @@ backend/
       asistencia/              puesto, carnés y marcados
       gestion/                 personas, horarios y administración
       diagnostico/             salud y conexión
-  migraciones/versiones/       0001 a 0009
+  migraciones/versiones/       0001 a 0010
   requirements.txt / requirements.lock
   .env.example                ejemplo sin secretos
 web/
@@ -79,7 +89,18 @@ HTTP y la configuración de cookie Secure se mantienen por decisión del proyect
 
 ## Base de datos
 
-**La definición publicable de la base está en las migraciones Alembic y los modelos**, no en un volcado local. Revisión vigente: `0009`. Hay 23 tablas de aplicación, más `alembic_version`.
+**La definición publicable de la base está en las migraciones Alembic y los modelos**, no en un volcado local. Revisión vigente: `0010`. Hay 23 tablas de aplicación, más `alembic_version`.
+
+Para una instalación nueva se prepararon dos archivos **privados, excluidos de Git**, en `database/`: `01_crear_esquema.sql` crea la base `fym_pass` vacía y el esquema completo de la revisión 0010; `02_datos_iniciales.sql` añade catálogos, reglas, punto QR, horarios y tres cuentas ficticias (administrador, operadora y docente). Los respaldos cifrados anteriores de esa carpeta se conservan.
+
+Importar primero el esquema y después los datos, desde el cliente MySQL/MariaDB con una cuenta autorizada. Por ejemplo, en esta computadora:
+
+```sql
+SOURCE D:/dev_/FyM_Pass/database/01_crear_esquema.sql;
+SOURCE D:/dev_/FyM_Pass/database/02_datos_iniciales.sql;
+```
+
+La base `fym_pass` no debe existir al ejecutar el primer archivo; no usar estos archivos para reemplazar la instalación actual. El segundo requiere tablas vacías y contiene los accesos iniciales en sus comentarios, con hashes Argon2id en los registros. La vigencia de 48 horas empieza al importar, y el cambio de contraseña es obligatorio. Los DNI son ficticios y no se precargan asistencias ni sesiones. Después configurar `.env`, claves privadas y cuentas SQL según los pasos de preparación de este README. Al tener revisión 0010, no volver a ejecutar la carga `datos_iniciales` sobre esas tres personas; usar Alembic para actualizaciones posteriores.
 
 | Tablas | Finalidad |
 | --- | --- |
@@ -108,6 +129,7 @@ Las tablas históricas y el rol antiguo de estudiante se conservan para compatib
 | 0007 | Tipo de personal, carrera y turno de horarios |
 | 0008 | Refuerzo de acceso, vigencia temporal, actividad de sesión, eventos y límites |
 | 0009 | Retirada del MFA y sus columnas; conserva contraseñas, cuentas y asistencias |
+| 0010 | Limpieza de identificadores heredados y dispositivos limitados a QR |
 
 Los eventos se guardan en UTC; los horarios son horas locales y la interfaz usa Lima. Se conserva el resultado original del marcado. No se soportan tramos que crucen medianoche.
 
@@ -280,7 +302,7 @@ Se verificó una restauración de 16 cuentas en una base aislada de MariaDB, pos
 ## Verificaciones y límites
 
 - Compilación TypeScript/Vite.
-- Migraciones hasta 0009 y `alembic check` sin diferencias en la instalación local verificada.
+- Migraciones hasta 0010 y `alembic check` sin diferencias en la instalación local verificada.
 - Comprobaciones aisladas del acceso sin MFA, contraseñas, permisos, límites persistentes e inactividad.
 - Restauración de respaldo cifrado sobre una base de prueba.
 - Política actual de 8 caracteres verificada: acepta una clave válida de ocho y rechaza siete caracteres y patrones débiles.
@@ -291,7 +313,7 @@ Se verificó una restauración de 16 cuentas en una base aislada de MariaDB, pos
 
 ## Qué publicar en GitHub
 
-Publicar fuentes, migraciones 0001–0009, locks, `backend/.env.example`, lanzador y documentación. Las migraciones permiten reconstruir el esquema; la carga ficticia es opcional y genera credenciales nuevas.
+Publicar fuentes, migraciones 0001–0010, locks, `backend/.env.example`, lanzador y documentación. Las migraciones permiten reconstruir el esquema; la carga ficticia es opcional y genera credenciales nuevas.
 
 No publicar `.env`, claves, credenciales SQL, listados de acceso, volcados, archivos cifrados de respaldo, fotos, registros de ejecución, entornos, `node_modules` ni `dist`. El cifrado no convierte un respaldo en un archivo público.
 

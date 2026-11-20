@@ -46,20 +46,28 @@
  .dialogo .ingreso-directo .selector-hora { flex-wrap:wrap; }
  .dialogo .ingreso-directo .selector-hora > .selector-filtro:last-child { flex:1 1 100%; }
 }
-.tarjetas-laborales { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:20px; }
-.horario-laboral { min-width:0; padding:22px; border:1px solid var(--linea); border-radius:20px; background:var(--superficie); }
+.tarjetas-laborales { display:grid; grid-template-columns:1fr; gap:12px; }
+.horario-laboral { min-width:0; padding:20px; border:1px solid var(--linea); border-radius:18px; background:var(--fondo-tarjeta); display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:24px; align-items:start; }
+.horario-laboral .cabecera-tarjeta-horario { grid-column:1; margin-bottom:8px; justify-content:flex-start; }
+.horario-laboral h3, .horario-laboral > p, .horario-laboral > details { grid-column:1; }
+.horario-laboral > p { margin:0 0 8px; }
+.horario-laboral .acciones { grid-column:2; grid-row:1 / span 4; align-self:center; margin:0; padding:0; border:0; }
+.horario-laboral summary { color:var(--acento-texto); font-size:13px; display:list-item; padding-block:10px; }
+.horarios-laborales .separador-personal button { padding:12px 16px; }
+.horarios-laborales .separador-personal small { display:none; }
 .horario-laboral h3 { margin-bottom:12px; }
 .semana-laboral { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin:20px 0; }
 .semana-laboral span { text-align:center; font-size:12px; padding:9px 0; border-radius:8px; color:var(--secundario); background:var(--suave); }
 .semana-laboral span[data-activo=true] { background:var(--acento); color:var(--sobre-acento); font-weight:600; }
 .horario-laboral summary { cursor:pointer; min-height:44px; }
 .horario-laboral li { margin:12px 0; }
-.horario-laboral .acciones { display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; padding-top:18px; border-top:1px solid var(--linea); }
+.horario-laboral .acciones { display:flex; flex-wrap:wrap; gap:12px; margin:0; padding:0; border:0; }
 .ingreso-directo .dias-configurables { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
 .ingreso-directo .horas-ingreso-grupo { display:grid; gap:12px; }
 .ingreso-directo .campo-hora { display:grid; grid-template-columns:90px minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:center; }
 @media(max-width:540px) {
- .horario-laboral { padding:16px; }
+ .horario-laboral { padding:16px; grid-template-columns:minmax(0,1fr); }
+ .horario-laboral .acciones { grid-column:1; grid-row:auto; margin-top:12px; justify-content:flex-start; }
  .ingreso-directo .campo-hora { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
  .ingreso-directo .campo-hora > span { grid-column:1/-1; }
 }

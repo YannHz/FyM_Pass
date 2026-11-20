@@ -10,6 +10,14 @@ No desplegar, hacer commit/push, regenerar usuarios, restaurar una base ni crear
 
 Flutter fue descartado. La app es React/PWA para escritorio y teléfonos. La referencia antigua y el prototipo móvil no son el proyecto activo.
 
+Personas: DNI obligatorio al crear, exactamente ocho dígitos ASCII; validación cliente/API, unicidad SQL. ID generado en servidor DOC-DNI o ADM-DNI según rol, nunca confiar en código enviado. Al editar registros históricos sin DNI conservar ID; no migrar ni inventar DNI de prueba. Formulario muestra ID de solo lectura y explicación del permiso; docente solo personal. Formularios.css corrige fondos de diálogos y pies compartidos sin tocar la paleta de temas.
+
+Justificaciones: por decisión del usuario, crear desde una cuenta administradora aprueba en la misma transacción y registra responsable y auditoría. Operadoras envían a revisión; no autoaprobar pendientes históricos ni permitir que el cliente elija permisos de aprobación.
+
+Horarios: SemanaLaboral.tsx sustituye el listado por edición visual de siete días, aplicación de horas en grupo, descanso, fecha y personas en una vista. POST /api/gestion/horarios/semana guarda horario y asignaciones atómicamente, con permisos administrativos, reglas de sede/rol/fecha y conservación histórica. Desmarcar una persona significa no aplicarle los cambios, no desvincular su horario. No prometer cifrado del frontend: el navegador necesita ese código. Build sin sourcemaps y verificar_distribucion.mjs rechaza mapas y tipos privados antes de publicar.
+
+Simplificación posterior de horarios: elegir mediante lista visible con marca activa, no desplegable mezclado con datos editables. Mostrar el nombre y turno sobre la semana; carrera/turno bajo Editar datos; personas en sección desplegable. Mostrar fecha y Guardar cambios solo al modificar o crear, sin pie flotante permanente. Conservar los temas originales y reducir explicaciones repetidas.
+
 ## Alcance vigente
 
 - Solo docentes y personal administrativo; secretarias con permiso operador, administradoras con permiso administrador y docentes con acceso personal.
@@ -21,7 +29,7 @@ Flutter fue descartado. La app es React/PWA para escritorio y teléfonos. La ref
 - Confirmación de tres segundos, iniciales, nombre, rol, movimiento, hora, resultado y sonido. No hay carga actual de fotos; el acceso histórico está autenticado.
 - Registro manual limitado a entradas de hoy con hora del servidor; no permite carga retroactiva ni faltas ya evaluadas.
 - Reportes Excel, justificaciones y preplanilla docente estimada, sin pagos ni descuentos automáticos.
-- ZKTeco es solo inventario/configuración; no hay integración física.
+- Marcado exclusivamente QR, sin identificadores ni dispositivos ajenos a esa modalidad.
 
 ## Horarios e interfaz
 
@@ -63,7 +71,9 @@ Archivos clave:
 
 ## Base y datos locales
 
-Revisión Alembic vigente: **0009**. Hay 23 tablas de aplicación más alembic_version. El README contiene el mapa completo y las nueve migraciones. Migraciones/modelos son el esquema publicable; no subir un volcado de la instalación.
+Revisión Alembic vigente: **0010**. Hay 23 tablas de aplicación más alembic_version. El README contiene el mapa completo y las diez migraciones. Migraciones/modelos son el esquema publicable; no subir un volcado de la instalación. La 0010 elimina el identificador heredado de personas y restringe dispositivos a QR, con respaldo privado previo. Conservar las migraciones históricas para actualizar bases anteriores.
+
+Por solicitud del usuario, database/ contiene 01_crear_esquema.sql (esquema limpio 0010) y 02_datos_iniciales.sql (tres cuentas ficticias con administrador/operador/personal, punto QR, reglas y horarios). Se verificó la importación real en base aislada, retirada después; la base operativa no se reemplazó. Ambos archivos permanecen ignorados por Git y el segundo contiene accesos iniciales privados. No alterar los respaldos cifrados previos de esa carpeta. Instrucciones centralizadas en README.
 
 0006: cambio de contraseña; 0007: carrera/turno/tipo en horarios; 0008: refuerzo de acceso y sesiones. 0009: retira columnas MFA, conservando usuarios, contrasenas y asistencias. Carreras/grupos/rol estudiantil históricos se conservan por compatibilidad sin exponer flujo de alumnado. No borrar tablas por limpieza visual.
 

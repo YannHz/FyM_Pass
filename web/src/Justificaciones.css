@@ -59,6 +59,26 @@
 .formulario-justificacion {
     padding: 22px;
 }
+.dialogo.dialogo-justificacion { background: var(--superficie); color: var(--texto); }
+.dialogo-justificacion .titulo-dialogo { border-bottom: 1px solid var(--linea); }
+.formulario-justificacion .acciones-dialogo {
+    position: sticky;
+    bottom: -22px;
+    margin: 24px -22px -22px;
+    padding: 18px 22px;
+    background: var(--superficie);
+    border-top: 1px solid var(--linea);
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.formulario-justificacion .nota { line-height: 1.6; }
+.formulario-justificacion :is(input, textarea):focus-visible {
+    outline: 2px solid var(--acento);
+    outline-offset: 2px;
+    box-shadow: none;
+}
 
 .formulario-justificacion label {
     display: block;
@@ -126,6 +146,11 @@
 
     .formulario-justificacion {
         padding: 18px;
+    }
+    .formulario-justificacion .acciones-dialogo {
+        bottom: -18px;
+        margin: 24px -18px -18px;
+        padding: 16px 18px;
     }
 
     .justificaciones .buscador {

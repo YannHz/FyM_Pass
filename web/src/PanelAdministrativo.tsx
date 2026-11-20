@@ -38,7 +38,6 @@ import {
   Settings2,
   LogOut,
   X,
-  Plus,
   Search,
   Download,
   ChevronRight,
@@ -88,10 +87,10 @@ const navegacion: {
   },
   {
     id: "dispositivos",
-    titulo: "Dispositivos y puesto",
+    titulo: "Puesto de asistencia",
     icono: QrCode,
     grupo: "Jornada",
-    descripcion: "Abre el punto de ingreso y administra sus dispositivos.",
+    descripcion: "Abre el punto de ingreso y configura el marcado QR.",
   },
   {
     id: "diario",
@@ -590,7 +589,14 @@ export function PanelAdministrativo({
       titulo: persona ? "Editar persona y cuenta" : "Registrar persona",
       accion: persona ? "Guardar cambios" : "Registrar persona",
       ruta: "/api/gestion/personas",
-      aviso: "La cuenta se genera automáticamente con el nombre y los apellidos. En el primer ingreso deberá establecer una contraseña personal. Asigna su horario desde Horarios laborales.",
+      aviso: "El ID y la cuenta se generan automáticamente. La contraseña inicial se cambia en el primer ingreso.",
+      actualizar: (valores) => {
+        const rol = catalogo.roles.find((r: Registro) => r.id === Number(valores.rol_id));
+        return { ...valores,
+          codigo: /^[0-9]{8}$/.test(valores.documento || "") ? `${rol?.codigo === "docente" ? "DOC" : "ADM"}-${valores.documento}` : persona?.codigo || "",
+          permiso: rol?.codigo === "docente" ? "personal" : valores.permiso,
+        };
+      },
       datos: {
         codigo: "",
         nombres: "",
@@ -605,10 +611,12 @@ export function PanelAdministrativo({
         clave: "",
       },
       campos: [
-        { nombre: "codigo", etiqueta: "ID institucional", requerido: true },
+        { nombre: "documento", etiqueta: "DNI", requerido: !persona, longitudMinima: 8, longitudMaxima: 8,
+          patron: "[0-9]{8}", modoEntrada: "numeric", ayuda: "8 dígitos, sin letras ni espacios." },
+        { nombre: "codigo", etiqueta: "ID institucional · automático", soloLectura: true,
+          ayuda: "Se genera con el rol y el DNI." },
         { nombre: "actual", etiqueta: "Tu contraseña actual", tipo: "password", avanzado: true,
           ayuda: "Necesaria si cambias los permisos de una cuenta existente.", visible: () => Boolean(persona) },
-        { nombre: "documento", etiqueta: "Documento de identidad" },
         { nombre: "nombres", etiqueta: "Nombres", requerido: true },
         { nombre: "apellidos", etiqueta: "Apellidos", requerido: true },
         {
@@ -623,15 +631,18 @@ export function PanelAdministrativo({
           })),
         },
         {
-          nombre: "identificador_biometrico",
-          etiqueta: "ID biométrico opcional",
-          avanzado: true,
-          longitudMaxima: 40,
-        },
-        {
           nombre: "permiso",
-          etiqueta: "Permiso del sistema",
+          etiqueta: "Acceso al sistema",
           tipo: "select",
+          ayudaSegunDatos: valores => ({
+            personal: "Solo su carnet y asistencia. Sin acceso al panel de gestión.",
+            operador: "Gestiona la jornada y envía justificaciones a revisión. Sin configuración administrativa.",
+            administrador: "Administra personas, horarios, reglas y permisos; aprueba justificaciones y consulta preplanilla.",
+          }[valores.permiso as string] || "Selecciona el nivel de acceso."),
+          opcionesSegunDatos: valores => catalogo.roles.find((r: Registro) => r.id === Number(valores.rol_id))?.codigo === "docente"
+            ? [{ valor: "personal", texto: "Personal · carnet y asistencia" }]
+            : [{ valor: "personal", texto: "Personal · carnet y asistencia" },
+              { valor: "operador", texto: "Operador de asistencia" }, { valor: "administrador", texto: "Administrador" }],
           opciones: [
             { valor: "personal", texto: "Acceso personal" },
             { valor: "operador", texto: "Operador de asistencia" },
@@ -659,7 +670,6 @@ export function PanelAdministrativo({
         documento: valores.documento || null,
         grupo_id: null,
         horario_id: persona?.horario_id || null,
-        identificador_biometrico: valores.identificador_biometrico || null,
         nombre_usuario: valores.nombre_usuario || null,
         clave: valores.clave || null,
       }),
@@ -707,53 +717,6 @@ export function PanelAdministrativo({
           requerido: true,
         },
       ],
-    });
-  }
-  function nuevoDispositivo(valor?: Registro) {
-    establecerFormulario({
-      titulo: valor ? "Editar dispositivo" : "Registrar dispositivo",
-      ruta: "/api/gestion/dispositivos",
-      datos: {
-        nombre: "",
-        tipo: "qr",
-        modelo: "",
-        direccion_ip: "",
-        puerto: 4370,
-        activo: true,
-        ...valor,
-      },
-      campos: [
-        { nombre: "nombre", etiqueta: "Nombre", requerido: true },
-        {
-          nombre: "tipo",
-          etiqueta: "Tipo",
-          tipo: "select",
-          opciones: [
-            { valor: "qr", texto: "Puesto QR" },
-            { valor: "zkteco", texto: "Biométrico ZKTeco (configuración)" },
-          ],
-        },
-        { nombre: "modelo", etiqueta: "Modelo" },
-        { nombre: "direccion_ip", etiqueta: "Dirección IP opcional" },
-        {
-          nombre: "puerto",
-          etiqueta: "Puerto",
-          tipo: "number",
-          numerico: true,
-          minimo: 1,
-          maximo: 65535,
-        },
-        {
-          nombre: "activo",
-          etiqueta: "Configuración activa",
-          tipo: "booleano",
-        },
-      ],
-      preparar: (valores) => ({
-        ...valores,
-        modelo: valores.modelo || null,
-        direccion_ip: valores.direccion_ip || null,
-      }),
     });
   }
 
@@ -1295,84 +1258,7 @@ export function PanelAdministrativo({
                 </section>
               </>
             )}
-            {seccion === "dispositivos" && catalogo && (
-              <>
-                <ControlAsistencia />
-                <section className="panel">
-                  <div className="cabecera">
-                    <div>
-                      <h2>Dispositivos de la sede</h2>
-                      <p>
-                        Inventario y configuración. El marcado operativo utiliza
-                        QR.
-                      </p>
-                    </div>
-                    {administrador && (
-                      <button onClick={() => nuevoDispositivo()}>
-                        <Plus size={16} /> Añadir dispositivo
-                      </button>
-                    )}
-                  </div>
-                  <Tabla
-                    filas={catalogo.dispositivos}
-                    columnas={[
-                      {
-                        titulo: "Nombre",
-                        mostrar: (fila) => <strong>{fila.nombre}</strong>,
-                      },
-                      {
-                        titulo: "Tipo / modelo",
-                        mostrar: (fila) => (
-                          <>
-                            {fila.tipo === "zkteco" ? "ZKTeco" : "Puesto QR"}
-                            <small>{fila.modelo || "Sin modelo"}</small>
-                          </>
-                        ),
-                      },
-                      {
-                        titulo: "Dirección",
-                        mostrar: (fila) =>
-                          fila.direccion_ip
-                            ? `${fila.direccion_ip}:${fila.puerto}`
-                            : "Local",
-                      },
-                      {
-                        titulo: "Integración",
-                        mostrar: (fila) => (
-                          <Insignia
-                            texto={
-                              fila.tipo === "zkteco"
-                                ? "Sin conexión física"
-                                : "Marcado QR"
-                            }
-                          />
-                        ),
-                      },
-                      {
-                        titulo: "Configuración",
-                        mostrar: (fila) => (
-                          <Insignia
-                            texto={fila.activo ? "Activa" : "Desactivada"}
-                          />
-                        ),
-                      },
-                      {
-                        titulo: "Acciones",
-                        mostrar: (fila) =>
-                          administrador && (
-                            <button
-                              className="boton-texto"
-                              onClick={() => nuevoDispositivo(fila)}
-                            >
-                              Editar
-                            </button>
-                          ),
-                      },
-                    ]}
-                  />
-                </section>
-              </>
-            )}
+            {seccion === "dispositivos" && <ControlAsistencia />}
             {seccion === "diario" && !cargando && !error && (
               <section className="panel">
                 <div className="cabecera">

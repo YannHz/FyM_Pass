@@ -724,6 +724,8 @@ summary:focus-visible {
 }
 .dia-calendario {
   display: flex;
+  --fondo-dia: var(--fondo);
+  --tinta-dia: var(--texto);
   align-items: flex-start;
   flex-direction: column;
   text-align: left;
@@ -735,6 +737,12 @@ summary:focus-visible {
   font-weight: 400;
   gap: 7px;
 }
+.dia-calendario:hover:not(:disabled), .dia-calendario:active:not(:disabled), .dia-calendario:focus-visible {
+  background: var(--fondo-dia);
+  color: var(--tinta-dia);
+  border-color: var(--borde-control);
+  box-shadow: inset 0 0 0 1px var(--borde-control);
+}
 .dia-calendario strong {
   font-size: 13px;
 }
@@ -743,14 +751,20 @@ summary:focus-visible {
   white-space: normal;
 }
 .dia-calendario.presente {
+  --fondo-dia: var(--fondo-bien);
+  --tinta-dia: var(--bien);
   background: var(--fondo-bien);
   color: var(--bien);
 }
 .dia-calendario.tarde {
+  --fondo-dia: var(--fondo-atencion);
+  --tinta-dia: var(--atencion);
   background: var(--fondo-atencion);
   color: var(--atencion);
 }
 .dia-calendario.falta {
+  --fondo-dia: var(--fondo-alerta);
+  --tinta-dia: var(--alerta);
   background: var(--fondo-alerta);
   color: var(--alerta);
 }

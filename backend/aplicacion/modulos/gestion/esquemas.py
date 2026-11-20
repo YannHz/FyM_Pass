@@ -1,7 +1,8 @@
 from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Literal
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+import re
 
 
 class Formulario(BaseModel):
@@ -10,7 +11,7 @@ class Formulario(BaseModel):
 
 class DatosPersona(Formulario):
     id: int | None = None
-    codigo: str = Field(min_length=1, max_length=30)
+    codigo: str = Field(default="", max_length=30)
     nombres: str = Field(min_length=1, max_length=100)
     apellidos: str = Field(min_length=1, max_length=100)
     documento: str | None = Field(default=None, max_length=20)
@@ -18,12 +19,26 @@ class DatosPersona(Formulario):
     grupo_id: int | None = None
     horario_id: int | None = None
     activa: bool = True
-    identificador_biometrico: str | None = Field(default=None, max_length=40)
     tarifa_hora: Decimal = Field(default=0, ge=0, le=100000)
     nombre_usuario: str | None = Field(default=None, pattern="^[a-z0-9._-]{3,80}$")
     clave: str | None = Field(default=None, min_length=8, max_length=256)
     permiso: Literal["personal", "operador", "administrador"] = "personal"
     actual: str = Field(default="", max_length=256)
+
+    @field_validator("documento")
+    @classmethod
+    def validar_dni(cls, valor):
+        if valor in (None, ""):
+            return None
+        if not re.fullmatch(r"[0-9]{8}", valor):
+            raise ValueError("El DNI debe contener exactamente 8 dígitos, sin letras ni espacios.")
+        return valor
+
+    @model_validator(mode="after")
+    def exigir_dni_nuevo(self):
+        if self.id is None and self.documento is None:
+            raise ValueError("Ingresa el DNI para registrar a la persona y generar su ID institucional.")
+        return self
 
 
 class DatosCarrera(Formulario):
@@ -57,6 +72,12 @@ class DatosGrupo(Formulario):
     activo: bool = True
     ingreso: DatosHorario | None = None
     alcance: Literal["grupo"] = "grupo"
+
+
+class DatosSemanaLaboral(DatosHorario):
+    horario_id: int | None = Field(default=None, gt=0)
+    persona_ids: list[int] = Field(default_factory=list, max_length=500)
+    vigente_desde: date
 
 
 class DatosUsarHorarioGrupo(Formulario):
@@ -106,7 +127,7 @@ class DatosDia(Formulario):
 class DatosDispositivo(Formulario):
     id: int | None = None
     nombre: str = Field(min_length=1, max_length=100)
-    tipo: Literal["qr", "zkteco"]
+    tipo: Literal["qr"]
     modelo: str | None = Field(default=None, max_length=80)
     direccion_ip: str | None = None
     puerto: int = Field(default=4370, ge=1, le=65535)

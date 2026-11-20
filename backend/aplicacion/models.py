@@ -36,7 +36,6 @@ class Persona(Base):
     nombres: Mapped[str] = mapped_column(String(100))
     apellidos: Mapped[str] = mapped_column(String(100))
     grupo_id: Mapped[int | None] = mapped_column(ForeignKey("grupos.id", ondelete="RESTRICT", name="fk_personas_grupo"))
-    identificador_biometrico: Mapped[str | None] = mapped_column(String(40))
     foto_ruta: Mapped[str | None] = mapped_column(String(255))
     version_carne: Mapped[str] = mapped_column(String(36), default=lambda: str(uuid4()))
     documento: Mapped[str | None] = mapped_column(String(20), unique=True)
@@ -44,7 +43,7 @@ class Persona(Base):
     rol_id: Mapped[int] = mapped_column(ForeignKey("roles.id", ondelete="RESTRICT"))
     activa: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
     creada_en: Mapped[datetime] = mapped_column(DateTime, default=obtener_hora_utc)
-    __table_args__ = (Index("ix_personas_sede_rol", "sede_id", "rol_id"), UniqueConstraint("identificador_biometrico", name="uq_personas_biometrico"))
+    __table_args__ = (Index("ix_personas_sede_rol", "sede_id", "rol_id"),)
 
 
 class Usuario(Base):
@@ -258,7 +257,7 @@ class Dispositivo(Base):
     direccion_ip: Mapped[str | None] = mapped_column(String(50))
     puerto: Mapped[int] = mapped_column(Integer, default=4370)
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
-    __table_args__ = (CheckConstraint("tipo IN ('qr','zkteco')", name="ck_dispositivos_tipo"), CheckConstraint("puerto BETWEEN 1 AND 65535", name="ck_dispositivos_puerto"))
+    __table_args__ = (CheckConstraint("tipo = 'qr'", name="ck_dispositivos_tipo"), CheckConstraint("puerto BETWEEN 1 AND 65535", name="ck_dispositivos_puerto"))
 
 
 class Auditoria(Base):

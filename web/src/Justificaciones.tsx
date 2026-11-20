@@ -86,6 +86,7 @@ function JustificarIncidencia({
       }
       cerrar={cerrar}
       bloqueado={ocupado}
+      clase="dialogo-justificacion"
     >
       <form className="formulario-justificacion" onSubmit={guardar}>
         <div className="contexto-incidencia">
@@ -137,8 +138,9 @@ function JustificarIncidencia({
                 />
               </label>
               <p className="nota">
-                La solicitud quedará pendiente hasta que un administrador la
-                revise.
+                {administrador
+                  ? "Al guardar, la incidencia quedará justificada directamente."
+                  : "La solicitud quedará pendiente hasta que un administrador la revise."}
               </p>
             </>
           )}
@@ -194,7 +196,7 @@ function JustificarIncidencia({
                 ? "Guardando…"
                 : revisar
                   ? "Guardar revisión"
-                  : "Registrar justificación"}
+                  : administrador ? "Justificar incidencia" : "Enviar a revisión"}
             </button>
           )}
         </footer>

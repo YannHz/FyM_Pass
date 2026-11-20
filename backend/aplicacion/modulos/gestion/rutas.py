@@ -16,6 +16,7 @@ from . import servicios
 from .esquemas import (
     DatosPersona,
     DatosHorario,
+    DatosSemanaLaboral,
     DatosAsignacionLaboral,
     DatosManual,
     DatosJustificacion,
@@ -58,6 +59,15 @@ def guardar_horario(
     return servicios.guardar_horario(
         datos=datos, usuario=usuario, repositorio=RepositorioGestion(base)
     )
+
+
+@rutas_gestion.post("/horarios/semana", dependencies=[Depends(validar_peticion)])
+def guardar_semana_laboral(
+    datos: DatosSemanaLaboral,
+    usuario: Usuario = Depends(administrador),
+    base: Session = Depends(obtener_base_datos),
+):
+    return servicios.guardar_semana_laboral(datos, usuario, RepositorioGestion(base))
 
 
 @rutas_gestion.put("/horarios/{identificador}", dependencies=[Depends(validar_peticion)])
