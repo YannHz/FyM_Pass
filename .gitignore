@@ -6,6 +6,8 @@
 *.local
 *.local.*
 README_CREDENCIALES.local.md
+NOTAS_AGENTE.local.md
+CONTEXTO_PROYECTO.md
 
 # dependencias y cache de python
 .venv/
