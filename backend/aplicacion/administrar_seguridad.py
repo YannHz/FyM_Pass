@@ -39,7 +39,7 @@ def claves():
             guardar_privado(archivo, Fernet.generate_key().decode())
         else:
             proteger(archivo)
-    for nombre in ("administracion_bd.local.json", "migraciones_bd.local.json"):
+    for nombre in ("administracion_bd.local.json", "migraciones_bd.local.json", "respaldo_bd.local.json"):
         archivo = carpeta / nombre
         if archivo.exists():
             proteger(archivo)
@@ -65,11 +65,20 @@ def mostrar_accesos(archivo):
     print(Fernet((carpeta / "clave_respaldos.key").read_bytes()).decrypt(ruta.read_bytes()).decode("utf-8"))
 
 
-def respaldo(conexion):
+def respaldo():
+    if configuracion.bd_host not in {"localhost", "127.0.0.1"} or configuracion.bd_nombre != "fym_pass":
+        raise RuntimeError("El respaldo solo admite fym_pass en la base local.")
     ejecutable = shutil.which("mariadb-dump") or shutil.which("mysqldump") or "C:/xampp/mysql/bin/mysqldump.exe"
-    datos = json.loads((carpeta / "administracion_bd.local.json").read_text()) if (carpeta / "administracion_bd.local.json").exists() else {"usuario": "root", "clave": ""}
+    credencial = carpeta / "respaldo_bd.local.json"
+    if configuracion.produccion and not credencial.is_file():
+        raise RuntimeError("Producción requiere respaldo_bd.local.json con una cuenta SQL de solo lectura.")
+    if not credencial.is_file():
+        credencial = carpeta / "administracion_bd.local.json"
+    datos = json.loads(credencial.read_text()) if credencial.is_file() else {"usuario": "root", "clave": ""}
+    if not (carpeta / "clave_respaldos.key").is_file():
+        raise RuntimeError("Falta la clave de respaldos existente; no se genera una nueva durante el respaldo.")
     resultado = subprocess.run([ejecutable, "--host", configuracion.bd_host, "--port", str(configuracion.bd_puerto),
-        "--user", datos["usuario"], "--single-transaction", "--hex-blob", configuracion.bd_nombre],
+        "--user", datos["usuario"], "--single-transaction", "--no-tablespaces", "--hex-blob", configuracion.bd_nombre],
         env={**os.environ, "MYSQL_PWD": datos["clave"]}, capture_output=True, check=True)
     if len(resultado.stdout) < 100:
         raise RuntimeError("El respaldo está vacío.")
@@ -78,7 +87,8 @@ def respaldo(conexion):
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_bytes(cifrado.encrypt(resultado.stdout))
     proteger(destino)
-    assert cifrado.decrypt(destino.read_bytes()) == resultado.stdout
+    if cifrado.decrypt(destino.read_bytes()) != resultado.stdout:
+        raise RuntimeError("No se pudo verificar el respaldo cifrado.")
     print("Respaldo cifrado y verificado:", destino)
     return destino
 
@@ -86,7 +96,7 @@ def respaldo(conexion):
 def preparar():
     claves()
     with conexion_admin() as conexion:
-        respaldo(conexion)
+        respaldo()
         with conexion.cursor() as cursor:
             cursor.execute("SELECT CURRENT_USER()")
             identidad = cursor.fetchone()[0]
@@ -178,9 +188,7 @@ def main():
     elif datos.accion == "recuperar-admin":
         recuperar_admin(datos.usuario)
     else:
-        claves()
-        with conexion_admin() as conexion:
-            respaldo(conexion)
+        respaldo()
 
 
 if __name__ == "__main__":

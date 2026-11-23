@@ -73,6 +73,7 @@ function DetalleDocente({
       <Estado error={error} cargando={cargando} />
       {datos && (
         <Tabla
+          titulo="Detalle de la preplanilla docente"
           filas={datos.calendario}
           clave="fecha"
           columnas={[
@@ -292,6 +293,7 @@ export function PreplanillaDocente({
         </div>
         {!cargando && !error && (
           <Tabla
+            titulo="Resumen de preplanilla por docente"
             filas={visibles}
             clave="persona_id"
             columnas={[

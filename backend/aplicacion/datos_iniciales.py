@@ -199,10 +199,9 @@ def crear_personas_iniciales(base, inicio):
 
 
 def respaldar_base(carpeta):
-    from .administrar_seguridad import conexion_admin, respaldo, claves
+    from .administrar_seguridad import respaldo, claves
     claves()
-    with conexion_admin() as conexion:
-        return respaldo(conexion)
+    return respaldo()
 
 
 def guardar_listado(cuentas, archivo, respaldo, inicio):

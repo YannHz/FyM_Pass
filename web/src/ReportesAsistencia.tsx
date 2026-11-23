@@ -314,6 +314,7 @@ export function ReportesAsistencia({
           intervaloValido &&
           (visibles.length ? (
             <Tabla
+              titulo="Resultados del reporte de asistencia"
               filas={visibles}
               clave="persona_id"
               columnas={[

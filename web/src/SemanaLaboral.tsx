@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from "react";
 import { Plus, Check, Clock3 } from "lucide-react";
-import { type Registro } from "./componentesGestion";
+import { Dialogo, type Registro } from "./componentesGestion";
 import { diasHorario, type Tramo } from "./EditorHorario";
 import { SelectorHora, formatearHora } from "./SelectorHora";
 import { SelectorFiltro } from "./SelectorFiltro";
@@ -33,11 +33,18 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
   const [ocupado, cambiarOcupado] = useState(false);
   const [error, cambiarError] = useState("");
   const [editarDatos, cambiarEditarDatos] = useState(!inicial);
+  const [horarioPendiente, cambiarHorarioPendiente] = useState<string | null>(null);
   const enviando = useRef(false);
   const visibles = personas.filter(p => `${p.nombre} ${p.codigo}`.toLocaleLowerCase().includes(busqueda.toLocaleLowerCase()));
   function modificar() { cambiarModificado(true); alModificar(true); cambiarError(""); }
   function cargar(valor: string) {
-    if (modificado && !window.confirm("Hay cambios sin guardar. ¿Quieres descartarlos?")) return;
+    if (modificado) {
+      cambiarHorarioPendiente(valor);
+      return;
+    }
+    cargarHorario(valor);
+  }
+  function cargarHorario(valor: string) {
     const horario = horarios.find(h => h.id === Number(valor));
     cambiarIdentificador(horario?.id ?? null);
     cambiarCarrera(horario?.carrera || ""); cambiarTurno(horario?.turno || "manana");
@@ -80,7 +87,8 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
   }
   const actual = horarios.find(h => h.id === identificador);
   const titulo = identificador === null ? "Nuevo horario" : tipo === "docente" ? carrera || actual?.nombre || "Horario docente" : "Administración";
-  return <form className="semana-visual" onSubmit={evento => void guardar(evento)}>
+  return <>
+    <form className="semana-visual" onSubmit={evento => void guardar(evento)}>
     <nav className="lista-horarios-visual" aria-label="Horarios disponibles">
       <h2>Horarios</h2>
       {horarios.map(h => <button key={h.id} type="button" disabled={ocupado} aria-pressed={h.id === identificador}
@@ -144,5 +152,18 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
       <span>{seleccion.length ? `${seleccion.length} personas recibirán los cambios` : "Sin personas seleccionadas"}</span>
       <button disabled={ocupado || !modificado && identificador !== null}>{ocupado ? "Guardando…" : "Guardar cambios"}</button></footer>}
     </div>
-  </form>;
+    </form>
+    {horarioPendiente !== null && <Dialogo titulo="Descartar cambios sin guardar" cerrar={() => cambiarHorarioPendiente(null)}>
+      <div className="formulario-gestion">
+        <p>Los cambios de este horario se perderán si continúas.</p>
+        <footer className="acciones-dialogo">
+          <button type="button" className="secundario" autoFocus onClick={() => cambiarHorarioPendiente(null)}>Conservar cambios</button>
+          <button type="button" onClick={() => {
+            cargarHorario(horarioPendiente);
+            cambiarHorarioPendiente(null);
+          }}>Descartar cambios</button>
+        </footer>
+      </div>
+    </Dialogo>}
+  </>;
 }

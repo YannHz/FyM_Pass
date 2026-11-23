@@ -2,6 +2,7 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Configuracion(BaseSettings):
+    produccion: bool = False
     clave_qr: str = ""
     cookie_segura: bool = False
     inactividad_minutos: int = 30

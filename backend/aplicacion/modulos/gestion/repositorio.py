@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from ...models import (
     Rol,
     Persona,
@@ -288,6 +288,16 @@ class RepositorioGestion(RepositorioBase):
             .order_by(Justificacion.id.desc())
         ).all()
 
+    def pagina_justificaciones(self, sede_consulta, pagina, por_pagina):
+        filtro = Persona.sede_id == sede_consulta
+        total = self._base.scalar(select(func.count(Justificacion.id)).join(Persona).where(filtro)) or 0
+        filas = self._base.execute(
+            select(Justificacion, Persona).join(Persona).where(filtro)
+            .order_by(Justificacion.id.desc())
+            .offset((pagina - 1) * por_pagina).limit(por_pagina)
+        ).all()
+        return total, filas
+
     def bloquear_tolerancia(self, hoy, identificador):
         return self._base.scalar(
             select(ToleranciaRol)
@@ -320,15 +330,23 @@ class RepositorioGestion(RepositorioBase):
             select(TarifaDocente).where(TarifaDocente.persona_id == docente.id)
         )
 
-    def historial_de_marcados(self, fin, inicio, sede):
-        return self._base.execute(
+    def historial_de_marcados(self, fin, inicio, sede, pagina=1, por_pagina=50, modalidad=None):
+        filtros = (
+            Persona.sede_id == sede.id,
+            Marcado.ocurrido_en >= inicio,
+            Marcado.ocurrido_en < fin,
+        )
+        if modalidad:
+            filtros += (Marcado.modalidad == modalidad,)
+        total = self._base.scalar(
+            select(func.count(Marcado.id)).join(Persona).where(*filtros)
+        ) or 0
+        filas = self._base.execute(
             select(Marcado, Persona, Usuario.nombre_usuario)
             .join(Persona, Marcado.persona_id == Persona.id)
             .outerjoin(Usuario, Marcado.registrado_por_id == Usuario.id)
-            .where(
-                Persona.sede_id == sede.id,
-                Marcado.ocurrido_en >= inicio,
-                Marcado.ocurrido_en < fin,
-            )
-            .order_by(Marcado.ocurrido_en.desc())
+            .where(*filtros)
+            .order_by(Marcado.ocurrido_en.desc(), Marcado.id.desc())
+            .offset((pagina - 1) * por_pagina).limit(por_pagina)
         ).all()
+        return total, filas

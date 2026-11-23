@@ -30,6 +30,8 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
   const [persona, establecerPersona] = useState<Registro | null>(null);
   const [fecha, establecerFecha] = useState(hoyLima);
   const [revision, establecerRevision] = useState(0);
+  const [paginaHistorial, establecerPaginaHistorial] = useState(1);
+  useEffect(() => establecerPaginaHistorial(1), [fecha]);
   const [ocupado, establecerOcupado] = useState(false);
   const [error, establecerError] = useState("");
   const [confirmacion, establecerConfirmacion] = useState<Registro | null>(
@@ -47,7 +49,7 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
     true,
   );
   const historial = useDatos(
-    `/api/gestion/marcados?desde=${fecha}&hasta=${fecha}`,
+    `/api/gestion/marcados?desde=${fecha}&hasta=${fecha}&modalidad=manual&pagina=${paginaHistorial}&por_pagina=12`,
     revision,
     0,
     true,
@@ -113,6 +115,7 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
       establecerBuscar("");
       solicitud.current = null;
       establecerRevision((valor) => valor + 1);
+      establecerPaginaHistorial(1);
     } catch (problema) {
       establecerError((problema as Error).message);
       establecerRevision((valor) => valor + 1);
@@ -293,10 +296,11 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
           cargando={historial.cargando && !historial.datos}
         />
         {historial.datos && (
-          <Tabla
-            filas={historial.datos.filter(
-              (fila: Registro) => fila.modalidad === "manual",
-            )}
+          <>
+            <Tabla
+            filas={historial.datos.elementos as Registro[]}
+            paginacionInterna={false}
+            titulo="Registros manuales de hoy"
             columnas={[
               {
                 titulo: "Persona",
@@ -314,7 +318,17 @@ export function RegistroManual({ catalogo }: { catalogo: Registro }) {
                 mostrar: (fila) => <Insignia texto={fila.resultado} />,
               },
             ]}
-          />
+            />
+            {historial.datos.total > historial.datos.por_pagina && (
+              <nav aria-label="Páginas de registros manuales" className="paginacion">
+                <span>{historial.datos.total} registros · Página {paginaHistorial} de {Math.ceil(historial.datos.total / historial.datos.por_pagina)}</span>
+                <div>
+                  <button className="secundario" type="button" disabled={paginaHistorial <= 1} onClick={() => establecerPaginaHistorial((valor) => valor - 1)}>Anterior</button>
+                  <button className="secundario" type="button" disabled={paginaHistorial * historial.datos.por_pagina >= historial.datos.total} onClick={() => establecerPaginaHistorial((valor) => valor + 1)}>Siguiente</button>
+                </div>
+              </nav>
+            )}
+          </>
         )}
       </section>
     </>

@@ -1,12 +1,71 @@
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, Generic, TypeVar
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 import re
 
 
 class Formulario(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class RespuestaError(BaseModel):
+    detail: str | list[dict]
+
+
+class RespuestaCreacion(BaseModel):
+    id: int
+    mensaje: str
+
+
+class RespuestaPersona(RespuestaCreacion):
+    usuario: str | None = None
+    clave_temporal: str | None = None
+    vence: datetime | None = None
+
+
+class RespuestaMensaje(BaseModel):
+    mensaje: str
+
+
+class MarcadoHistorial(BaseModel):
+    id: int
+    persona_id: int
+    nombre: str
+    codigo: str
+    tipo: str
+    fecha: date
+    hora: datetime
+    cargado_en: datetime
+    responsable: str
+    modalidad: str
+    motivo: str | None
+    resultado: str
+
+
+class JustificacionListado(BaseModel):
+    id: int
+    persona_id: int
+    fecha: date
+    tipo: str
+    motivo: str
+    referencia: str | None
+    estado: str
+    creada_por_id: int
+    resuelta_por_id: int | None
+    observacion: str | None
+    creada_en: datetime
+    nombre: str
+
+
+Elemento = TypeVar("Elemento")
+
+
+class Pagina(BaseModel, Generic[Elemento]):
+    elementos: list[Elemento]
+    total: int
+    pagina: int
+    por_pagina: int
 
 
 class DatosPersona(Formulario):

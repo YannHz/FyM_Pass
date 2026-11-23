@@ -158,6 +158,7 @@ export function PersonasCarnets({
         </div>
         {filtradas.length ? (
           <Tabla
+            titulo="Personas del instituto"
             filas={filtradas}
             columnas={[
               {

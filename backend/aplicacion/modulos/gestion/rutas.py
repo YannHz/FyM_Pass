@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from typing import Literal
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from ...models import Usuario
@@ -24,9 +24,21 @@ from .esquemas import (
     DatosReglas,
     DatosDia,
     DatosDispositivo,
+    RespuestaError,
+    RespuestaCreacion,
+    RespuestaPersona,
+    RespuestaMensaje,
+    Pagina,
+    MarcadoHistorial,
+    JustificacionListado,
 )
 
-rutas_gestion = APIRouter(prefix="/api/gestion", tags=["Administración"])
+rutas_gestion = APIRouter(
+    prefix="/api/gestion", tags=["Administración"],
+    responses={400: {"model": RespuestaError}, 403: {"model": RespuestaError},
+               404: {"model": RespuestaError}, 409: {"model": RespuestaError},
+               422: {"model": RespuestaError}, 503: {"model": RespuestaError}},
+)
 
 
 @rutas_gestion.get("/catalogo")
@@ -39,18 +51,23 @@ def consultar_catalogo(
     )
 
 
-@rutas_gestion.post("/personas", dependencies=[Depends(validar_peticion)])
+@rutas_gestion.post("/personas", dependencies=[Depends(validar_peticion)], response_model=RespuestaPersona,
+                   response_model_exclude_none=True, responses={201: {"model": RespuestaPersona}})
 def guardar_persona(
     datos: DatosPersona,
+    respuesta: Response,
     usuario: Usuario = Depends(administrador),
     base: Session = Depends(obtener_base_datos),
 ):
-    return servicios.guardar_persona(
+    resultado = servicios.guardar_persona(
         datos=datos, usuario=usuario, repositorio=RepositorioGestion(base)
     )
+    if datos.id is None:
+        respuesta.status_code = 201
+    return resultado
 
 
-@rutas_gestion.post("/horarios", dependencies=[Depends(validar_peticion)])
+@rutas_gestion.post("/horarios", dependencies=[Depends(validar_peticion)], status_code=201, response_model=RespuestaCreacion)
 def guardar_horario(
     datos: DatosHorario,
     usuario: Usuario = Depends(administrador),
@@ -61,16 +78,21 @@ def guardar_horario(
     )
 
 
-@rutas_gestion.post("/horarios/semana", dependencies=[Depends(validar_peticion)])
+@rutas_gestion.post("/horarios/semana", dependencies=[Depends(validar_peticion)],
+                   response_model=RespuestaCreacion, responses={201: {"model": RespuestaCreacion}})
 def guardar_semana_laboral(
     datos: DatosSemanaLaboral,
+    respuesta: Response,
     usuario: Usuario = Depends(administrador),
     base: Session = Depends(obtener_base_datos),
 ):
-    return servicios.guardar_semana_laboral(datos, usuario, RepositorioGestion(base))
+    resultado = servicios.guardar_semana_laboral(datos, usuario, RepositorioGestion(base))
+    if datos.horario_id is None:
+        respuesta.status_code = 201
+    return resultado
 
 
-@rutas_gestion.put("/horarios/{identificador}", dependencies=[Depends(validar_peticion)])
+@rutas_gestion.put("/horarios/{identificador}", dependencies=[Depends(validar_peticion)], response_model=RespuestaCreacion)
 def editar_horario(
     identificador: int, datos: DatosHorario,
     usuario: Usuario = Depends(administrador),
@@ -134,17 +156,19 @@ def consultar_incidencias(
     return servicios.consultar_incidencias(desde, hasta, usuario, RepositorioGestion(base))
 
 
-@rutas_gestion.get("/justificaciones")
+@rutas_gestion.get("/justificaciones", response_model=Pagina[JustificacionListado])
 def consultar_justificaciones(
+    pagina: int = Query(default=1, ge=1),
+    por_pagina: int = Query(default=50, ge=1, le=100),
     usuario: Usuario = Depends(obtener_encargado),
     base: Session = Depends(obtener_base_datos),
 ):
     return servicios.consultar_justificaciones(
-        usuario=usuario, repositorio=RepositorioGestion(base)
+        usuario=usuario, repositorio=RepositorioGestion(base), pagina=pagina, por_pagina=por_pagina
     )
 
 
-@rutas_gestion.post("/justificaciones", dependencies=[Depends(validar_peticion)])
+@rutas_gestion.post("/justificaciones", dependencies=[Depends(validar_peticion)], status_code=201, response_model=RespuestaMensaje)
 def crear_justificacion(
     datos: DatosJustificacion,
     usuario: Usuario = Depends(obtener_encargado),
@@ -282,15 +306,19 @@ def exportar(
     )
 
 
-@rutas_gestion.get("/marcados")
+@rutas_gestion.get("/marcados", response_model=Pagina[MarcadoHistorial])
 def consultar_historial_marcados(
     desde: date,
     hasta: date,
+    pagina: int = Query(default=1, ge=1),
+    por_pagina: int = Query(default=50, ge=1, le=100),
+    modalidad: Literal["camara_puesto", "escaneo_movil", "manual"] | None = None,
     usuario: Usuario = Depends(obtener_encargado),
     base: Session = Depends(obtener_base_datos),
 ):
     return servicios.consultar_historial_marcados(
-        desde=desde, hasta=hasta, usuario=usuario, repositorio=RepositorioGestion(base)
+        desde=desde, hasta=hasta, usuario=usuario, repositorio=RepositorioGestion(base),
+        pagina=pagina, por_pagina=por_pagina, modalidad=modalidad,
     )
 
 

@@ -226,6 +226,7 @@ export function ToleranciasReglas({
         </div>
         {dias.length ? (
           <Tabla
+            titulo="Días no lectivos"
             filas={dias}
             clave="fecha"
             columnas={[

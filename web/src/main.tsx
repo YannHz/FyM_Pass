@@ -32,10 +32,13 @@ if (
     const aviso = document.createElement("div");
     aviso.className = "aviso-actualizacion";
     aviso.setAttribute("role", "status");
-    aviso.innerHTML =
-      "<span>FyM Pass se actualizó.</span>" +
-      "<button type=\"button\">Recargar ahora</button>";
-    aviso.querySelector("button")!.addEventListener("click", () => location.reload());
+    const texto = document.createElement("span");
+    texto.textContent = "FyM Pass se actualizó.";
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.textContent = "Recargar ahora";
+    boton.addEventListener("click", () => location.reload());
+    aviso.replaceChildren(texto, boton);
     document.body.append(aviso);
   });
 }

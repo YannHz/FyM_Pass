@@ -196,7 +196,9 @@ function JustificarIncidencia({
                 ? "Guardando…"
                 : revisar
                   ? "Guardar revisión"
-                  : administrador ? "Justificar incidencia" : "Enviar a revisión"}
+                  : administrador
+                    ? "Justificar incidencia"
+                    : "Enviar a revisión"}
             </button>
           )}
         </footer>
@@ -355,6 +357,7 @@ export function Justificaciones({
           valido &&
           (visibles.length ? (
             <Tabla
+              titulo="Incidencias del periodo"
               filas={visibles.map((fila) => ({
                 ...fila,
                 clave: `${fila.persona_id}-${fila.fecha}-${fila.tipo}`,

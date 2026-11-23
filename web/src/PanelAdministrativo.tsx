@@ -75,8 +75,11 @@ const navegacion: {
   descripcion: string;
 }[] = [
   {
-    id: "horarios", titulo: "Horarios laborales", icono: CalendarDays,
-    grupo: "Instituto", descripcion: "Organiza la entrada y salida del personal.",
+    id: "horarios",
+    titulo: "Horarios laborales",
+    icono: CalendarDays,
+    grupo: "Instituto",
+    descripcion: "Organiza la entrada y salida del personal.",
   },
   {
     id: "inicio",
@@ -284,6 +287,7 @@ function Expediente({
                   Periodo consultado: {fechaCorta(inicio)} al {fechaCorta(fin)}
                 </p>
                 <Tabla
+                  titulo="Asistencia de la persona"
                   filas={datos.calendario}
                   clave="fecha"
                   columnas={[
@@ -401,6 +405,7 @@ function Expediente({
             )}
             {pestana === "horario" && (
               <Tabla
+                titulo="Horario de la persona"
                 filas={datos.tramos}
                 columnas={[
                   { titulo: "Día", mostrar: (fila) => dias[fila.dia_semana] },
@@ -589,11 +594,17 @@ export function PanelAdministrativo({
       titulo: persona ? "Editar persona y cuenta" : "Registrar persona",
       accion: persona ? "Guardar cambios" : "Registrar persona",
       ruta: "/api/gestion/personas",
-      aviso: "El ID y la cuenta se generan automáticamente. La contraseña inicial se cambia en el primer ingreso.",
+      aviso:
+        "El ID y la cuenta se generan automáticamente. La contraseña inicial se cambia en el primer ingreso.",
       actualizar: (valores) => {
-        const rol = catalogo.roles.find((r: Registro) => r.id === Number(valores.rol_id));
-        return { ...valores,
-          codigo: /^[0-9]{8}$/.test(valores.documento || "") ? `${rol?.codigo === "docente" ? "DOC" : "ADM"}-${valores.documento}` : persona?.codigo || "",
+        const rol = catalogo.roles.find(
+          (r: Registro) => r.id === Number(valores.rol_id),
+        );
+        return {
+          ...valores,
+          codigo: /^[0-9]{8}$/.test(valores.documento || "")
+            ? `${rol?.codigo === "docente" ? "DOC" : "ADM"}-${valores.documento}`
+            : persona?.codigo || "",
           permiso: rol?.codigo === "docente" ? "personal" : valores.permiso,
         };
       },
@@ -611,12 +622,30 @@ export function PanelAdministrativo({
         clave: "",
       },
       campos: [
-        { nombre: "documento", etiqueta: "DNI", requerido: !persona, longitudMinima: 8, longitudMaxima: 8,
-          patron: "[0-9]{8}", modoEntrada: "numeric", ayuda: "8 dígitos, sin letras ni espacios." },
-        { nombre: "codigo", etiqueta: "ID institucional · automático", soloLectura: true,
-          ayuda: "Se genera con el rol y el DNI." },
-        { nombre: "actual", etiqueta: "Tu contraseña actual", tipo: "password", avanzado: true,
-          ayuda: "Necesaria si cambias los permisos de una cuenta existente.", visible: () => Boolean(persona) },
+        {
+          nombre: "documento",
+          etiqueta: "DNI",
+          requerido: !persona,
+          longitudMinima: 8,
+          longitudMaxima: 8,
+          patron: "[0-9]{8}",
+          modoEntrada: "numeric",
+          ayuda: "8 dígitos, sin letras ni espacios.",
+        },
+        {
+          nombre: "codigo",
+          etiqueta: "ID institucional · automático",
+          soloLectura: true,
+          ayuda: "Se genera con el rol y el DNI.",
+        },
+        {
+          nombre: "actual",
+          etiqueta: "Tu contraseña actual",
+          tipo: "password",
+          avanzado: true,
+          ayuda: "Necesaria si cambias los permisos de una cuenta existente.",
+          visible: () => Boolean(persona),
+        },
         { nombre: "nombres", etiqueta: "Nombres", requerido: true },
         { nombre: "apellidos", etiqueta: "Apellidos", requerido: true },
         {
@@ -634,15 +663,28 @@ export function PanelAdministrativo({
           nombre: "permiso",
           etiqueta: "Acceso al sistema",
           tipo: "select",
-          ayudaSegunDatos: valores => ({
-            personal: "Solo su carnet y asistencia. Sin acceso al panel de gestión.",
-            operador: "Gestiona la jornada y envía justificaciones a revisión. Sin configuración administrativa.",
-            administrador: "Administra personas, horarios, reglas y permisos; aprueba justificaciones y consulta preplanilla.",
-          }[valores.permiso as string] || "Selecciona el nivel de acceso."),
-          opcionesSegunDatos: valores => catalogo.roles.find((r: Registro) => r.id === Number(valores.rol_id))?.codigo === "docente"
-            ? [{ valor: "personal", texto: "Personal · carnet y asistencia" }]
-            : [{ valor: "personal", texto: "Personal · carnet y asistencia" },
-              { valor: "operador", texto: "Operador de asistencia" }, { valor: "administrador", texto: "Administrador" }],
+          ayudaSegunDatos: (valores) =>
+            ({
+              personal:
+                "Solo su carnet y asistencia. Sin acceso al panel de gestión.",
+              operador:
+                "Gestiona la jornada y envía justificaciones a revisión. Sin configuración administrativa.",
+              administrador:
+                "Administra personas, horarios, reglas y permisos; aprueba justificaciones y consulta preplanilla.",
+            })[valores.permiso as string] || "Selecciona el nivel de acceso.",
+          opcionesSegunDatos: (valores) =>
+            catalogo.roles.find(
+              (r: Registro) => r.id === Number(valores.rol_id),
+            )?.codigo === "docente"
+              ? [{ valor: "personal", texto: "Personal · carnet y asistencia" }]
+              : [
+                  {
+                    valor: "personal",
+                    texto: "Personal · carnet y asistencia",
+                  },
+                  { valor: "operador", texto: "Operador de asistencia" },
+                  { valor: "administrador", texto: "Administrador" },
+                ],
           opciones: [
             { valor: "personal", texto: "Acceso personal" },
             { valor: "operador", texto: "Operador de asistencia" },
@@ -1108,7 +1150,7 @@ export function PanelAdministrativo({
             </section>
           )}
           <div
-            className="vista-modulo"
+            className={`vista-modulo${seccion === "inicio" ? " inicio-administrativo" : ""}`}
             hidden={Boolean(grupoAbierto)}
             key={seccion}
           >
@@ -1171,6 +1213,25 @@ export function PanelAdministrativo({
                       <span>{titulo}</span>
                       <strong>{valor}</strong>
                       <small>{detalle}</small>
+                      {titulo === "Presentes" && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navegar(
+                              fecha === hoyLima() ? "dispositivos" : "diario",
+                            )
+                          }
+                        >
+                          {fecha === hoyLima() ? (
+                            <QrCode size={18} aria-hidden="true" />
+                          ) : (
+                            <ChevronRight size={18} aria-hidden="true" />
+                          )}
+                          {fecha === hoyLima()
+                            ? "Abrir puesto de asistencia"
+                            : "Ver diario de asistencia"}
+                        </button>
+                      )}
                     </article>
                   ))}
                 </div>
@@ -1249,6 +1310,7 @@ export function PanelAdministrativo({
                     </button>
                   </div>
                   <Tabla
+                    titulo="Jornada de hoy"
                     filas={datos.diario}
                     clave="persona_id"
                     columnas={columnasDiario.filter(
@@ -1292,6 +1354,7 @@ export function PanelAdministrativo({
                   />
                 ) : (
                   <Tabla
+                    titulo="Diario de asistencia"
                     filas={filtradas}
                     clave="persona_id"
                     columnas={columnasDiario}
@@ -1365,7 +1428,11 @@ export function PanelAdministrativo({
               />
             )}
             {seccion === "horarios" && catalogo && (
-              <HorariosLaborales catalogo={catalogo} administrador={administrador} guardado={guardado} />
+              <HorariosLaborales
+                catalogo={catalogo}
+                administrador={administrador}
+                guardado={guardado}
+              />
             )}
           </div>
         </main>

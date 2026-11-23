@@ -38,9 +38,10 @@ export function useDatos(
       }
       enCurso = true;
       control = new AbortController();
-      const limite = setTimeout(() => control?.abort(), 15000);
       try {
-        const respuesta = await consultar(ruta!, { signal: control.signal });
+        const respuesta = await consultar(ruta!, {
+          signal: AbortSignal.any([control.signal, AbortSignal.timeout(15000)]),
+        });
         if (!cancelado) {
           establecerDatos(respuesta);
           establecerResuelta(claveConsulta);
@@ -50,7 +51,6 @@ export function useDatos(
       } catch (problema) {
         if (!cancelado) establecerError((problema as Error).message);
       } finally {
-        clearTimeout(limite);
         enCurso = false;
         if (!cancelado) {
           establecerCargando(false);
@@ -177,6 +177,8 @@ export function Tabla({
   columnas,
   filas,
   clave = "id",
+  paginacionInterna = true,
+  titulo = "Resultados",
 }: {
   columnas: {
     titulo: string;
@@ -184,13 +186,15 @@ export function Tabla({
   }[];
   filas: Registro[];
   clave?: string;
+  paginacionInterna?: boolean;
+  titulo?: string;
 }) {
   const [pagina, establecerPagina] = useState(1);
   const firma = filas
     .map((fila) => String(fila[clave]) + String(fila.fecha || ""))
     .join("|");
   useEffect(() => establecerPagina(1), [firma]);
-  const paginas = Math.max(1, Math.ceil(filas.length / 12)),
+  const paginas = paginacionInterna ? Math.max(1, Math.ceil(filas.length / 12)) : 1,
     actual = Math.min(pagina, paginas);
   if (!filas.length)
     return (
@@ -198,8 +202,9 @@ export function Tabla({
     );
   return (
     <>
-      <div className="tabla-contenedor">
+      <div className="tabla-contenedor" role="region" aria-label={titulo} tabIndex={0}>
         <table>
+          <caption className="solo-lector">{titulo}</caption>
           <thead>
             <tr>
               {columnas.map((columna) => (
@@ -215,14 +220,17 @@ export function Tabla({
                 key={String(fila[clave] ?? indice) + String(fila.fecha || "")}
               >
                 {columnas.map((columna) => (
-                  <td key={columna.titulo}>{columna.mostrar(fila)}</td>
+                  <td key={columna.titulo}>
+                    <span className="etiqueta-celda">{columna.titulo}</span>
+                    <div className="valor-celda">{columna.mostrar(fila)}</div>
+                  </td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {filas.length > 12 && (
+      {paginacionInterna && filas.length > 12 && (
         <div className="paginacion">
           <span>
             {filas.length} registros · Página {actual} de {paginas}

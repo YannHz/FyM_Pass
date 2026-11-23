@@ -270,6 +270,8 @@ node .\node_modules\vite\bin\vite.js preview --host 127.0.0.1 --port 4173 --stri
 
 La carpeta de trabajo de Vite es `web`; ejecutarlo en la raíz puede provocar que no encuentre `dist`. Abrir [FyM Pass](http://127.0.0.1:4173). API: [documentación local](http://127.0.0.1:8000/docs). `/api/salud` indica vida de la API; no demuestra disponibilidad SQL. `/api/salud/base-datos` exige sesión de encargado y los controles de acceso completados.
 
+Los listados `GET /api/gestion/marcados` y `GET /api/gestion/justificaciones` aceptan `pagina` (desde 1) y `por_pagina` (1 a 100; 50 por defecto). Responden con `elementos`, `total`, `pagina` y `por_pagina`. El historial de marcados también acepta `modalidad` para filtrar antes de paginar. Las creaciones de personas y horarios responden con HTTP 201; las actualizaciones de personas y horarios conservan HTTP 200. Los errores de aplicación mantienen el campo `detail`.
+
 Para un acceso temporal desde teléfono, con los servicios ya activos y solo cuando se solicite:
 
 ```sh
@@ -297,7 +299,45 @@ Los respaldos nuevos se guardan como `.sql.fernet`. `clave_respaldos.key` permit
 
 La base, `.env`, claves y archivos de `backend/archivos/seguridad/` son privados. La herramienta aplica permisos del usuario local y SYSTEM en Windows; 0700 a la carpeta y 0600 a archivos en POSIX. No sobrescribirlos al actualizar el código.
 
-Se verificó una restauración de 16 cuentas en una base aislada de MariaDB, posteriormente retirada. La copia externa, conservación mensual y nuevas comprobaciones de restauración son responsabilidad operativa; no hay automatización de esas tareas. Los históricos protegidos conservan su nombre más `.fernet`, y no se borran automáticamente.
+Se verificó una restauración de 16 cuentas en una base aislada de MariaDB, posteriormente retirada. Los históricos protegidos conservan su nombre más `.fernet`, y no se borran automáticamente. La copia externa diaria queda preparada para el piloto; requiere configurar la cuenta de Drive y el servidor antes de activarse.
+
+### Despliegue del piloto en AWS
+
+El piloto usa una instancia **Amazon Lightsail Linux/Ubuntu de 2 GB** en Ohio (`us-east-2`), con MariaDB, API y web compilada en el mismo servidor. El plan con IPv4 público figura a USD 12/mes; snapshots, transferencia excedente y otros recursos pueden añadir cargos. No dar por supuestos los créditos gratuitos: comprobar su saldo y vigencia en Billing antes de crear la instancia. Crear un presupuesto mensual de USD 20 con avisos por correo al 50 %, 80 % y 100 % del gasto, y revisar también el consumo bruto antes de créditos. El presupuesto avisa; no detiene la instancia automáticamente. La base MariaDB queda local para conservar la configuración y el respaldo actual; una base administrada requeriría otro presupuesto y cambios de operación.
+
+En la consola web de AWS:
+
+1. En **Billing and Cost Management**, comprobar el saldo de créditos y crear el presupuesto de USD 20 para toda la cuenta. Confirmar el correo de las alertas.
+2. En **Lightsail**, seleccionar `us-east-2`, crear `fym-pass-piloto` con Ubuntu LTS, Linux/Unix, IPv4 público y el plan de 2 GB. Activar snapshots automáticos de la instancia si el costo estimado cabe en el presupuesto; Lightsail conserva los siete más recientes y cobra el almacenamiento usado.
+3. Asignar una IP estática a la instancia. En **Networking**, dejar 80 y 443 abiertos; restringir SSH 22 al cliente SSH del navegador de Lightsail y, solo si hace falta, a la IP de administración. No abrir 3306, 8000, 4173 ni 5173. Revisar por separado las reglas IPv4 e IPv6.
+4. En dpdns.org, activar `fympass.dpdns.org` y apuntar su registro A a la IP estática. No dejar un registro AAAA que apunte a otro servidor. Comprobar que el nombre resuelve antes de iniciar el proxy HTTPS.
+
+El servidor ejecuta `despliegue/fym_pass.service` como usuario `fym-pass`, con Uvicorn en `127.0.0.1:8000`. `despliegue/Caddyfile` sirve `web/dist`, reenvía `/api` a Uvicorn y obtiene/renueva HTTPS para `fympass.dpdns.org`. Instalar Caddy desde su repositorio oficial para Ubuntu, no mediante un paquete de aplicación preconfigurada. Crear el usuario de servicio y los directorios `/opt/fym-pass` y `backend/archivos` con permisos adecuados; `backend/.env` y `backend/archivos/seguridad` deben ser legibles solo por `fym-pass`. Configurar `PRODUCCION=true`, `COOKIE_SEGURA=true`, `PROXY_CONFIABLE=true`, una `CLAVE_QR` aleatoria de 32 caracteres o más y las credenciales SQL privadas. Caddy es el único acceso público; la API y MariaDB escuchan solo en loopback.
+
+Como el repositorio GitHub es privado, conceder a la instancia una **deploy key de solo lectura** para obtener el código; no guardar un token GitHub en un comando, URL o archivo versionado. Instalar Python, `python3-venv`, MariaDB, Git y Node.js LTS para compilar; usar `backend/requirements.lock` y `npm ci` seguido de `npm run build` en `web`. Crear la base `fym_pass` con `utf8mb4`, una cuenta operativa con permisos DML y una cuenta separada para migraciones. Aplicar las revisiones 0001–0010 mediante `FYM_MIGRACION=1 alembic upgrade head` después de preparar su credencial privada. La carga inicial ficticia solo se ejecuta como paso deliberado de instalación; no importar volcados ni credenciales locales. Instalar `fym_pass.service` y `Caddyfile` en sus rutas de systemd/Caddy, validar la configuración de Caddy y activar ambos servicios. Verificar `/api/salud`, la carga de la PWA, la sesión y el uso de cámara QR desde un teléfono antes de abrir el piloto a personas reales.
+
+Para actualizar, desplegar una revisión concreta del repositorio, instalar dependencias según los locks, compilar la web, aplicar únicamente las migraciones pendientes con la cuenta de migración y reiniciar la API. No sobrescribir `.env`, claves, fotos ni respaldos. Al terminar el mes, conservar primero el respaldo y las fotografías requeridos, después retirar los recursos que generen cargos y liberar la IP estática.
+
+### Piloto en AWS: seguridad y copia externa
+
+Para el piloto, usar un solo origen HTTPS para la PWA y `/api`, con la API escuchando únicamente en `127.0.0.1:8000` detrás de un proxy que sustituya, en vez de conservar, `X-Forwarded-For` y `X-Forwarded-Proto`. Abrir al público solo 80 para redirigir a HTTPS y 443; mantener MySQL/MariaDB 3306 cerrado y limitar SSH a la IP de administración. Comprobar la renovación del certificado, el dominio y la cámara QR en teléfonos antes de abrir el acceso. Configurar privadamente `PRODUCCION=true`, `COOKIE_SEGURA=true`, `CLAVE_QR` aleatoria de al menos 32 caracteres, `BD_CLAVE` no vacía y `PROXY_CONFIABLE=true` únicamente después de configurar el proxy. El arranque en modo producción rechaza claves o cookie inseguras y desactiva `/docs`, `/redoc` y `/openapi.json`. No cambiar la clave QR si se conservarán carnés emitidos.
+
+Para enviar respaldos de la base a una cuenta exclusiva de Google Drive, instalar rclone desde su fuente oficial y configurar un remoto llamado `drive_fym`. El cliente compartido de rclone se retira durante 2026; usar un cliente OAuth propio. Con la nueva cuenta, crear un proyecto en Google Cloud Console, habilitar Google Drive API y configurar la pantalla de consentimiento para usuario *External*. En acceso a datos, solicitar solamente `https://www.googleapis.com/auth/drive.file`, que limita el acceso a archivos creados por la aplicación. Crear un cliente OAuth de tipo *Desktop app*. Publicar la aplicación para uso personal antes del piloto: si queda en estado *Testing*, Google caduca el token de actualización a los siete días. No añadir otros usuarios ni compartir el cliente OAuth.
+
+En el servidor que ejecutará el respaldo, iniciar `rclone config` con `RCLONE_CONFIG=/etc/fym-pass/rclone.conf`, crear el remoto `drive_fym` de tipo `drive`, introducir allí el ID y secreto del cliente OAuth, elegir el alcance `drive.file` y autorizar interactivamente la nueva cuenta de Google. En un servidor sin navegador, seguir la opción de autorización remota que ofrece rclone usando un navegador del administrador. Comprobar el remoto con `rclone --config /etc/fym-pass/rclone.conf lsd drive_fym:`. Con el alcance `drive.file`, dejar que rclone cree `FyM-Pass/respaldos` al subir la primera copia; no crear esa carpeta manualmente en la web de Drive porque podría quedar fuera del acceso concedido. La configuración privada de rclone contiene el token y debe ser legible y escribible solo por el usuario del servicio, porque rclone lo renueva allí. No escribir la contraseña de Google, el token, el ID ni el secreto OAuth en el repositorio ni compartirlos por chat.
+
+Crear en MariaDB una cuenta exclusiva de respaldo con `SELECT`, `SHOW VIEW` y `TRIGGER` sobre `fym_pass.*`, accesible solo por conexión local. Por ejemplo, desde la sesión administrativa de MariaDB, crear `fym_respaldo`@`127.0.0.1` con una contraseña aleatoria distinta a la operativa y ejecutar `GRANT SELECT, SHOW VIEW, TRIGGER ON fym_pass.* TO 'fym_respaldo'@'127.0.0.1'`. Guardar `{"usuario":"fym_respaldo","clave":"..."}` en `backend/archivos/seguridad/respaldo_bd.local.json` con permisos 0600. En producción, el comando de respaldo exige esa cuenta y una `clave_respaldos.key` existente; nunca genera otra clave durante la tarea programada. Guardar una copia de la clave de cifrado **fuera de Google Drive y fuera del servidor**, bajo custodia de la administración. Quien tenga el archivo cifrado y esa clave puede recuperar los datos.
+
+En el servidor Linux, configurar `/etc/fym-pass/respaldo.env` con permisos 0600 y estas variables, ajustando la ruta privada real:
+
+```ini
+FYM_RESPALDO_REMOTO=drive_fym:FyM-Pass/respaldos
+RCLONE_CONFIG=/etc/fym-pass/rclone.conf
+```
+
+Ejecutar una vez `cd /opt/fym-pass/backend && .venv/bin/python -B -m aplicacion.respaldo_drive` con el mismo usuario y las mismas variables del servicio. La tarea cifra y verifica el volcado local, sube solo el `.sql.fernet` y compara tamaño y MD5 del archivo cifrado con Google Drive. Después copiar `despliegue/respaldos_fym.service` y `despliegue/respaldos_fym.timer` a `/etc/systemd/system/`, ajustar usuario, rutas y dependencia de MariaDB si difieren, y ejecutar `systemctl daemon-reload` y `systemctl enable --now respaldos_fym.timer`. Corre diariamente cerca de las 02:00 de Lima. Revisar `systemctl status respaldos_fym.timer`, `journalctl -u respaldos_fym.service` y la aparición de cada archivo en Drive; configurar una alerta operativa ante cualquier fallo del servicio. No usar `rclone sync` para este destino: podría borrar respaldos existentes.
+
+Antes de recibir datos reales, descargar un respaldo de Drive y restaurarlo en una base aislada usando la clave custodiada; verificar personas, horarios y marcados sin modificar la base operativa. Repetir al menos una comprobación durante el mes. Durante el piloto conservar todos los respaldos diarios, sin borrado automático; al cerrarlo, acordar con la administración qué conservar y cuándo eliminarlo. El respaldo SQL **no incluye** `backend/archivos/fotos`; conservar también las fotografías mediante una copia separada o un snapshot de la instancia.
 
 ## Verificaciones y límites
 

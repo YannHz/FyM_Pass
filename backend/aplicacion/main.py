@@ -20,6 +20,9 @@ avisos_registro = logging.getLogger("fym")
 
 @asynccontextmanager
 async def vigilar_configuracion(aplicacion_en_uso):
+    if configuracion.produccion:
+        if len(configuracion.clave_qr) < 32 or not configuracion.cookie_segura or not configuracion.bd_clave:
+            raise RuntimeError("Producción requiere CLAVE_QR, COOKIE_SEGURA=true y BD_CLAVE.")
     # avisa al arrancar sobre configuracion debil antes del despliegue
     if len(configuracion.clave_qr) < 32:
         avisos_registro.warning(
@@ -37,6 +40,9 @@ aplicacion = FastAPI(
     description="API de asistencia institucional",
     version=VERSION,
     lifespan=vigilar_configuracion,
+    docs_url=None if configuracion.produccion else "/docs",
+    redoc_url=None if configuracion.produccion else "/redoc",
+    openapi_url=None if configuracion.produccion else "/openapi.json",
 )
 for enrutador in (
     rutas_salud,

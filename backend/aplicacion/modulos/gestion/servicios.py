@@ -701,16 +701,18 @@ def registrar_manual(
 
 
 def consultar_justificaciones(
-    usuario: Usuario = None, repositorio: RepositorioGestion = None
+    usuario: Usuario = None, repositorio: RepositorioGestion = None,
+    pagina: int = 1, por_pagina: int = 50,
 ):
-    filas = repositorio.justificaciones_de_sede(sede_usuario(repositorio, usuario))
-    return [
+    total, filas = repositorio.pagina_justificaciones(sede_usuario(repositorio, usuario), pagina, por_pagina)
+    elementos = [
         {
             **datos_objeto(justificacion),
             "nombre": f"{persona.nombres} {persona.apellidos}",
         }
         for justificacion, persona in filas
     ]
+    return {"elementos": elementos, "total": total, "pagina": pagina, "por_pagina": por_pagina}
 
 
 def consultar_incidencias(desde, hasta, usuario=None, repositorio=None):
@@ -1053,10 +1055,13 @@ def consultar_historial_marcados(
     hasta: date,
     usuario: Usuario = None,
     repositorio: RepositorioGestion = None,
+    pagina: int = 1,
+    por_pagina: int = 50,
+    modalidad: str | None = None,
 ):
     sede, zona, inicio, fin = intervalo(repositorio, usuario, desde, hasta)
-    filas = repositorio.historial_de_marcados(fin, inicio, sede)
-    return [
+    total, filas = repositorio.historial_de_marcados(fin, inicio, sede, pagina, por_pagina, modalidad)
+    elementos = [
         {
             "id": marcado.id,
             "persona_id": persona.id,
@@ -1078,3 +1083,4 @@ def consultar_historial_marcados(
         }
         for marcado, persona, responsable in filas
     ]
+    return {"elementos": elementos, "total": total, "pagina": pagina, "por_pagina": por_pagina}
