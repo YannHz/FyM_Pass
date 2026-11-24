@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { consultar } from "./servicio";
+import { CampoClave } from "./CampoClave";
 
 export function CambiarClaveInicial({ alCambiar, alCerrar, requiereActual = false }: {
   requiereActual?: boolean;
@@ -35,16 +36,15 @@ export function CambiarClaveInicial({ alCambiar, alCerrar, requiereActual = fals
       <p>Usa entre 8 y 256 caracteres. Puedes escribir una frase con espacios. Evita tu nombre, usuario y contraseñas comunes.</p>
       {requiereActual && <>
         <label htmlFor="clave-actual">Contraseña actual</label>
-        <input id="clave-actual" type="password" autoComplete="current-password" required value={actual} maxLength={256} onChange={e => cambiarActual(e.target.value)} />
+        <CampoClave id="clave-actual" nombre="clave-actual" etiqueta="contraseña actual" valor={actual}
+          alCambiar={cambiarActual} autocompletar="current-password" deshabilitado={ocupado} />
       </>}
       <label htmlFor="nueva-clave">Nueva contraseña</label>
-      <input id="nueva-clave" type="password" autoComplete="new-password"
-        minLength={8} maxLength={256} required value={clave} disabled={ocupado}
-        onChange={evento => cambiarClave(evento.target.value)} />
+      <CampoClave id="nueva-clave" nombre="nueva-clave" etiqueta="nueva contraseña" valor={clave}
+        alCambiar={cambiarClave} autocompletar="new-password" longitudMinima={8} deshabilitado={ocupado} />
       <label htmlFor="confirmar-clave">Confirma tu nueva contraseña</label>
-      <input id="confirmar-clave" type="password" autoComplete="new-password"
-        minLength={8} maxLength={256} required value={confirmacion} disabled={ocupado}
-        onChange={evento => cambiarConfirmacion(evento.target.value)} />
+      <CampoClave id="confirmar-clave" nombre="confirmar-clave" etiqueta="confirmación de contraseña" valor={confirmacion}
+        alCambiar={cambiarConfirmacion} autocompletar="new-password" longitudMinima={8} deshabilitado={ocupado} />
       {error && <p role="alert" className="error">{error}</p>}
       <p className="nota" role="status">{clave.length}/8 caracteres mínimos{confirmacion ? clave === confirmacion ? " · Las contraseñas coinciden." : " · Las contraseñas todavía no coinciden." : ""}</p>
       <div className="acciones-clave-inicial">

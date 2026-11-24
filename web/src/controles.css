@@ -319,6 +319,29 @@ body:has(dialog[open]) {
   background: var(--suave);
 }
 
+.panel-cuenta>a.acceso-cuenta-carne {
+  gap: 10px;
+  background: var(--suave);
+  font-weight: 650;
+}
+
+.panel-cuenta>a.acceso-cuenta-carne:hover {
+  background: color-mix(in srgb, var(--suave) 82%, var(--acento));
+}
+
+.campo-clave input {
+  width: 100%;
+  padding-right: 100px;
+}
+
+.campo-clave button {
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  min-height: 44px;
+  padding-inline: 12px;
+}
+
 .panel-cuenta .instalar-aplicacion>div {
   position: static;
   width: 100%;

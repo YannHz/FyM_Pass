@@ -1,6 +1,7 @@
 import { MenuCuenta } from "./MenuCuenta";
 import { CentroSeguridad } from "./CentroSeguridad";
 import { CambiarClaveInicial } from "./CambiarClaveInicial";
+import { CampoClave } from "./CampoClave";
 import { EspacioPersonal } from "./EspacioPersonal";
 import { LogoInstitucional, MarcaInstitucional } from "./LogoInstitucional";
 import { InstalarAplicacion } from "./InstalarAplicacion";
@@ -31,7 +32,6 @@ export function Aplicacion() {
   const [ocupado, establecerOcupado] = useState(false);
   const [nombre, establecerNombre] = useState("");
   const [clave, establecerClave] = useState("");
-  const [visible, establecerVisible] = useState(false);
   const [error, establecerError] = useState("");
   const [caducada, establecerCaducada] = useState(false);
   const [seguridad, mostrarSeguridad] = useState(false);
@@ -229,30 +229,8 @@ export function Aplicacion() {
               disabled={ocupado}
             />
             <label htmlFor="clave">Contraseña</label>
-            <div className="campo-clave">
-              <input
-                id="clave"
-                name="password"
-                type={visible ? "text" : "password"}
-                autoComplete="current-password"
-                required
-                maxLength={256}
-                value={clave}
-                onChange={(evento) => establecerClave(evento.target.value)}
-                disabled={ocupado}
-              />
-              <button
-                type="button"
-                className="boton-texto"
-                aria-pressed={visible}
-                aria-label={
-                  visible ? "Ocultar contraseña" : "Mostrar contraseña"
-                }
-                onClick={() => establecerVisible(!visible)}
-              >
-                {visible ? "Ocultar" : "Mostrar"}
-              </button>
-            </div>
+            <CampoClave id="clave" nombre="password" etiqueta="contraseña" valor={clave}
+              alCambiar={establecerClave} autocompletar="current-password" deshabilitado={ocupado} />
             {error && (
               <p role="alert" className="error">
                 {error}
@@ -344,22 +322,14 @@ export function Aplicacion() {
             window.history.replaceState(null, "", "/acceso");
           }}
         >
-          <form className="formulario-gestion" onSubmit={iniciarSesion}>
+          <form className="formulario-gestion formulario-renovar-sesion" onSubmit={iniciarSesion}>
             <p>
               Vuelve a entrar como {usuario.usuario} para continuar. Tus cambios
               sin guardar permanecen en esta ventana.
             </p>
             <label htmlFor="clave-renovar">Contraseña</label>
-            <input
-              id="clave-renovar"
-              type="password"
-              autoComplete="current-password"
-              value={clave}
-              onChange={(evento) => establecerClave(evento.target.value)}
-              required
-              autoFocus
-              disabled={ocupado}
-            />
+            <CampoClave id="clave-renovar" nombre="password" etiqueta="contraseña" valor={clave}
+              alCambiar={establecerClave} autocompletar="current-password" deshabilitado={ocupado} enfocar />
             {error && (
               <p className="aviso error" role="alert">
                 {error}
