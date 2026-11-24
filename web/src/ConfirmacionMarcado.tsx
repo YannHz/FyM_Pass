@@ -30,14 +30,7 @@ export function ConfirmacionMarcado({ evento }: { evento: Confirmacion }) {
         : resultado.includes("puntual")
           ? "correcta"
           : "informativa";
-  const simbolo =
-    estado === "rechazada"
-      ? "✕ "
-      : estado === "tardia"
-        ? "! "
-        : estado === "correcta"
-          ? "✓ "
-          : "ℹ ";
+  const mensaje = evento.resultado.replace(/[¡!]/g, "").trim().toLocaleUpperCase("es-PE");
   return (
     <div className={`confirmacion ${estado}`} role="status" aria-live="polite">
       <AvatarPersona persona={evento.persona} />
@@ -54,8 +47,7 @@ export function ConfirmacionMarcado({ evento }: { evento: Confirmacion }) {
         <span>{horaLocal(evento.hora)}</span>
       </div>
       <p className="resultado">
-        {simbolo}
-        {evento.resultado}
+        {mensaje}
       </p>
     </div>
   );

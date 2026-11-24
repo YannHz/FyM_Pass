@@ -2736,27 +2736,6 @@ dialog::backdrop {
   animation: presentar-carne 280ms var(--curva-movimiento) both;
 }
 
-.confirmacion::before {
-  content: '✓';
-  display: flex;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  justify-content: center;
-  align-items: center;
-  background: var(--fondo-bien);
-  color: var(--bien);
-  margin: 0 auto 24px;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.confirmacion.rechazada::before {
-  content: '×';
-  background: var(--fondo-alerta);
-  color: var(--alerta);
-}
-
 .confirmacion .foto-persona {
   width: 88px;
   height: 88px;

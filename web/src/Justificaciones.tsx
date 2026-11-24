@@ -421,7 +421,7 @@ export function Justificaciones({
           ) : (
             <Vacio
               titulo="No hay incidencias para esta consulta."
-              detalle="Las faltas aparecen al superar el límite sin registrar entrada. Puedes cambiar el periodo o limpiar los filtros."
+              detalle="Las tardanzas requieren un horario asignado. Las faltas aparecen al superar el límite sin registrar entrada. Puedes cambiar el periodo o limpiar los filtros."
             />
           ))}
         <p className="nota">

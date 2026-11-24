@@ -117,11 +117,11 @@ def evaluar_manual(repositorio, persona, instante, tipo):
     )
     tramos = tramos_para(repositorio, persona, local.date())
     margen = repositorio.tolerancia_vigente(local, persona)
-    if not tramos or not margen:
+    if not tramos:
         return "Registrado · horario pendiente"
     limite = datetime.combine(
         local.date(), tramos[0].hora_entrada, local.tzinfo
-    ) + timedelta(minutes=margen.minutos)
+    ) + timedelta(minutes=margen.minutos if margen else 0)
     return "Puntual" if local <= limite else "Tardanza"
 
 
@@ -500,6 +500,8 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
                 if entrada
                 else "Pendiente"
             )
+            if entrada and estado == "Registrado · horario pendiente":
+                estado = evaluar_manual(repositorio, persona, entrada.ocurrido_en, "entrada")
             programadas = sum(
                 (
                     (
@@ -840,7 +842,7 @@ def guardar_reglas(
     )
     confirmar(repositorio)
     return {
-        "mensaje": "Reglas guardadas. Los marcados previos conservan su resultado original."
+        "mensaje": "Reglas guardadas. Los marcados ya evaluados conservan su resultado original."
     }
 
 

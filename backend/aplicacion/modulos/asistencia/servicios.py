@@ -171,12 +171,12 @@ def evaluar_entrada(
 
     tramos = tramos_para(repositorio.para_gestion(), persona, local.date())
     tolerancia = repositorio.tolerancia_vigente(local, persona)
-    if not tramos or not tolerancia:
+    if not tramos:
         return "Registrado · horario pendiente"
     entrada = datetime.combine(local.date(), tramos[0].hora_entrada, local.tzinfo)
     return (
         "Puntual"
-        if local <= entrada + timedelta(minutes=tolerancia.minutos)
+        if local <= entrada + timedelta(minutes=tolerancia.minutos if tolerancia else 0)
         else "Tardanza"
     )
 
