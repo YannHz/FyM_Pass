@@ -256,6 +256,19 @@ def registrar_lectura(
             )
         ):
             rechazo = "El ingreso todavía no está habilitado para tu horario"
+        elif tramos and local > (
+            datetime.combine(local.date(), tramos[0].hora_entrada, zona)
+            + timedelta(minutes=regla.limite_ausencia_minutos)
+        ):
+            sede = repositorio.obtener_sede(persona.sede_id)
+            dias_no_lectivos = repositorio.para_gestion().dias_no_lectivos_del_intervalo(
+                local.date(), local.date(), sede
+            )
+            if not dias_no_lectivos:
+                rechazo = (
+                    "Falta por ingreso fuera de plazo. "
+                    "Acude al área de administración para justificarla"
+                )
     resultado = rechazo or (
         "Salida registrada"
         if tipo == "salida"

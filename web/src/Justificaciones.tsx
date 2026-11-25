@@ -47,7 +47,7 @@ function JustificarIncidencia({
     [observacion, cambiarObservacion] = useState("");
   const [ocupado, cambiarOcupado] = useState(false),
     [error, cambiarError] = useState("");
-  const registrar = !solicitud || solicitud.estado === "observada";
+  const registrar = administrador && (!solicitud || solicitud.estado === "observada");
   const revisar = solicitud?.estado === "pendiente" && administrador;
   async function guardar(evento: FormEvent) {
     evento.preventDefault();
@@ -137,11 +137,7 @@ function JustificarIncidencia({
                   placeholder="Número de constancia, expediente o documento"
                 />
               </label>
-              <p className="nota">
-                {administrador
-                  ? "Al guardar, la incidencia quedará justificada directamente."
-                  : "La solicitud quedará pendiente hasta que un administrador la revise."}
-              </p>
+              <p className="nota">Al guardar, la incidencia quedará justificada directamente.</p>
             </>
           )}
           {revisar && (
@@ -192,13 +188,7 @@ function JustificarIncidencia({
           {(registrar || revisar) && (
             <button disabled={ocupado}>
               <Send size={16} />
-              {ocupado
-                ? "Guardando…"
-                : revisar
-                  ? "Guardar revisión"
-                  : administrador
-                    ? "Justificar incidencia"
-                    : "Enviar a revisión"}
+              {ocupado ? "Guardando…" : revisar ? "Guardar revisión" : "Justificar incidencia"}
             </button>
           )}
         </footer>
@@ -403,18 +393,18 @@ export function Justificaciones({
                 },
                 {
                   titulo: "Acción",
-                  mostrar: (fila) => (
+                  mostrar: (fila) => administrador || fila.solicitud ? (
                     <button
                       className="boton-texto"
                       onClick={() => cambiarSeleccion(fila)}
                     >
-                      {!fila.solicitud || fila.solicitud.estado === "observada"
+                      {administrador && (!fila.solicitud || fila.solicitud.estado === "observada")
                         ? "Justificar"
-                        : fila.solicitud.estado === "pendiente" && administrador
+                        : fila.solicitud?.estado === "pendiente" && administrador
                           ? "Revisar"
                           : "Ver detalle"}
                     </button>
-                  ),
+                  ) : "—",
                 },
               ]}
             />
@@ -425,9 +415,9 @@ export function Justificaciones({
             />
           ))}
         <p className="nota">
-          Selecciona una persona para justificar ese día. Una falta puede
-          cambiar a tardanza si después se registra su ingreso. Solo las
-          justificaciones aprobadas modifican el resultado del reporte.
+          {administrador
+            ? "Selecciona una persona para justificar ese día. Una vez vencido el plazo de ingreso, el QR no registra una entrada tardía. Solo las justificaciones aprobadas modifican el resultado del reporte."
+            : "Consulta las tardanzas, faltas y justificaciones registradas. Solo administración puede justificarlas."}
         </p>
       </section>
       {seleccion && (

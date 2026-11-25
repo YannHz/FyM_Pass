@@ -744,6 +744,8 @@ def crear_justificacion(
     usuario: Usuario = None,
     repositorio: RepositorioGestion = None,
 ):
+    if usuario.permiso != "administrador":
+        raise ErrorAplicacion(403, "Solo administración puede registrar justificaciones.")
     persona = comprobar_persona(repositorio, usuario, datos.persona_id)
     repositorio.bloquear_persona(persona)
     existentes = repositorio.justificaciones_de_sede(sede_usuario(repositorio, usuario))
@@ -754,11 +756,9 @@ def crear_justificacion(
     if not any(fila["estado"] == esperado for fila in filas):
         raise ErrorAplicacion(422, "La incidencia ya no está disponible. Actualiza los registros antes de justificar.")
     justificacion = Justificacion(**datos.model_dump(), creada_por_id=usuario.id)
-    directa = usuario.permiso == "administrador"
-    if directa:
-        justificacion.estado = "aprobada"
-        justificacion.resuelta_por_id = usuario.id
-        justificacion.observacion = "Aprobada al registrar por administración."
+    justificacion.estado = "aprobada"
+    justificacion.resuelta_por_id = usuario.id
+    justificacion.observacion = "Aprobada al registrar por administración."
     repositorio.agregar(justificacion)
     repositorio.sincronizar()
     registrar_auditoria(
@@ -768,10 +768,10 @@ def crear_justificacion(
         "justificaciones",
         justificacion.id,
         {"persona_id": datos.persona_id, "fecha": datos.fecha,
-         "estado": "aprobada" if directa else "pendiente", "aprobacion_directa": directa},
+         "estado": "aprobada", "aprobacion_directa": True},
     )
     confirmar(repositorio)
-    return {"mensaje": "Incidencia justificada." if directa else "Justificación enviada a revisión."}
+    return {"mensaje": "Incidencia justificada."}
 
 
 def resolver_justificacion(

@@ -1245,6 +1245,14 @@ summary:focus-visible {
   color: var(--alerta);
 }
 
+.tardia .resultado {
+  color: var(--atencion);
+}
+
+.informativa .resultado {
+  color: var(--texto);
+}
+
 .puesto-cerrado {
   margin: auto;
   text-align: center;
@@ -2787,6 +2795,14 @@ dialog::backdrop {
 
 .rechazada .resultado {
   background: var(--fondo-alerta);
+}
+
+.tardia .resultado {
+  background: var(--fondo-atencion);
+}
+
+.informativa .resultado {
+  background: var(--suave);
 }
 
 @keyframes revelar-vista {

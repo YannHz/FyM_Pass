@@ -184,6 +184,7 @@ function Expediente({
   revision,
   cerrar,
   justificar,
+  administrador,
   periodoConsulta,
   vistaInicial = "calendario",
 }: {
@@ -194,6 +195,7 @@ function Expediente({
   revision: number;
   cerrar: () => void;
   justificar: (fecha: string, tipo: string) => void;
+  administrador: boolean;
 }) {
   const [pestana, establecerPestana] = useState(vistaInicial),
     [seleccion, establecerSeleccion] = useState<Registro | null>(null);
@@ -332,19 +334,21 @@ function Expediente({
                       Salida{" "}
                       {seleccion.salida ? horaLocal(seleccion.salida) : "—"}
                     </p>
-                    <button
-                      className="secundario"
-                      onClick={() =>
-                        justificar(
-                          seleccion.fecha,
-                          seleccion.estado === "Tardanza"
-                            ? "tardanza"
-                            : "falta",
-                        )
-                      }
-                    >
-                      Registrar justificación
-                    </button>
+                    {administrador && (
+                      <button
+                        className="secundario"
+                        onClick={() =>
+                          justificar(
+                            seleccion.fecha,
+                            seleccion.estado === "Tardanza"
+                              ? "tardanza"
+                              : "falta",
+                          )
+                        }
+                      >
+                        Registrar justificación
+                      </button>
+                    )}
                   </div>
                 )}
                 <div className="calendario">
@@ -668,7 +672,7 @@ export function PanelAdministrativo({
               personal:
                 "Solo su carnet y asistencia. Sin acceso al panel de gestión.",
               operador:
-                "Gestiona la jornada y envía justificaciones a revisión. Sin configuración administrativa.",
+                "Gestiona la jornada y consulta incidencias. Las justificaciones corresponden a administración.",
               administrador:
                 "Administra personas, horarios, reglas y permisos; aprueba justificaciones y consulta preplanilla.",
             })[valores.permiso as string] || "Selecciona el nivel de acceso.",
@@ -718,6 +722,7 @@ export function PanelAdministrativo({
     });
   }
   function nuevaJustificacion(personaId?: number, dia = fecha, tipo = "falta") {
+    if (!administrador) return;
     establecerExpediente(null);
     establecerFormulario({
       titulo: "Registrar justificación",
@@ -1293,7 +1298,7 @@ export function PanelAdministrativo({
                     <button onClick={() => navegar("justificaciones")}>
                       <FileCheck2 />
                       <span>
-                        Revisar justificaciones
+                        {administrador ? "Revisar justificaciones" : "Consultar incidencias"}
                         <small>{datos.pendientes} solicitudes pendientes</small>
                       </span>
                       <ArrowUpRight />
@@ -1484,6 +1489,7 @@ export function PanelAdministrativo({
           justificar={(dia, tipo) =>
             nuevaJustificacion(expediente.id, dia, tipo)
           }
+          administrador={administrador}
         />
       )}
     </div>

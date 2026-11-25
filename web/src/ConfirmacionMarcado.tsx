@@ -39,11 +39,13 @@ export function ConfirmacionMarcado({ evento }: { evento: Confirmacion }) {
       </span>
       <h2>{evento.persona?.nombre || "QR no reconocido"}</h2>
       <div className="movimiento">
-        {evento.tipo
-          ? evento.tipo === "entrada"
-            ? "Entrada"
-            : "Salida"
-          : "Marcado rechazado"}{" "}
+        {!evento.aceptado
+          ? "Marcado rechazado"
+          : evento.tipo
+            ? evento.tipo === "entrada"
+              ? "Entrada"
+              : "Salida"
+            : "Marcado rechazado"}{" "}
         <span>{horaLocal(evento.hora)}</span>
       </div>
       <p className="resultado">

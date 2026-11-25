@@ -171,7 +171,7 @@ def consultar_justificaciones(
 @rutas_gestion.post("/justificaciones", dependencies=[Depends(validar_peticion)], status_code=201, response_model=RespuestaMensaje)
 def crear_justificacion(
     datos: DatosJustificacion,
-    usuario: Usuario = Depends(obtener_encargado),
+    usuario: Usuario = Depends(administrador),
     base: Session = Depends(obtener_base_datos),
 ):
     return servicios.crear_justificacion(
