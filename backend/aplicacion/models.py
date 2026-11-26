@@ -163,6 +163,8 @@ class PuestoAbierto(Base):
     encargado_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="RESTRICT"))
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
+    camara_puesto_habilitada: Mapped[bool] = mapped_column(Boolean, default=True)
+    escaneo_movil_habilitado: Mapped[bool] = mapped_column(Boolean, default=True)
     vence_en: Mapped[datetime] = mapped_column(DateTime)
     __table_args__ = (Index("ix_puestos_punto_activo", "punto_id", "activo"),)
 

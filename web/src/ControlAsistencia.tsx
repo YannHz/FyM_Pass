@@ -3,6 +3,7 @@ import { consultar, horaLocal, type Persona } from "./servicio";
 type Punto = {
   nombre: string;
   activo: boolean;
+  propio_activo: boolean;
   camara_puesto_habilitada: boolean;
   escaneo_movil_habilitado: boolean;
 };
@@ -120,14 +121,14 @@ export function ControlAsistencia() {
           <div>
             <h2>Puesto de asistencia</h2>
             <p>
-              {punto?.nombre || "Ingreso principal"} ·{" "}
+              {punto?.nombre || "Ingreso principal"} · Tu puesto {" "}
               {consultando
                 ? "Consultando…"
                 : error
                   ? "Sin conexión; estado sin confirmar"
-                  : punto?.activo
-                    ? "Abierto"
-                    : "Cerrado"}
+                  : punto?.propio_activo
+                    ? "abierto"
+                    : "cerrado"}
             </p>
           </div>
           <span className="etiqueta">SEDE PRINCIPAL</span>
@@ -160,16 +161,16 @@ export function ControlAsistencia() {
           >
             {ocupado
               ? "Preparando…"
-              : punto?.activo
-                ? "Reabrir puesto con estas opciones"
+              : punto?.propio_activo
+                ? "Reabrir tu puesto con estas opciones"
                 : "Iniciar asistencia"}
           </button>
           <button
             className="secundario"
-            disabled={ocupado || !punto?.activo}
+            disabled={ocupado || !punto?.propio_activo}
             onClick={() => void pausar()}
           >
-            Pausar puesto
+            Pausar mi puesto
           </button>
         </div>
         {error && (
@@ -178,8 +179,9 @@ export function ControlAsistencia() {
           </p>
         )}
         <p className="nota">
-          La pantalla de marcado se abre en una ventana independiente. Permite
-          el acceso a la cámara allí si activas esa modalidad.
+          Tu puesto funciona de forma independiente de los puestos abiertos por
+          otros encargados. Al reabrirlo, se cierra tu ventana anterior. Permite
+          el acceso a la cámara en la nueva ventana si activas esa modalidad.
         </p>
       </section>
       <section className="panel">

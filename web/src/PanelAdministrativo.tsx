@@ -937,13 +937,8 @@ export function PanelAdministrativo({
       ),
     },
     {
-      titulo: "Rol / grupo",
-      mostrar: (fila: Registro) => (
-        <>
-          {fila.rol}
-          <small>{fila.grupo || "Sin grupo"}</small>
-        </>
-      ),
+      titulo: "Rol",
+      mostrar: (fila: Registro) => fila.rol,
     },
     { titulo: "Fecha", mostrar: (fila: Registro) => fechaCorta(fila.fecha) },
     {

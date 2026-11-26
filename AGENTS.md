@@ -15,7 +15,7 @@
 - No documentar en archivos publicos formulas de credenciales temporales ni procedimientos internos de recuperacion. Consultar NOTAS_AGENTE.local.md para las decisiones de seguridad vigentes y no publicar ese archivo.
 
 - README.md publico: presentacion, arquitectura, estructura del backend y frontend y requisitos de uso. Mantener NOTAS_AGENTE.local.md como contexto operativo privado e ignorado por Git; AGENTS.md conserva las convenciones publicables. No incluir secretos ni detalles de despliegue en README.md.
-- Esquema vigente: migraciones Alembic 0001–0010; publicar migraciones/modelos, no volcados locales. La cuenta operativa solo tiene permisos DML; usar FYM_MIGRACION=1 para Alembic despues de preparar seguridad. No ejecutar preparar, recuperar-admin ni datos_iniciales como comprobacion rutinaria.
+- Esquema vigente: migraciones Alembic 0001–0011; publicar migraciones/modelos, no volcados locales. La cuenta operativa solo tiene permisos DML; usar FYM_MIGRACION=1 para Alembic despues de preparar seguridad. No ejecutar preparar, recuperar-admin ni datos_iniciales como comprobacion rutinaria.
 - iniciar.sh es Bash para Linux/macOS, incluidos usuarios fish que lo ejecutan directamente; Windows conserva comandos manuales. El arranque comprueba claves y SQL sin iniciar sesion ni consultar rutas autenticadas, y no instala, migra ni genera secretos.
 
 - Usar WebP para fotografias e imagenes rasterizadas nuevas; conservar SVG para logos, iconos y QR vectoriales, y PNG para compatibilidad de iconos de instalacion PWA/Apple. No convertir vectores a mapas de bits ni modificar dependencias o respaldos para aplicar esta regla. Las nuevas fotos procesadas por el backend se guardan en WebP; conservar las rutas historicas existentes.

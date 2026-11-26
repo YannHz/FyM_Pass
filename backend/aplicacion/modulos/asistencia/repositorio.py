@@ -1,5 +1,5 @@
 from datetime import timedelta
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from ...models import (
     Persona,
     Usuario,
@@ -32,13 +32,18 @@ class RepositorioAsistencia(RepositorioBase):
             .order_by(PuntoAsistencia.id)
         )
 
-    def puesto_abierto(self, hora_consulta, punto):
+    def puesto_abierto(self, hora_consulta, punto, encargado_id=None):
+        condiciones = [
+            PuestoAbierto.punto_id == punto.id,
+            PuestoAbierto.activo.is_(True),
+            PuestoAbierto.vence_en > hora_consulta,
+        ]
+        if encargado_id is not None:
+            condiciones.append(PuestoAbierto.encargado_id == encargado_id)
         return self._base.scalar(
             select(PuestoAbierto).where(
-                PuestoAbierto.punto_id == punto.id,
-                PuestoAbierto.activo.is_(True),
-                PuestoAbierto.vence_en > hora_consulta,
-            )
+                *condiciones,
+            ).order_by(PuestoAbierto.id.desc()).limit(1)
         )
 
     def bloquear_punto(self, punto):
@@ -48,18 +53,33 @@ class RepositorioAsistencia(RepositorioBase):
             .with_for_update()
         ).scalar_one()
 
-    def desactivar_puestos(self, punto):
+    def desactivar_puestos(self, punto, encargado_id):
         return self._base.execute(
             update(PuestoAbierto)
-            .where(PuestoAbierto.punto_id == punto.id)
+            .where(
+                PuestoAbierto.punto_id == punto.id,
+                PuestoAbierto.encargado_id == encargado_id,
+                PuestoAbierto.activo.is_(True),
+            )
             .values(activo=False)
         )
 
     def eventos_recientes(self, despues, hora_consulta, puesto):
+        sede_id = (
+            select(PuntoAsistencia.sede_id)
+            .where(PuntoAsistencia.id == puesto.punto_id)
+            .scalar_subquery()
+        )
         return self._base.scalars(
             select(EventoPuesto)
+            .join(PuestoAbierto, EventoPuesto.puesto_id == PuestoAbierto.id)
+            .join(PuntoAsistencia, PuestoAbierto.punto_id == PuntoAsistencia.id)
             .where(
-                EventoPuesto.puesto_id == puesto.id,
+                PuntoAsistencia.sede_id == sede_id,
+                or_(
+                    EventoPuesto.puesto_id == puesto.id,
+                    EventoPuesto.aceptado.is_(True),
+                ),
                 EventoPuesto.id > despues,
                 EventoPuesto.ocurrido_en > hora_consulta - timedelta(minutes=2),
             )

@@ -72,11 +72,13 @@ def obtener_punto_encargado(repositorio: RepositorioAsistencia, usuario: Usuario
 def consultar_punto(usuario: Usuario = None, repositorio: RepositorioAsistencia = None):
     punto = obtener_punto_encargado(repositorio, usuario)
     puesto = repositorio.puesto_abierto(obtener_hora_utc(), punto)
+    propio = repositorio.puesto_abierto(obtener_hora_utc(), punto, usuario.id)
     return {
         "nombre": punto.nombre,
         "activo": puesto is not None,
-        "camara_puesto_habilitada": punto.camara_puesto_habilitada,
-        "escaneo_movil_habilitado": punto.escaneo_movil_habilitado,
+        "propio_activo": propio is not None,
+        "camara_puesto_habilitada": propio.camara_puesto_habilitada if propio else punto.camara_puesto_habilitada,
+        "escaneo_movil_habilitado": propio.escaneo_movil_habilitado if propio else punto.escaneo_movil_habilitado,
     }
 
 
@@ -89,15 +91,15 @@ def abrir_puesto(
         raise ErrorAplicacion(422, "Activa al menos una modalidad.")
     punto = obtener_punto_encargado(repositorio, usuario)
     repositorio.bloquear_punto(punto)
-    punto.camara_puesto_habilitada = datos.camara_puesto_habilitada
-    punto.escaneo_movil_habilitado = datos.escaneo_movil_habilitado
-    repositorio.desactivar_puestos(punto)
+    repositorio.desactivar_puestos(punto, usuario.id)
     token = secrets.token_urlsafe(32)
     puesto = PuestoAbierto(
         punto_id=punto.id,
         encargado_id=usuario.id,
         token_hash=resumir_token(token),
         activo=True,
+        camara_puesto_habilitada=datos.camara_puesto_habilitada,
+        escaneo_movil_habilitado=datos.escaneo_movil_habilitado,
         vence_en=obtener_hora_utc() + timedelta(hours=16),
     )
     repositorio.agregar(puesto)
@@ -108,9 +110,9 @@ def abrir_puesto(
 def pausar_puesto(usuario: Usuario = None, repositorio: RepositorioAsistencia = None):
     punto = obtener_punto_encargado(repositorio, usuario)
     repositorio.bloquear_punto(punto)
-    repositorio.desactivar_puestos(punto)
+    repositorio.desactivar_puestos(punto, usuario.id)
     repositorio.confirmar()
-    return {"mensaje": "Puesto pausado. Abre nuevamente el puesto para reanudar."}
+    return {"mensaje": "Tu puesto está pausado. Ábrelo nuevamente para reanudar."}
 
 
 def consultar_estado_puesto(
@@ -123,8 +125,8 @@ def consultar_estado_puesto(
         "nombre": punto.nombre,
         "qr": valor + ":" + firmar(valor),
         "vence_en": (bloque + 1) * 30,
-        "camara": punto.camara_puesto_habilitada,
-        "movil": punto.escaneo_movil_habilitado,
+        "camara": puesto.camara_puesto_habilitada,
+        "movil": puesto.escaneo_movil_habilitado,
     }
 
 
@@ -193,8 +195,8 @@ def registrar_lectura(
     punto = comprobar_puesto(repositorio, puesto)
     if (
         modalidad == "camara_puesto"
-        and (not punto.camara_puesto_habilitada)
-        or (modalidad == "escaneo_movil" and (not punto.escaneo_movil_habilitado))
+        and (not puesto.camara_puesto_habilitada)
+        or (modalidad == "escaneo_movil" and (not puesto.escaneo_movil_habilitado))
     ):
         raise ErrorAplicacion(409, "Esta modalidad está desactivada.")
     anterior = repositorio.evento_por_identificador(datos)

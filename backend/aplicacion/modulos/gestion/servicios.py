@@ -357,7 +357,7 @@ def guardar_horario(
     )
     if confirmar_cambios:
         confirmar(repositorio)
-    return {"id": horario.id, "mensaje": "Horario actualizado." if horario_id is not None else "Horario creado. Puedes asignarlo a personas o grupos."}
+    return {"id": horario.id, "mensaje": "Horario actualizado." if horario_id is not None else "Horario creado. Puedes asignarlo a personas."}
 
 
 
@@ -418,7 +418,7 @@ def eliminar_horario(identificador: int, usuario: Usuario = None, repositorio: R
     if not horario or horario.sede_id != sede_usuario(repositorio, usuario):
         raise ErrorAplicacion(404, "Horario no disponible en tu sede.")
     if repositorio.horario_tiene_asignaciones(identificador, bloquear=True):
-        raise ErrorAplicacion(409, "Este horario tiene grupos o asignaciones individuales, actuales o históricas. No se puede eliminar.")
+        raise ErrorAplicacion(409, "Este horario tiene asignaciones actuales o históricas. No se puede eliminar.")
     registrar_auditoria(repositorio, usuario, "eliminar_horario", "horarios", identificador, {"nombre": horario.nombre})
     repositorio.eliminar_tramos(identificador)
     repositorio.eliminar(horario)
