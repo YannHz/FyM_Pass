@@ -67,6 +67,24 @@ def guardar_persona(
     return resultado
 
 
+@rutas_gestion.post("/personas/{identificador}/baja", dependencies=[Depends(validar_peticion)], response_model=RespuestaMensaje)
+def dar_baja_persona(
+    identificador: int,
+    usuario: Usuario = Depends(administrador),
+    base: Session = Depends(obtener_base_datos),
+):
+    return servicios.cambiar_estado_persona(identificador, False, usuario, RepositorioGestion(base))
+
+
+@rutas_gestion.post("/personas/{identificador}/reactivar", dependencies=[Depends(validar_peticion)], response_model=RespuestaMensaje)
+def reactivar_persona(
+    identificador: int,
+    usuario: Usuario = Depends(administrador),
+    base: Session = Depends(obtener_base_datos),
+):
+    return servicios.cambiar_estado_persona(identificador, True, usuario, RepositorioGestion(base))
+
+
 @rutas_gestion.post("/horarios", dependencies=[Depends(validar_peticion)], status_code=201, response_model=RespuestaCreacion)
 def guardar_horario(
     datos: DatosHorario,

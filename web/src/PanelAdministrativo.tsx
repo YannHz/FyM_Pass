@@ -498,6 +498,11 @@ export function PanelAdministrativo({
     error: errorCatalogo,
     cargando: cargandoCatalogo,
   } = useDatos("/api/gestion/catalogo", revision);
+  const ultimoCatalogoHorarios = useRef<Registro | null>(null);
+  useEffect(() => {
+    if (catalogo) ultimoCatalogoHorarios.current = catalogo;
+  }, [catalogo]);
+  const catalogoHorarios = catalogo || ultimoCatalogoHorarios.current;
   const ruta =
     seccion === "inicio"
       ? `/api/gestion/resumen?fecha=${fecha}`
@@ -708,7 +713,6 @@ export function PanelAdministrativo({
           minimo: 0,
           ayuda: "Se utiliza solo para docentes en la preplanilla estimada.",
         },
-        { nombre: "activa", etiqueta: "Persona activa", tipo: "booleano" },
       ],
       preparar: (valores) => ({
         ...valores,
@@ -1414,6 +1418,8 @@ export function PanelAdministrativo({
               <PersonasCarnets
                 catalogo={catalogo}
                 administrador={administrador}
+                guardado={guardado}
+                usuarioActual={usuario.usuario}
                 registrar={() => nuevaPersona()}
                 editar={nuevaPersona}
                 abrir={(persona, vista) => {
@@ -1430,9 +1436,9 @@ export function PanelAdministrativo({
                 editarDia={editarDiaNoLectivo}
               />
             )}
-            {seccion === "horarios" && catalogo && (
+            {seccion === "horarios" && catalogoHorarios && (
               <HorariosLaborales
-                catalogo={catalogo}
+                catalogo={catalogoHorarios}
                 administrador={administrador}
                 guardado={guardado}
               />

@@ -104,7 +104,7 @@ def horario_y_tramos_para(repositorio, persona, fecha):
     asignacion = repositorio.asignacion_vigente(fecha, persona)
     horario_id = asignacion.horario_id if asignacion else None
     horario = repositorio.obtener_horario(horario_id) if horario_id else None
-    if not horario or not horario.activo:
+    if not horario:
         return None, []
     return horario, repositorio.tramos_del_dia(fecha, horario)
 
@@ -131,10 +131,13 @@ def evaluar_manual(repositorio, persona, instante, tipo):
 
 def consultar_catalogo(usuario: Usuario = None, repositorio: RepositorioGestion = None):
     sede = sede_usuario(repositorio, usuario)
-    personas, roles_disponibles, cuentas, asignaciones, tarifas, horarios, tramos = repositorio.datos_del_catalogo(sede)
+    personas, roles_disponibles, cuentas, asignaciones, tarifas, horarios, tramos, bajas = repositorio.datos_del_catalogo(sede)
     roles_por_id = {rol.id: rol for rol in roles_disponibles}
     cuentas_por_persona = {cuenta.persona_id: cuenta for cuenta in cuentas}
     tarifas_por_persona = {tarifa.persona_id: tarifa for tarifa in tarifas}
+    bajas_por_persona = {}
+    for baja, nombre_usuario in bajas:
+        bajas_por_persona.setdefault(baja.entidad_id, (baja.creada_en, nombre_usuario))
     asignaciones_por_persona = {}
     asignaciones_por_horario = {}
     tramos_por_horario = {}
@@ -166,6 +169,9 @@ def consultar_catalogo(usuario: Usuario = None, repositorio: RepositorioGestion 
             nombre_usuario=cuenta.nombre_usuario if cuenta else None,
             permiso=cuenta.permiso if cuenta else "personal",
         )
+        baja = bajas_por_persona.get(persona.id) if not persona.activa else None
+        datos["baja_en"] = baja[0].replace(tzinfo=timezone.utc).isoformat() if baja else None
+        datos["baja_por"] = baja[1] if baja else None
         programadas = [
             valor for valor in asignaciones_por_persona.get(persona.id, [])
             if valor.vigente_hasta is None or valor.vigente_hasta >= hoy
@@ -241,12 +247,18 @@ def guardar_persona(
     elif datos.id:
         datos.codigo = comprobar_persona(repositorio, usuario, datos.id).codigo
     if datos.horario_id:
-        comprobar_horario(repositorio, sede, datos.horario_id)
+        horario_actual = repositorio.asignacion_vigente(hoy_sede(repositorio, sede), comprobar_persona(repositorio, usuario, datos.id)) if datos.id else None
+        if not horario_actual or horario_actual.horario_id != datos.horario_id:
+            comprobar_horario(repositorio, sede, datos.horario_id)
     persona = (
         comprobar_persona(repositorio, usuario, datos.id)
         if datos.id
         else Persona(sede_id=sede)
     )
+    if datos.id and datos.activa != persona.activa:
+        raise ErrorAplicacion(422, "Utiliza Dar de baja o Reactivar desde el directorio.")
+    if not datos.id and not datos.activa:
+        raise ErrorAplicacion(422, "Registra primero una persona activa.")
     cuenta_previa = repositorio.cuenta_de_persona(persona) if datos.id else None
     if cuenta_previa and cuenta_previa.permiso != datos.permiso:
         proteccion.reautenticar(repositorio._base, usuario, datos.actual)
@@ -329,6 +341,50 @@ def guardar_persona(
 
 
 
+def cerrar_asignaciones(repositorio, asignaciones, fecha_corte):
+    afectados = set()
+    for asignacion in asignaciones:
+        if asignacion.vigente_hasta is not None and asignacion.vigente_hasta < fecha_corte:
+            continue
+        afectados.add(asignacion.persona_id)
+        if asignacion.vigente_desde >= fecha_corte:
+            repositorio.eliminar(asignacion)
+        else:
+            asignacion.vigente_hasta = fecha_corte - timedelta(days=1)
+    return afectados
+
+
+def cambiar_estado_persona(identificador, activar, usuario, repositorio):
+    administrador(usuario)
+    persona = comprobar_persona(repositorio, usuario, identificador)
+    if persona.id == usuario.persona_id:
+        raise ErrorAplicacion(422, "No puedes dar de baja tu propia cuenta administrativa.")
+    persona = repositorio.bloquear_persona(persona)
+    if persona.activa == activar:
+        raise ErrorAplicacion(409, "La persona ya tiene ese estado. Actualiza el directorio.")
+    cuenta = repositorio.cuenta_de_persona(persona)
+    sede = persona.sede_id
+    afectados = set()
+    if not activar:
+        afectados = cerrar_asignaciones(
+            repositorio, repositorio.asignaciones_de_persona(persona.id),
+            hoy_sede(repositorio, sede) + timedelta(days=1),
+        )
+        if cuenta:
+            proteccion.revocar(repositorio._base, cuenta)
+            proteccion.registrar(repositorio._base, "cuenta_desactivada", usuario, f"Persona: {persona.id}")
+    persona.activa = activar
+    if cuenta:
+        cuenta.activo = activar
+    registrar_auditoria(repositorio, usuario,
+        "reactivar_persona" if activar else "dar_baja_persona", "personas", persona.id,
+        {"persona_id": persona.id, "horario_retirado": bool(afectados)})
+    confirmar(repositorio)
+    notificar_marcado(sede)
+    return {"mensaje": "Persona reactivada. Asígnale un horario si corresponde." if activar
+            else "Persona dada de baja. Se conservaron sus asistencias y justificaciones."}
+
+
 def guardar_horario(
     datos: DatosHorario, usuario: Usuario = None, repositorio: RepositorioGestion = None,
     horario_id: int | None = None, confirmar_cambios: bool = True,
@@ -336,6 +392,8 @@ def guardar_horario(
     carrera = (datos.carrera or "").strip()
     if datos.tipo_personal == "docente" and not carrera:
         raise ErrorAplicacion(422, "Indica la carrera del horario docente.")
+    if not datos.nombre.strip():
+        raise ErrorAplicacion(422, "Indica el nombre del horario.")
     turnos = {"manana": "Mañana", "tarde": "Tarde", "noche": "Noche", "completo": "Jornada completa"}
     vistos = set()
     for tramo in datos.tramos:
@@ -349,9 +407,22 @@ def guardar_horario(
         vistos.add(clave)
     sede = sede_usuario(repositorio, usuario)
     horario = repositorio.bloquear_horario(horario_id) if horario_id is not None else Horario(sede_id=sede)
-    if not horario or (horario_id is not None and horario.sede_id != sede):
+    if not horario or (horario_id is not None and (horario.sede_id != sede or not horario.activo)):
         raise ErrorAplicacion(404, "Horario no disponible en tu sede.")
     if horario_id is not None:
+        tramos_anteriores = repositorio.tramos_del_horario(horario)
+        mismos_tramos = sorted((tramo.dia_semana, tramo.hora_entrada, tramo.hora_salida) for tramo in tramos_anteriores) == sorted(
+            (tramo.dia_semana, tramo.hora_entrada, tramo.hora_salida) for tramo in datos.tramos
+        )
+        mismo_horario = (horario.tipo_personal == datos.tipo_personal and horario.carrera == (carrera if datos.tipo_personal == "docente" else None)
+            and horario.turno == datos.turno and mismos_tramos)
+        if mismo_horario:
+            if horario.nombre != datos.nombre.strip():
+                horario.nombre = datos.nombre.strip()
+                registrar_auditoria(repositorio, usuario, "renombrar_horario", "horarios", horario.id, {"nombre": horario.nombre})
+            if confirmar_cambios:
+                confirmar(repositorio)
+            return {"id": horario.id, "mensaje": "Horario actualizado.", "mismo_horario": True}
         if repositorio.horario_tiene_asignaciones(horario.id, bloquear=True):
             horario = Horario(sede_id=sede)
         else:
@@ -359,7 +430,10 @@ def guardar_horario(
     horario.tipo_personal = datos.tipo_personal
     horario.carrera = carrera if datos.tipo_personal == "docente" else None
     horario.turno = datos.turno
-    horario.nombre = f"{carrera if datos.tipo_personal == 'docente' else 'Administración'} · {turnos[datos.turno]}"[:100]
+    horario.nombre = (
+        f"{carrera} · {turnos[datos.turno]}" if datos.tipo_personal == "docente"
+        else datos.nombre.strip()
+    )[:100]
     repositorio.agregar(horario)
     repositorio.sincronizar()
     for tramo in datos.tramos:
@@ -418,9 +492,15 @@ def guardar_semana_laboral(datos, usuario, repositorio):
             usuario, repositorio, horario_id=datos.horario_id, confirmar_cambios=False,
         )
         repositorio.sincronizar()
-        if datos.persona_ids:
+        persona_ids = datos.persona_ids
+        if resultado.get("mismo_horario"):
+            persona_ids = [identificador for identificador in persona_ids
+                if not (asignacion := repositorio.asignacion_vigente(
+                    datos.vigente_desde, comprobar_persona(repositorio, usuario, identificador)
+                )) or asignacion.horario_id != resultado["id"]]
+        if persona_ids:
             asignar_horario_laboral(DatosAsignacionLaboral(
-                persona_ids=datos.persona_ids, horario_id=resultado["id"], vigente_desde=datos.vigente_desde,
+                persona_ids=persona_ids, horario_id=resultado["id"], vigente_desde=datos.vigente_desde,
             ), usuario, repositorio, confirmar_cambios=False)
         confirmar(repositorio)
     except Exception:
@@ -431,16 +511,26 @@ def guardar_semana_laboral(datos, usuario, repositorio):
 
 
 def eliminar_horario(identificador: int, usuario: Usuario = None, repositorio: RepositorioGestion = None):
+    administrador(usuario)
     horario = repositorio.bloquear_horario(identificador)
-    if not horario or horario.sede_id != sede_usuario(repositorio, usuario):
+    sede = sede_usuario(repositorio, usuario)
+    if not horario or horario.sede_id != sede or not horario.activo:
         raise ErrorAplicacion(404, "Horario no disponible en tu sede.")
-    if repositorio.horario_tiene_asignaciones(identificador, bloquear=True):
-        raise ErrorAplicacion(409, "Este horario tiene asignaciones actuales o históricas. No se puede eliminar.")
-    registrar_auditoria(repositorio, usuario, "eliminar_horario", "horarios", identificador, {"nombre": horario.nombre})
-    repositorio.eliminar_tramos(identificador)
-    repositorio.eliminar(horario)
+    asignaciones = repositorio.asignaciones_del_horario(identificador)
+    fecha_corte = hoy_sede(repositorio, sede) + timedelta(days=1)
+    afectados = cerrar_asignaciones(repositorio, asignaciones, fecha_corte)
+    registrar_auditoria(repositorio, usuario, "eliminar_horario", "horarios", identificador,
+        {"nombre": horario.nombre, "desde": str(fecha_corte), "personas_afectadas": len(afectados)})
+    if asignaciones:
+        horario.activo = False
+    else:
+        repositorio.eliminar_tramos(identificador)
+        repositorio.eliminar(horario)
     confirmar(repositorio)
-    return {"mensaje": "Horario eliminado."}
+    notificar_marcado(sede)
+    if afectados:
+        return {"mensaje": f"Horario retirado. {len(afectados)} personas quedarán sin este horario desde mañana."}
+    return {"mensaje": "Horario retirado. No había asignaciones vigentes o futuras."}
 
 
 def intervalo(repositorio, usuario, desde, hasta):
@@ -481,7 +571,6 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
     ahora = obtener_hora_utc().replace(tzinfo=timezone.utc).astimezone(zona)
     regla = regla_sede(repositorio, sede.id)
     roles = {}
-
     def rol_de(identificador):
         # evita repetir la misma consulta de rol en cada fila
         if identificador not in roles:
@@ -493,14 +582,14 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
         fecha = desde + timedelta(days=numero)
         for persona in personas:
             marcas_persona = por_dia.get((persona.id, fecha), [])
-            if not persona.activa and (not marcas_persona):
+            horario, tramos = horario_y_tramos_para(repositorio, persona, fecha)
+            if not persona.activa and not marcas_persona and not horario:
                 continue
             rol = rol_de(
                 marcas_persona[0].rol_id if marcas_persona else persona.rol_id
             )
             if rol.codigo not in ("docente", "administrativo"):
                 continue
-            horario, tramos = horario_y_tramos_para(repositorio, persona, fecha)
             entrada = next(
                 (marcado for marcado in marcas_persona if marcado.tipo == "entrada"),
                 None,

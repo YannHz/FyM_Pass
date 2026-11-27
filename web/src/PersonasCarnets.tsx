@@ -7,10 +7,13 @@ import {
   ContactRound,
   Pencil,
   CreditCard,
+  UserX,
+  UserRoundCheck,
 } from "lucide-react";
 import { AvatarPersona } from "./ConfirmacionMarcado";
-import { Insignia, Tabla, Vacio, type Registro } from "./componentesGestion";
+import { Dialogo, Insignia, Tabla, Vacio, type Registro } from "./componentesGestion";
 import { SelectorFiltro } from "./SelectorFiltro";
+import { consultar } from "./servicio";
 import "./PersonasCarnets.css";
 const normalizar = (texto: string) =>
   texto
@@ -31,17 +34,35 @@ export function PersonasCarnets({
   registrar,
   editar,
   abrir,
+  guardado,
+  usuarioActual,
 }: {
   catalogo: Registro;
   administrador: boolean;
   registrar: () => void;
   editar: (persona: Registro) => void;
   abrir: (persona: Registro, vista: string) => void;
+  guardado: (mensaje: string) => void;
+  usuarioActual: string;
 }) {
   const [buscar, cambiarBuscar] = useState(""),
     [rol, cambiarRol] = useState(""),
     [estado, cambiarEstado] = useState(""),
     [cuenta, cambiarCuenta] = useState("");
+  const [personaPendiente, cambiarPersonaPendiente] = useState<Registro | null>(null);
+  const [ocupado, cambiarOcupado] = useState(false);
+  const [error, cambiarError] = useState("");
+  async function confirmarEstadoPersona() {
+    if (!personaPendiente || ocupado) return;
+    cambiarOcupado(true); cambiarError("");
+    try {
+      const accion = personaPendiente.activa ? "baja" : "reactivar";
+      const respuesta = await consultar(`/api/gestion/personas/${personaPendiente.id}/${accion}`, { method: "POST" });
+      cambiarPersonaPendiente(null);
+      guardado(respuesta.mensaje);
+    } catch (problema) { cambiarError((problema as Error).message); }
+    finally { cambiarOcupado(false); }
+  }
   const personas: Registro[] = catalogo.personas;
   const filtradas = personas
     .filter(
@@ -226,7 +247,9 @@ export function PersonasCarnets({
               {
                 titulo: "Estado",
                 mostrar: (persona) => (
-                  <Insignia texto={persona.activa ? "Activo" : "Desactivado"} />
+                  <div className="estado-directorio"><Insignia texto={persona.activa ? "Activo" : "Desactivado"} />
+                    {!persona.activa && persona.baja_en && <small>Baja: {new Intl.DateTimeFormat("es-PE", { timeZone: "America/Lima", dateStyle: "short", timeStyle: "short" }).format(new Date(persona.baja_en))}<br />Por {persona.baja_por}</small>}
+                  </div>
                 ),
               },
               {
@@ -242,7 +265,7 @@ export function PersonasCarnets({
                       Carnet
                     </button>
                     {administrador && (
-                      <button
+                      <><button
                         className="boton-texto"
                         onClick={() => editar(persona)}
                         aria-label={`Editar a ${persona.nombre}`}
@@ -250,6 +273,10 @@ export function PersonasCarnets({
                         <Pencil size={15} />
                         Editar
                       </button>
+                      {persona.nombre_usuario !== usuarioActual && <button className="boton-texto accion-baja-persona" onClick={() => { cambiarError(""); cambiarPersonaPendiente(persona); }}>
+                        {persona.activa ? <UserX size={16} aria-hidden="true" /> : <UserRoundCheck size={16} aria-hidden="true" />}
+                        {persona.activa ? "Dar de baja" : "Reactivar"}
+                      </button>}</>
                     )}
                   </div>
                 ),
@@ -267,6 +294,17 @@ export function PersonasCarnets({
           confirman en Horarios laborales.
         </p>
       </section>
+      {personaPendiente && <Dialogo titulo={personaPendiente.activa ? "Dar de baja a una persona" : "Reactivar a una persona"} cerrar={() => cambiarPersonaPendiente(null)} bloqueado={ocupado}>
+        <div className="formulario-gestion">
+          <p><strong>{personaPendiente.nombre}</strong> · {personaPendiente.codigo}</p>
+          <p>{personaPendiente.activa ? "Se cerrarán sus sesiones y se desactivará su acceso de inmediato. Perderá el horario asignado desde mañana. Sus asistencias y justificaciones anteriores permanecerán en los reportes. Se registrarán la fecha y el administrador responsable." : "La cuenta volverá a estar activa. El horario retirado no se recupera automáticamente; asígnale uno desde Horarios laborales si corresponde."}</p>
+          {error && <p role="alert" className="aviso error">{error}</p>}
+          <footer className="acciones-dialogo">
+            <button type="button" className="secundario" autoFocus disabled={ocupado} onClick={() => cambiarPersonaPendiente(null)}>Cancelar</button>
+            <button type="button" disabled={ocupado} onClick={() => void confirmarEstadoPersona()}>{ocupado ? "Guardando…" : personaPendiente.activa ? "Confirmar baja" : "Reactivar persona"}</button>
+          </footer>
+        </div>
+      </Dialogo>}
     </div>
   );
 }

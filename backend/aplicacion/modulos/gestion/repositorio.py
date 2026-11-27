@@ -15,6 +15,7 @@ from ...models import (
     ReglaSede,
     TarifaDocente,
     Dispositivo,
+    Auditoria,
 )
 from ...compartido.repositorio import RepositorioBase
 
@@ -45,6 +46,16 @@ class RepositorioGestion(RepositorioBase):
         personas = select(AsignacionHorario.id).where(AsignacionHorario.horario_id == identificador).limit(1)
         persona = self._base.scalar(personas.with_for_update() if bloquear else personas)
         return persona is not None
+
+    def asignaciones_del_horario(self, identificador):
+        return self._base.scalars(
+            select(AsignacionHorario).where(AsignacionHorario.horario_id == identificador).with_for_update()
+        ).all()
+
+    def asignaciones_de_persona(self, identificador):
+        return self._base.scalars(
+            select(AsignacionHorario).where(AsignacionHorario.persona_id == identificador).with_for_update()
+        ).all()
 
     def eliminar_tramos(self, identificador):
         for tramo in self._base.scalars(select(TramoHorario).where(TramoHorario.horario_id == identificador).with_for_update()).all():
@@ -110,7 +121,20 @@ class RepositorioGestion(RepositorioBase):
             select(TramoHorario).join(Horario).where(Horario.sede_id == sede)
             .order_by(TramoHorario.dia_semana, TramoHorario.hora_entrada)
         ).all()
-        return personas, roles, cuentas, asignaciones, tarifas, horarios, tramos
+        return personas, roles, cuentas, asignaciones, tarifas, horarios, tramos, self.bajas_de_sede(sede)
+
+    def bajas_de_sede(self, sede):
+        return self._base.execute(
+            select(Auditoria, Usuario.nombre_usuario)
+            .join(Persona, Persona.id == Auditoria.entidad_id)
+            .join(Usuario, Usuario.id == Auditoria.usuario_id)
+            .where(
+                Persona.sede_id == sede,
+                Auditoria.entidad == "personas",
+                Auditoria.accion == "dar_baja_persona",
+            )
+            .order_by(Auditoria.id.desc())
+        ).all()
 
     def cuenta_de_persona(self, persona):
         return self._base.scalar(

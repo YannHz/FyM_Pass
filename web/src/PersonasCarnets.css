@@ -29,3 +29,7 @@
     box-shadow: none;
   }
 }
+.estado-directorio { display:grid; justify-items:start; gap:6px; }
+.estado-directorio small { color:var(--secundario); line-height:1.4; }
+.acciones-fila .accion-baja-persona { color:var(--alerta); }
+.acciones-fila .accion-baja-persona:hover { color:var(--alerta); }

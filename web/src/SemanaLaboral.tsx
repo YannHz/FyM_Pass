@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Plus, Check, Clock3 } from "lucide-react";
+import { Plus, Check, Clock3, Trash2 } from "lucide-react";
 import { Dialogo, type Registro } from "./componentesGestion";
 import { diasHorario, type Tramo } from "./EditorHorario";
 import { SelectorHora, formatearHora } from "./SelectorHora";
@@ -10,6 +10,7 @@ import "./SemanaLaboral.css";
 
 const turnos = { manana: "Mañana", tarde: "Tarde", noche: "Noche", completo: "Jornada completa" };
 const hoy = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
+const manana = () => new Date(Date.parse(`${hoy()}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 const tramosIniciales = (): Tramo[] => [0, 1, 2, 3, 4].map(dia => ({ dia_semana: dia, hora_entrada: "08:00", hora_salida: "13:00" }));
 
 export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModificar }: {
@@ -19,6 +20,7 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
   const horarios: Registro[] = catalogo.horarios.filter((h: Registro) => h.activo && h.tipo_personal === tipo);
   const inicial = horarios[0];
   const [identificador, cambiarIdentificador] = useState<number | null>(inicial?.id ?? null);
+  const [nombre, cambiarNombre] = useState(inicial?.nombre || "Administración");
   const [carrera, cambiarCarrera] = useState(inicial?.carrera || "");
   const [turno, cambiarTurno] = useState(inicial?.turno || "manana");
   const [tramos, cambiarTramos] = useState<Tramo[]>(inicial?.tramos || tramosIniciales());
@@ -34,6 +36,7 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
   const [error, cambiarError] = useState("");
   const [editarDatos, cambiarEditarDatos] = useState(!inicial);
   const [horarioPendiente, cambiarHorarioPendiente] = useState<string | null>(null);
+  const [confirmarRetiro, cambiarConfirmarRetiro] = useState(false);
   const enviando = useRef(false);
   const visibles = personas.filter(p => `${p.nombre} ${p.codigo}`.toLocaleLowerCase().includes(busqueda.toLocaleLowerCase()));
   function modificar() { cambiarModificado(true); alModificar(true); cambiarError(""); }
@@ -47,6 +50,7 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
   function cargarHorario(valor: string) {
     const horario = horarios.find(h => h.id === Number(valor));
     cambiarIdentificador(horario?.id ?? null);
+    cambiarNombre(horario?.nombre || "Administración");
     cambiarCarrera(horario?.carrera || ""); cambiarTurno(horario?.turno || "manana");
     cambiarTramos(horario?.tramos || tramosIniciales()); cambiarDias([]);
     cambiarSeleccion(personas.filter(p => p.horario_id === horario?.id).map(p => p.id));
@@ -72,12 +76,15 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
     if (tipo === "docente" && !carrera.trim()) {
       cambiarEditarDatos(true); cambiarError("Indica la carrera de este horario."); return;
     }
+    if (tipo === "administrativo" && !nombre.trim()) {
+      cambiarEditarDatos(true); cambiarError("Indica el nombre de este horario."); return;
+    }
     if (dias.length) { cambiarError("Aplica las horas o marca descanso para los días seleccionados antes de guardar."); return; }
     if (!tramos.length || tramos.some(t => !t.hora_salida || t.hora_salida <= t.hora_entrada)) { cambiarError("Configura al menos un día con entrada y salida válidas."); return; }
     enviando.current = true; cambiarOcupado(true); cambiarError("");
     try {
       const respuesta = await consultar("/api/gestion/horarios/semana", { method: "POST", body: JSON.stringify({
-        horario_id: identificador, nombre: `${tipo === "docente" ? carrera.trim() : "Administración"} · ${turnos[turno as keyof typeof turnos]}`.slice(0, 100),
+        horario_id: identificador, nombre: tipo === "docente" ? `${carrera.trim()} · ${turnos[turno as keyof typeof turnos]}`.slice(0, 100) : nombre.trim(),
         tipo_personal: tipo, carrera: tipo === "docente" ? carrera.trim() : null, turno, tramos,
         persona_ids: seleccion, vigente_desde: fecha,
       }) });
@@ -85,15 +92,28 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
     } catch (problema) { cambiarError((problema as Error).message); }
     finally { enviando.current = false; cambiarOcupado(false); }
   }
+  async function retirarHorario() {
+    if (identificador === null || enviando.current || !administrador) return;
+    enviando.current = true; cambiarOcupado(true); cambiarError("");
+    try {
+      const respuesta = await consultar(`/api/gestion/horarios/${identificador}`, { method: "DELETE" });
+      const siguiente = horarios.find(h => h.id !== identificador);
+      cargarHorario(siguiente ? String(siguiente.id) : "nuevo");
+      cambiarConfirmarRetiro(false);
+      guardado(respuesta.mensaje);
+    } catch (problema) { cambiarError((problema as Error).message); cambiarConfirmarRetiro(false); }
+    finally { enviando.current = false; cambiarOcupado(false); }
+  }
   const actual = horarios.find(h => h.id === identificador);
-  const titulo = identificador === null ? "Nuevo horario" : tipo === "docente" ? carrera || actual?.nombre || "Horario docente" : "Administración";
+  const titulo = identificador === null ? "Nuevo horario" : tipo === "docente" ? carrera || actual?.nombre || "Horario docente" : nombre || "Horario administrativo";
+  const afectados = new Set((actual?.asignaciones_individuales || []).filter((asignacion: Registro) => !asignacion.hasta || asignacion.hasta >= manana()).map((asignacion: Registro) => asignacion.persona_id)).size;
   return <>
     <form className="semana-visual" onSubmit={evento => void guardar(evento)}>
     <nav className="lista-horarios-visual" aria-label="Horarios disponibles">
       <h2>Horarios</h2>
       {horarios.map(h => <button key={h.id} type="button" disabled={ocupado} aria-pressed={h.id === identificador}
         onClick={() => cargar(String(h.id))}>
-        <span><strong>{tipo === "docente" ? h.carrera || h.nombre : "Administración"}</strong>
+        <span><strong>{tipo === "docente" ? h.carrera || h.nombre : h.nombre}</strong>
           <small>{turnos[h.turno as keyof typeof turnos]} · {personas.filter(p => p.horario_id === h.id).length} personas</small></span>
         {h.id === identificador && <Check size={18} aria-hidden="true" />}
       </button>)}
@@ -102,9 +122,13 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
     </nav>
     <div className="editor-semana-visual">
     <header className="cabecera"><div><h2>{titulo}</h2><span className="turno-horario">{turnos[turno as keyof typeof turnos]}</span></div>
-      {administrador && identificador !== null && <button type="button" className="boton-texto" disabled={ocupado} aria-expanded={editarDatos} onClick={() => cambiarEditarDatos(!editarDatos)}>{editarDatos ? "Cerrar datos" : "Editar datos"}</button>}
+      {administrador && identificador !== null && <div className="acciones-horario-visual">
+        <button type="button" className="boton-texto" disabled={ocupado} aria-expanded={editarDatos} onClick={() => cambiarEditarDatos(!editarDatos)}>{editarDatos ? "Cerrar datos" : "Editar datos"}</button>
+        <button type="button" className="boton-texto retirar-horario-visual" disabled={ocupado} onClick={() => cambiarConfirmarRetiro(true)}><Trash2 size={16} aria-hidden="true" />Retirar horario</button>
+      </div>}
     </header>
     {editarDatos && <fieldset disabled={ocupado || !administrador} className="filtros-semana">
+      {tipo === "administrativo" && <label>Nombre del horario<input name="nombre" required maxLength={100} value={nombre} onChange={e => { cambiarNombre(e.target.value); modificar(); }} /></label>}
       {tipo === "docente" && <label>Carrera<input required maxLength={120} value={carrera} readOnly={!administrador} placeholder="Ej. Computación" onChange={e => { cambiarCarrera(e.target.value); modificar(); }} /></label>}
       <div className="filtro-etiquetado"><span>Turno</span>{administrador ? <SelectorFiltro etiqueta="Turno" valor={turno} alCambiar={v => { cambiarTurno(v); modificar(); }} opciones={Object.entries(turnos).map(([valor, texto]) => ({ valor, texto }))} /> : <strong>{turnos[turno as keyof typeof turnos]}</strong>}</div>
     </fieldset>}
@@ -162,6 +186,17 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
             cargarHorario(horarioPendiente);
             cambiarHorarioPendiente(null);
           }}>Descartar cambios</button>
+        </footer>
+      </div>
+    </Dialogo>}
+    {confirmarRetiro && actual && <Dialogo titulo="Retirar horario" cerrar={() => cambiarConfirmarRetiro(false)} bloqueado={ocupado}>
+      <div className="formulario-gestion">
+        <p>Se retirará <strong>{actual.nombre}</strong> de los horarios disponibles.</p>
+        <p>{afectados ? `${afectados} ${afectados === 1 ? "persona perderá" : "personas perderán"} este horario desde mañana. Los marcados y horarios anteriores se conservarán.` : "No hay personas con asignaciones vigentes o futuras. El historial se conservará."}</p>
+        {modificado && <p>Los cambios que aún no guardaste se descartarán.</p>}
+        <footer className="acciones-dialogo">
+          <button type="button" className="secundario" autoFocus disabled={ocupado} onClick={() => cambiarConfirmarRetiro(false)}>Conservar horario</button>
+          <button type="button" disabled={ocupado} onClick={() => void retirarHorario()}>{ocupado ? "Retirando…" : "Retirar horario"}</button>
         </footer>
       </div>
     </Dialogo>}

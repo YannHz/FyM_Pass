@@ -10,6 +10,9 @@
 .semana-visual .lista-horarios-visual .nuevo-horario-visual { justify-content:flex-start; color:var(--acento-texto); border-top:1px solid var(--linea); margin-top:8px; }
 .editor-semana-visual .cabecera h2 { font-size:20px; margin-bottom:8px; }
 .semana-visual .cabecera { margin:0; }
+.acciones-horario-visual { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; }
+.acciones-horario-visual .retirar-horario-visual { display:inline-flex; align-items:center; gap:6px; color:var(--alerta); }
+.acciones-horario-visual .retirar-horario-visual:hover { color:var(--alerta); }
 .filtros-semana { display:grid; grid-template-columns:minmax(0,1fr) minmax(160px,1fr); gap:16px; align-items:end; padding:16px; background:var(--suave); border-radius:16px; }
 .semana-visual label, .horas-semana > div { display:grid; gap:8px; font-size:14px; }
 .semana-dias { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:10px; }
