@@ -22,7 +22,6 @@ import {
 import { FormularioGestion, type Formulario } from "./FormularioGestion";
 import { solicitar } from "./servicio";
 import { InstalarAplicacion } from "./InstalarAplicacion";
-import { DiagnosticoConexion } from "./DiagnosticoConexion";
 import { SelectorTema } from "./SelectorTema";
 import { cambiarConTransicion } from "./transiciones";
 import { useEffect, useRef, useState } from "react";
@@ -1198,7 +1197,6 @@ export function PanelAdministrativo({
               error={errorSesion || errorAccion || errorCatalogo || error}
               cargando={cargandoCatalogo || cargando}
             />
-            <DiagnosticoConexion />
             {seccion === "inicio" && datos && (
               <>
                 <div className="metricas">

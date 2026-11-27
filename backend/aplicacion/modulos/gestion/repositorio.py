@@ -87,6 +87,41 @@ class RepositorioGestion(RepositorioBase):
             .order_by(TramoHorario.hora_entrada)
         ).all()
 
+    def horarios_del_intervalo(self, personas, desde, hasta):
+        identificadores = [persona.id for persona in personas]
+        if not identificadores:
+            return [], [], []
+        asignaciones = self._base.scalars(
+            select(AsignacionHorario)
+            .where(
+                AsignacionHorario.persona_id.in_(identificadores),
+                AsignacionHorario.vigente_desde <= hasta,
+                AsignacionHorario.vigente_hasta.is_(None)
+                | (AsignacionHorario.vigente_hasta >= desde),
+            )
+            .order_by(
+                AsignacionHorario.persona_id,
+                AsignacionHorario.vigente_desde.desc(),
+                AsignacionHorario.id.desc(),
+            )
+        ).all()
+        horarios_ids = {asignacion.horario_id for asignacion in asignaciones}
+        if not horarios_ids:
+            return asignaciones, [], []
+        horarios = self._base.scalars(
+            select(Horario).where(Horario.id.in_(horarios_ids))
+        ).all()
+        tramos = self._base.scalars(
+            select(TramoHorario)
+            .where(TramoHorario.horario_id.in_(horarios_ids))
+            .order_by(
+                TramoHorario.horario_id,
+                TramoHorario.dia_semana,
+                TramoHorario.hora_entrada,
+            )
+        ).all()
+        return asignaciones, horarios, tramos
+
     def tolerancia_vigente(self, local, persona):
         return self._base.scalar(
             select(ToleranciaRol)

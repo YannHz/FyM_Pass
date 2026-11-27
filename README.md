@@ -2,7 +2,7 @@
 
 FyM Pass es el sistema web de control de asistencia de ingreso del Instituto de Educación Superior Técnica Finney Miller S.A.C. La versión 1.0.0 funciona en navegadores de escritorio y móviles y puede instalarse como aplicación web progresiva (PWA).
 
-Registra una entrada y una salida por jornada para docentes y personal administrativo de la sede principal. Admite varios puestos de asistencia simultáneos con QR dinámico y lectura del carné por cámara. Incluye consulta de asistencias, horarios laborales, justificaciones, registro manual auditado, reportes y preplanilla estimada. El ingreso al instituto se mantiene separado de la asistencia a clases.
+Registra una entrada y una salida por jornada para docentes y personal administrativo de la sede principal. Admite varios puestos de asistencia simultáneos con QR dinámico y lectura del carné por cámara. Incluye consulta de asistencias, horarios laborales, justificaciones, registro manual auditado, reportes y preplanilla estimada. Las bajas de personas y el retiro de horarios conservan el historial de asistencia. El ingreso al instituto se mantiene separado de la asistencia a clases.
 
 ## Arquitectura
 
@@ -32,7 +32,7 @@ backend/
 │       ├── acceso/              autenticación, sesiones y permisos
 │       ├── asistencia/          puestos, carnés y marcados
 │       ├── gestion/             personas, horarios y administración
-│       └── diagnostico/         estado del servicio
+│       └── diagnostico/         rutas de salud del servicio
 ├── migraciones/versiones/      migraciones Alembic
 ├── requirements.txt            dependencias Python
 ├── requirements.lock           versiones fijadas

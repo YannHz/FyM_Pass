@@ -555,6 +555,16 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
     sede, zona, inicio, fin = intervalo(repositorio, usuario, desde, hasta)
     personas = (repositorio.personas_con_marcados(sede, inicio, fin)
                 if solo_marcados else repositorio.personas_del_diario(sede, persona_id))
+    asignaciones, horarios, tramos_horarios = repositorio.horarios_del_intervalo(
+        personas, desde, hasta
+    )
+    asignaciones_por_persona = {}
+    for asignacion in asignaciones:
+        asignaciones_por_persona.setdefault(asignacion.persona_id, []).append(asignacion)
+    horarios_por_id = {horario.id: horario for horario in horarios}
+    tramos_por_dia = {}
+    for tramo in tramos_horarios:
+        tramos_por_dia.setdefault((tramo.horario_id, tramo.dia_semana), []).append(tramo)
     marcas = repositorio.marcados_del_intervalo(fin, inicio, sede, persona_id)
     por_dia = {}
     for marcado in marcas:
@@ -582,7 +592,14 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
         fecha = desde + timedelta(days=numero)
         for persona in personas:
             marcas_persona = por_dia.get((persona.id, fecha), [])
-            horario, tramos = horario_y_tramos_para(repositorio, persona, fecha)
+            asignacion = next(
+                (dato for dato in asignaciones_por_persona.get(persona.id, [])
+                 if dato.vigente_desde <= fecha
+                 and (dato.vigente_hasta is None or dato.vigente_hasta >= fecha)),
+                None,
+            )
+            horario = horarios_por_id.get(asignacion.horario_id) if asignacion else None
+            tramos = tramos_por_dia.get((horario.id, fecha.weekday()), []) if horario else []
             if not persona.activa and not marcas_persona and not horario:
                 continue
             rol = rol_de(
