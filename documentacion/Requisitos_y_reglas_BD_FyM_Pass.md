@@ -2,7 +2,7 @@
 
 Listado para la documentación del proyecto. Los requerimientos describen las funciones y condiciones de uso del sistema. Las reglas de negocio se limitan a restricciones que el esquema de MariaDB aplica mediante claves, unicidad y comprobaciones.
 
-El acceso administrativo a la protección de cuentas y carnés exige permiso de administrador y confirmación de la contraseña actual.
+El acceso administrativo a la protección de cuentas y carnets exige permiso de administrador y confirmación de la contraseña actual.
 
 ## 1. Requerimientos funcionales
 
@@ -11,10 +11,10 @@ El acceso administrativo a la protección de cuentas y carnés exige permiso de 
 | RF-01 | Permitir el inicio y cierre de sesión de usuarios activos. |
 | RF-02 | Exigir el cambio de la contraseña asignada en el primer ingreso. |
 | RF-03 | Aplicar permisos diferenciados para personal, operador y administrador. |
-| RF-04 | Mostrar el carné QR y la asistencia propia al personal autenticado. |
+| RF-04 | Mostrar el carnet QR y la asistencia propia al personal autenticado. |
 | RF-05 | Abrir y pausar puestos de asistencia con modalidades QR configurables. |
 | RF-06 | Permitir que varios encargados abran puestos de asistencia simultáneamente. |
-| RF-07 | Registrar entradas y salidas mediante lectura del carné QR en el puesto. |
+| RF-07 | Registrar entradas y salidas mediante lectura del carnet QR en el puesto. |
 | RF-08 | Registrar entradas y salidas mediante lectura del QR dinámico desde el móvil. |
 | RF-09 | Mostrar los marcados efectuados en los puestos abiertos. |
 | RF-10 | Administrar perfiles de docentes y personal administrativo, incluida su baja lógica y reactivación sin borrar el historial. |
@@ -29,7 +29,7 @@ El acceso administrativo a la protección de cuentas y carnés exige permiso de 
 | RF-19 | Calcular y exportar una preplanilla docente estimada. |
 | RF-20 | Administrar días no lectivos y dispositivos QR de la sede. |
 | RF-21 | Permitir al administrador restablecer el acceso temporal de una cuenta activa distinta de la propia y revocar sus sesiones. |
-| RF-22 | Permitir al administrador revocar y renovar el carné QR de una persona activa. |
+| RF-22 | Permitir al administrador revocar y renovar el carnet QR de una persona activa. |
 | RF-23 | Consultar la auditoría de seguridad por páginas y revisar alertas de rechazos QR. |
 
 
@@ -48,7 +48,7 @@ El acceso administrativo a la protección de cuentas y carnés exige permiso de 
 | RNF-09 | La base de datos debe admitir respaldos cifrados y una restauración verificable. |
 | RNF-10 | El despliegue debe poder reproducirse en un servidor Linux con la configuración privada fuera del repositorio. |
 | RNF-11 | El diario y los reportes deben recuperar asignaciones y tramos de horario en bloque por intervalo, sin repetir consultas por cada persona y día. |
-| RNF-12 | Las acciones de protección de cuentas y carnés deben revalidar el permiso y la contraseña actual en el servidor, y registrar el responsable. |
+| RNF-12 | Las acciones de protección de cuentas y carnets deben revalidar el permiso y la contraseña actual en el servidor, y registrar el responsable. |
 | RNF-13 | La auditoría de seguridad debe consultar páginas acotadas sin cargar el historial completo en el navegador. |
 
 

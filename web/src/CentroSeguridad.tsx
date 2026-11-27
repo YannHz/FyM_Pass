@@ -17,6 +17,7 @@ export function CentroSeguridad({
 }) {
   const [estado, cambiarEstado] = useState<Datos | null>(null);
   const [actual, cambiarActual] = useState("");
+  const [claveAdministrativa, cambiarClaveAdministrativa] = useState("");
   const [sesiones, cambiarSesiones] = useState<Datos[]>([]);
   const [eventos, cambiarEventos] = useState<Datos[]>([]);
   const [pagina, cambiarPagina] = useState(0);
@@ -77,6 +78,7 @@ export function CentroSeguridad({
       });
       cambiarMensaje(respuesta.mensaje || "Operación completada.");
       cambiarActual("");
+      cambiarClaveAdministrativa("");
       if (respuesta.clave_temporal) cambiarTemporal(respuesta);
       await cargar();
     } catch (e) {
@@ -126,7 +128,7 @@ export function CentroSeguridad({
           <>
             <section className="panel">
               <h2>Contraseña y sesiones</h2>
-              <p>Para operaciones sensibles confirma tu contraseña actual.</p>
+              <p>Confirma tu contraseña actual para cerrar las sesiones de otros dispositivos.</p>
               <div className="formulario-seguridad">
                 <div>
                   <label htmlFor="clave-seguridad">Contraseña actual</label>
@@ -160,7 +162,7 @@ export function CentroSeguridad({
             </section>
             {estado.administrador && (
               <section className="panel">
-                <h2>Protección de cuentas y carnés</h2>
+                <h2>Protección de cuentas y carnets</h2>
                 <label>
                   Persona
                   <select
@@ -179,15 +181,23 @@ export function CentroSeguridad({
                   </select>
                 </label>
                 {persona && personas.find(p => String(p.id) === persona)?.nombre_usuario === estado.usuario &&
-                  <p className="nota">Para tu propia cuenta, utiliza Cambiar mi contraseña. Puedes renovar tu carné aquí.</p>}
+                  <p className="nota">Para restablecer tu propia cuenta, utiliza Cambiar mi contraseña. Puedes renovar tu carnet aquí.</p>}
                 <p>
-                  Usa la contraseña actual indicada arriba. El restablecimiento
-                  cierra las sesiones de la cuenta. Renovar el carné invalida el
+                  Confirma tu contraseña actual en esta sección. El restablecimiento
+                  cierra las sesiones de la cuenta. Renovar el carnet invalida el
                   QR anterior inmediatamente.
                 </p>
+                <div className="formulario-seguridad">
+                  <div>
+                    <label htmlFor="clave-administrativa">Tu contraseña actual</label>
+                    <CampoClave id="clave-administrativa" nombre="clave-administrativa" etiqueta="tu contraseña actual" valor={claveAdministrativa} alCambiar={cambiarClaveAdministrativa} autocompletar="current-password" deshabilitado={ocupado} />
+                  </div>
+                </div>
+                {(!persona || !claveAdministrativa) &&
+                  <p className="nota">Selecciona una persona y escribe tu contraseña actual para habilitar las acciones.</p>}
                 <div className="acciones-seguridad">
                   <button
-                    disabled={ocupado || !persona || !actual || personas.find(p => String(p.id) === persona)?.nombre_usuario === estado.usuario}
+                    disabled={ocupado || !persona || !claveAdministrativa || personas.find(p => String(p.id) === persona)?.nombre_usuario === estado.usuario}
                     onClick={() => {
                       cambiarConfirmacion({ accion: "restablecer", persona });
                     }}
@@ -196,12 +206,12 @@ export function CentroSeguridad({
                   </button>
                   <button
                     className="secundario"
-                    disabled={ocupado || !persona || !actual}
+                    disabled={ocupado || !persona || !claveAdministrativa}
                     onClick={() => {
                       cambiarConfirmacion({ accion: "renovar", persona });
                     }}
                   >
-                    Revocar y renovar carné
+                    Revocar y renovar carnet
                   </button>
                 </div>
                 {temporal && (
@@ -259,8 +269,7 @@ export function CentroSeguridad({
                     <li key={e.id}>
                       <strong>{e.accion.replaceAll("_", " ")}</strong>
                       <small>
-                        {new Date(e.fecha).toLocaleString("es-PE")} · Cuenta{" "}
-                        {e.usuario_id || "no identificada"}
+                        {new Date(e.fecha).toLocaleString("es-PE")} · {e.responsable ? `Responsable: ${e.responsable}` : "Evento sin cuenta identificada"}
                       </small>
                       <p>{e.detalle}</p>
                     </li>
@@ -283,7 +292,7 @@ export function CentroSeguridad({
           titulo={
             confirmacion.accion === "restablecer"
               ? "Restablecer acceso inicial"
-              : "Revocar y renovar carné"
+              : "Revocar y renovar carnet"
           }
           cerrar={() => cambiarConfirmacion(null)}
         >
@@ -291,7 +300,7 @@ export function CentroSeguridad({
             <p>
               {confirmacion.accion === "restablecer"
                 ? `Se cerrarán las sesiones de ${personas.find(p => String(p.id) === confirmacion.persona)?.nombre || "esta persona"} y se generará un acceso temporal.`
-                : `El carné de ${personas.find(p => String(p.id) === confirmacion.persona)?.nombre || "esta persona"} quedará invalidado de inmediato y se emitirá uno nuevo.`}
+                : `El carnet de ${personas.find(p => String(p.id) === confirmacion.persona)?.nombre || "esta persona"} quedará invalidado de inmediato y se emitirá uno nuevo.`}
             </p>
             <footer className="acciones-dialogo">
               <button
@@ -312,9 +321,7 @@ export function CentroSeguridad({
                       : "renovar-carne";
                   const personaConfirmada = confirmacion.persona;
                   cambiarConfirmacion(null);
-                  void accion(
-                    `/api/seguridad/personas/${personaConfirmada}/${ruta}`,
-                  );
+                  void accion(`/api/seguridad/personas/${personaConfirmada}/${ruta}`, { actual: claveAdministrativa });
                 }}
               >
                 {confirmacion.accion === "restablecer"

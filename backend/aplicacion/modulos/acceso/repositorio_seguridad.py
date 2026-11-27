@@ -1,6 +1,7 @@
 from datetime import timedelta, timezone
 from uuid import uuid4
 import json
+import re
 import secrets
 import time
 from fastapi import APIRouter, Depends, Request, Response
@@ -71,17 +72,34 @@ def renovar_carne(persona_id: int, datos: Reautenticacion, usuario=Depends(admin
     persona.version_carne = str(uuid4())
     proteccion.registrar(base, 'carne_revocado_renovado', usuario, f'Persona: {persona.id}')
     base.commit()
-    return {'mensaje': 'Carné anterior revocado. El nuevo estará disponible al actualizar el carné personal.'}
+    return {'mensaje': 'Carnet anterior revocado. El nuevo estará disponible al actualizar el carnet personal.'}
 
 def auditoria(antes: int | None=None, usuario=Depends(administrador), base: Session=Depends(obtener_base_datos)):
     sede = base.get(Persona, usuario.persona_id).sede_id
     consulta = select(EventoSeguridad).where((EventoSeguridad.sede_id == sede) | EventoSeguridad.sede_id.is_(None))
     if antes:
         consulta = consulta.where(EventoSeguridad.id < antes)
-    filas = base.scalars(consulta.order_by(EventoSeguridad.id.desc()).limit(51)).all()
+    filas = base.scalars(consulta.order_by(EventoSeguridad.id.desc()).limit(11)).all()
+    visibles = filas[:10]
+    responsables = {cuenta.id: cuenta.nombre_usuario for cuenta in base.scalars(
+        select(Usuario).where(Usuario.id.in_({fila.usuario_id for fila in visibles if fila.usuario_id is not None}))
+    ).all()}
+    personas_ids = {int(coincidencia.group(1)) for fila in visibles
+        if (coincidencia := re.search(r'\bPersona:\s*(\d+)\b', fila.detalle or ''))}
+    personas = {persona.id: f'{persona.nombres} {persona.apellidos}' for persona in base.scalars(
+        select(Persona).where(Persona.id.in_(personas_ids))
+    ).all()}
+    def evento_visible(fila):
+        detalle = fila.detalle
+        coincidencia = re.search(r'\bPersona:\s*(\d+)\b', detalle or '')
+        if coincidencia and int(coincidencia.group(1)) in personas:
+            detalle = detalle.replace(coincidencia.group(0),
+                f'Persona afectada: {personas[int(coincidencia.group(1))]}', 1)
+        return {'id': fila.id, 'accion': fila.accion, 'detalle': detalle,
+            'fecha': fecha_iso(fila.creada_en), 'responsable': responsables.get(fila.usuario_id)}
     return {
-        'eventos': [{'id': f.id, 'accion': f.accion, 'detalle': f.detalle, 'fecha': fecha_iso(f.creada_en), 'usuario_id': f.usuario_id} for f in filas[:50]],
-        'hay_mas': len(filas) > 50,
+        'eventos': [evento_visible(fila) for fila in visibles],
+        'hay_mas': len(filas) > 10,
     }
 
 def alertas_qr(usuario=Depends(administrador), base: Session=Depends(obtener_base_datos)):

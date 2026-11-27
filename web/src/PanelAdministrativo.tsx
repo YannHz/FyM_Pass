@@ -1102,7 +1102,7 @@ export function PanelAdministrativo({
             </button>
             <MenuCuenta>
               <strong>{usuario.nombre}</strong>
-              <a className="acceso-cuenta-carne" href="/mi-carne"><QrCode size={18} aria-hidden="true" />Mostrar mi carné</a>
+              <a className="acceso-cuenta-carne" href="/mi-carne"><QrCode size={18} aria-hidden="true" />Mostrar mi carnet</a>
               <InstalarAplicacion />
               <button
                 className="secundario"
@@ -1168,7 +1168,7 @@ export function PanelAdministrativo({
               {["inicio", "diario"].includes(seccion) && (
                 <div className="acciones-cabecera-jornada">
                   {seccion === "inicio" && <a className="acceso-carne-propio" href="/mi-carne">
-                    <QrCode size={19} aria-hidden="true" />Mostrar mi carné
+                    <QrCode size={19} aria-hidden="true" />Mostrar mi carnet
                   </a>}
                   <div className="fecha-jornada">
                     <SelectorFecha
