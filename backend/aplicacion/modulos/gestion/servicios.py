@@ -381,7 +381,7 @@ def cambiar_estado_persona(identificador, activar, usuario, repositorio):
         {"persona_id": persona.id, "horario_retirado": bool(afectados)})
     confirmar(repositorio)
     notificar_marcado(sede)
-    return {"mensaje": "Persona reactivada. Asígnale un horario si corresponde." if activar
+    return {"mensaje": "Persona reactivada. Revisa su horario; las asignaciones futuras no se restauran automáticamente." if activar
             else "Persona dada de baja. Se conservaron sus asistencias y justificaciones."}
 
 

@@ -29,7 +29,9 @@
     box-shadow: none;
   }
 }
-.estado-directorio { display:grid; justify-items:start; gap:6px; }
+.estado-directorio { display:grid; justify-items:start; gap:6px; min-width:165px; }
 .estado-directorio small { color:var(--secundario); line-height:1.4; }
+.estado-directorio time { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.estado-directorio small span { display:block; overflow-wrap:anywhere; }
 .acciones-fila .accion-baja-persona { color:var(--alerta); }
 .acciones-fila .accion-baja-persona:hover { color:var(--alerta); }

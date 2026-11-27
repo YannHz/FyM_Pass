@@ -211,6 +211,9 @@ function Expediente({
     `/api/gestion/personas/${persona.id}/expediente?desde=${inicio}&hasta=${fin}`,
     revision,
   );
+  const pestanas = persona.activa
+    ? ["calendario", "carne", "horario"]
+    : ["calendario", "horario"];
   return (
     <Dialogo
       titulo={`Expediente de ${persona.nombre}`}
@@ -227,6 +230,7 @@ function Expediente({
               <p>
                 {datos.persona.rol} · {datos.persona.codigo}
               </p>
+              {!persona.activa && <p className="nota">Persona desactivada. Consulta aquí su historial de asistencia.</p>}
               <Insignia
                 texto={`${datos.alerta} · ${datos.porcentaje_faltas}% de faltas`}
               />
@@ -237,7 +241,7 @@ function Expediente({
             role="tablist"
             aria-label="Secciones del expediente"
           >
-            {["calendario", "carne", "horario"].map(
+            {pestanas.map(
               (opcion, indice, opciones) => (
                 <button
                   key={opcion}

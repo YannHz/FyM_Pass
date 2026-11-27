@@ -20,6 +20,15 @@ const normalizar = (texto: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+const fechaBaja = new Intl.DateTimeFormat("es-PE", {
+  timeZone: "America/Lima",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 const roles = [
   { codigo: "docente", nombre: "Docentes", icono: Presentation },
   {
@@ -128,6 +137,10 @@ export function PersonasCarnets({
             <p>
               Consulta los datos, la asignación y el carnet de cada persona.
             </p>
+            <p className="nota">
+              Al dar de baja, se desactivan el acceso y el carnet. Las asistencias
+              y justificaciones anteriores permanecen en el expediente y los reportes.
+            </p>
           </div>
           {administrador && (
             <button onClick={registrar}>
@@ -216,6 +229,9 @@ export function PersonasCarnets({
               {
                 titulo: "Asignación",
                 mostrar: (persona) => {
+                  if (!persona.activa) {
+                    return <span className="nota">Sin horario para marcar asistencia</span>;
+                  }
                   const horario = catalogo.horarios.find(
                     (dato: Registro) => dato.id === persona.horario_id,
                   );
@@ -233,7 +249,9 @@ export function PersonasCarnets({
                     <>
                       {persona.nombre_usuario}
                       <small>
-                        {persona.permiso === "administrador"
+                        {!persona.activa
+                          ? "Acceso desactivado"
+                          : persona.permiso === "administrador"
                           ? "Administrador"
                           : persona.permiso === "operador"
                             ? "Operador de asistencia"
@@ -247,8 +265,14 @@ export function PersonasCarnets({
               {
                 titulo: "Estado",
                 mostrar: (persona) => (
-                  <div className="estado-directorio"><Insignia texto={persona.activa ? "Activo" : "Desactivado"} />
-                    {!persona.activa && persona.baja_en && <small>Baja: {new Intl.DateTimeFormat("es-PE", { timeZone: "America/Lima", dateStyle: "short", timeStyle: "short" }).format(new Date(persona.baja_en))}<br />Por {persona.baja_por}</small>}
+                  <div className="estado-directorio">
+                    <Insignia texto={persona.activa ? "Activo" : "Desactivado"} />
+                    {!persona.activa && persona.baja_en && (
+                      <small>
+                        Baja: <time dateTime={persona.baja_en}>{fechaBaja.format(new Date(persona.baja_en))}</time>
+                        <span>Por: {persona.baja_por}</span>
+                      </small>
+                    )}
                   </div>
                 ),
               },
@@ -256,14 +280,14 @@ export function PersonasCarnets({
                 titulo: "Acciones",
                 mostrar: (persona) => (
                   <div className="acciones-fila">
-                    <button
+                    {persona.activa && <button
                       className="boton-texto"
                       onClick={() => abrir(persona, "carne")}
                       aria-label={`Ver carnet de ${persona.nombre}`}
                     >
                       <CreditCard size={16} />
                       Carnet
-                    </button>
+                    </button>}
                     {administrador && (
                       <><button
                         className="boton-texto"
@@ -297,7 +321,7 @@ export function PersonasCarnets({
       {personaPendiente && <Dialogo titulo={personaPendiente.activa ? "Dar de baja a una persona" : "Reactivar a una persona"} cerrar={() => cambiarPersonaPendiente(null)} bloqueado={ocupado}>
         <div className="formulario-gestion">
           <p><strong>{personaPendiente.nombre}</strong> · {personaPendiente.codigo}</p>
-          <p>{personaPendiente.activa ? "Se cerrarán sus sesiones y se desactivará su acceso de inmediato. Perderá el horario asignado desde mañana. Sus asistencias y justificaciones anteriores permanecerán en los reportes. Se registrarán la fecha y el administrador responsable." : "La cuenta volverá a estar activa. El horario retirado no se recupera automáticamente; asígnale uno desde Horarios laborales si corresponde."}</p>
+          <p>{personaPendiente.activa ? "Se cerrarán sus sesiones y el carnet dejará de servir para marcar de inmediato. El horario se conservará hasta hoy para el historial y dejará de aplicarse desde mañana. Sus asistencias y justificaciones permanecerán en el expediente y los reportes. Se registrarán la fecha y el administrador responsable." : "La cuenta volverá a estar activa. Revisa su horario en Horarios laborales: las asignaciones futuras retiradas al darla de baja no se restauran automáticamente."}</p>
           {error && <p role="alert" className="aviso error">{error}</p>}
           <footer className="acciones-dialogo">
             <button type="button" className="secundario" autoFocus disabled={ocupado} onClick={() => cambiarPersonaPendiente(null)}>Cancelar</button>
