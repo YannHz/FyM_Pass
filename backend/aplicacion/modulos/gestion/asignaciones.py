@@ -15,9 +15,13 @@ def validar_fecha(repositorio, sede_id, fecha):
         raise ErrorAplicacion(422, "Elige una fecha desde hoy y dentro del próximo año.")
 
 
-def asignar_desde(repositorio, persona, horario_id, fecha):
+def asignar_desde(repositorio, persona, horario_id, fecha, horario_origen_id=None):
     validar_fecha(repositorio, persona.sede_id, fecha)
     asignaciones = repositorio.asignaciones_desde(fecha, persona)
+    if horario_origen_id is not None:
+        asignaciones = [actual for actual in asignaciones if actual.horario_id == horario_origen_id]
+    if not asignaciones and horario_id is None:
+        return False
     if len(asignaciones) == 1:
         actual = asignaciones[0]
         if actual.horario_id == horario_id and actual.vigente_desde <= fecha and actual.vigente_hasta is None:

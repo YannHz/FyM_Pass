@@ -493,6 +493,23 @@ def guardar_semana_laboral(datos, usuario, repositorio):
         )
         repositorio.sincronizar()
         persona_ids = datos.persona_ids
+        seleccionados = set(persona_ids)
+        retirados_por_id = {}
+        if datos.horario_id is not None:
+            for asignacion in repositorio.asignaciones_del_horario(datos.horario_id):
+                if (asignacion.persona_id in seleccionados
+                    or asignacion.vigente_desde > datos.vigente_desde
+                    or (asignacion.vigente_hasta is not None
+                        and asignacion.vigente_hasta < datos.vigente_desde)):
+                    continue
+                persona = repositorio.obtener_persona(asignacion.persona_id)
+                if persona.activa:
+                    retirados_por_id[persona.id] = persona
+        retirados = list(retirados_por_id.values())
+        for persona in retirados:
+            asignar_desde(repositorio, persona, None, datos.vigente_desde, datos.horario_id)
+            registrar_auditoria(repositorio, usuario, "retirar_asignacion_laboral", "personas", persona.id,
+                {"horario_id": datos.horario_id, "desde": str(datos.vigente_desde)})
         if resultado.get("mismo_horario"):
             persona_ids = [identificador for identificador in persona_ids
                 if not (asignacion := repositorio.asignacion_vigente(
@@ -507,7 +524,11 @@ def guardar_semana_laboral(datos, usuario, repositorio):
         repositorio.revertir()
         raise
     notificar_marcado(sede_usuario(repositorio, usuario))
-    return {"id": resultado["id"], "mensaje": f"Semana guardada. Horario aplicado a {len(set(datos.persona_ids))} personas."}
+    cantidad = len(seleccionados)
+    mensaje = f"Semana guardada. Horario aplicado a {cantidad} {'persona' if cantidad == 1 else 'personas'}."
+    if retirados:
+        mensaje += f" Se retiró para {len(retirados)} desde {datos.vigente_desde}."
+    return {"id": resultado["id"], "mensaje": mensaje}
 
 
 def eliminar_horario(identificador: int, usuario: Usuario = None, repositorio: RepositorioGestion = None):

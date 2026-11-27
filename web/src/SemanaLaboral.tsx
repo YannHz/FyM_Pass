@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Plus, Check, Clock3, Trash2 } from "lucide-react";
 import { Dialogo, type Registro } from "./componentesGestion";
 import { diasHorario, type Tramo } from "./EditorHorario";
@@ -12,6 +12,9 @@ const turnos = { manana: "Mañana", tarde: "Tarde", noche: "Noche", completo: "J
 const hoy = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
 const manana = () => new Date(Date.parse(`${hoy()}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 const tramosIniciales = (): Tramo[] => [0, 1, 2, 3, 4].map(dia => ({ dia_semana: dia, hora_entrada: "08:00", hora_salida: "13:00" }));
+const asignadaEn = (persona: Registro, horarioId: number | null, fecha: string) =>
+  horarioId !== null && (persona.asignaciones || []).some((asignacion: Registro) =>
+    asignacion.horario_id === horarioId && asignacion.desde <= fecha && (!asignacion.hasta || asignacion.hasta >= fecha));
 
 export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModificar }: {
   tipo: string; catalogo: Registro; administrador: boolean;
@@ -29,7 +32,7 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
   const [salida, cambiarSalida] = useState("13:00");
   const [fecha, cambiarFecha] = useState(hoy);
   const personas: Registro[] = catalogo.personas.filter((p: Registro) => p.activa && p.rol_codigo === tipo);
-  const [seleccion, cambiarSeleccion] = useState<number[]>(personas.filter(p => p.horario_id === inicial?.id).map(p => p.id));
+  const [seleccion, cambiarSeleccion] = useState<number[]>(personas.filter(p => asignadaEn(p, inicial?.id ?? null, hoy())).map(p => p.id));
   const [busqueda, cambiarBusqueda] = useState("");
   const [modificado, cambiarModificado] = useState(false);
   const [ocupado, cambiarOcupado] = useState(false);
@@ -38,7 +41,14 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
   const [horarioPendiente, cambiarHorarioPendiente] = useState<string | null>(null);
   const [confirmarRetiro, cambiarConfirmarRetiro] = useState(false);
   const enviando = useRef(false);
+  const catalogoSincronizado = useRef(catalogo);
   const visibles = personas.filter(p => `${p.nombre} ${p.codigo}`.toLocaleLowerCase().includes(busqueda.toLocaleLowerCase()));
+  useEffect(() => {
+    if (catalogoSincronizado.current === catalogo || modificado || ocupado) return;
+    catalogoSincronizado.current = catalogo;
+    if (identificador !== null && horarios.some(h => h.id === identificador))
+      cambiarSeleccion(personas.filter(p => asignadaEn(p, identificador, fecha)).map(p => p.id));
+  }, [catalogo, fecha, horarios, identificador, modificado, ocupado, personas]);
   function modificar() { cambiarModificado(true); alModificar(true); cambiarError(""); }
   function cargar(valor: string) {
     if (modificado) {
@@ -53,7 +63,7 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
     cambiarNombre(horario?.nombre || "Administración");
     cambiarCarrera(horario?.carrera || ""); cambiarTurno(horario?.turno || "manana");
     cambiarTramos(horario?.tramos || tramosIniciales()); cambiarDias([]);
-    cambiarSeleccion(personas.filter(p => p.horario_id === horario?.id).map(p => p.id));
+    cambiarSeleccion(personas.filter(p => asignadaEn(p, horario?.id ?? null, fecha)).map(p => p.id));
     cambiarModificado(false); alModificar(false); cambiarError("");
     cambiarEditarDatos(!horario);
   }
@@ -156,7 +166,7 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
     </fieldset>}
     <details className="personal-semana"><summary>{administrador ? `Aplicar a ${seleccion.length} personas` : "Personal asignado"}</summary>
       {administrador ? <>
-        <p className="nota">Solo se actualizarán las personas marcadas.</p>
+        <p className="nota">Las personas marcadas quedarán en este horario. Si desmarcas a alguien que ya lo tiene, quedará sin horario desde la fecha elegida. Si ya marcó asistencia hoy, aplica el cambio desde mañana.</p>
         <fieldset disabled={ocupado} className="filtros-personal-semana">
           <label>Buscar personal<input type="search" value={busqueda} placeholder="Nombre o ID" onChange={e => cambiarBusqueda(e.target.value)} /></label>
         </fieldset>
@@ -165,7 +175,7 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
         }}>Seleccionar o quitar visibles</button></div>
         <fieldset disabled={ocupado} className="personas-semana">{visibles.map(p => <label key={p.id} data-seleccionado={seleccion.includes(p.id)}>
           <input type="checkbox" checked={seleccion.includes(p.id)} onChange={() => { cambiarSeleccion(actual => actual.includes(p.id) ? actual.filter(id => id !== p.id) : [...actual, p.id]); modificar(); }} />
-          <span><strong>{p.nombre}</strong><small>{p.codigo} · {p.horario_id === identificador ? "Horario actual" : "Otro horario o sin asignar"}</small></span>
+          <span><strong>{p.nombre}</strong><small>{p.codigo} · {asignadaEn(p, identificador, fecha) ? "Asignado en la fecha elegida" : "Otro horario o sin asignar"}</small></span>
         </label>)}</fieldset>
         {!visibles.length && <p className="nota">No hay personas para esta búsqueda.</p>}
       </> : <ul>{personas.filter(p => p.horario_id === identificador).map(p => <li key={p.id}>{p.nombre}</li>)}</ul>}
@@ -173,7 +183,7 @@ export function SemanaLaboral({ tipo, catalogo, administrador, guardado, alModif
     {error && <p role="alert" className="aviso error">{error}</p>}
     {administrador && (modificado || identificador === null) && <footer className="guardar-semana">
       <SelectorFecha etiqueta="Aplicar desde" minimo={hoy()} valor={fecha} alCambiar={v => { cambiarFecha(v); modificar(); }} />
-      <span>{seleccion.length ? `${seleccion.length} personas recibirán los cambios` : "Sin personas seleccionadas"}</span>
+      <span>{seleccion.length ? `${seleccion.length} ${seleccion.length === 1 ? "persona seleccionada" : "personas seleccionadas"}` : "Sin personas seleccionadas"}</span>
       <button disabled={ocupado || !modificado && identificador !== null}>{ocupado ? "Guardando…" : "Guardar cambios"}</button></footer>}
     </div>
     </form>
