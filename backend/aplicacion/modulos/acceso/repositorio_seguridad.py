@@ -48,7 +48,7 @@ def cerrar_otras(datos: Reautenticacion, request: Request, usuario=Depends(obten
 def objetivo(base, encargado, persona_id):
     persona = base.scalar(select(Persona).where(Persona.id == persona_id).with_for_update())
     sede = base.get(Persona, encargado.persona_id).sede_id
-    if not persona or persona.sede_id != sede:
+    if not persona or persona.sede_id != sede or not persona.activa:
         raise ErrorAplicacion(404, 'Persona no disponible en tu sede.')
     return persona
 
@@ -78,8 +78,11 @@ def auditoria(antes: int | None=None, usuario=Depends(administrador), base: Sess
     consulta = select(EventoSeguridad).where((EventoSeguridad.sede_id == sede) | EventoSeguridad.sede_id.is_(None))
     if antes:
         consulta = consulta.where(EventoSeguridad.id < antes)
-    filas = base.scalars(consulta.order_by(EventoSeguridad.id.desc()).limit(50)).all()
-    return [{'id': f.id, 'accion': f.accion, 'detalle': f.detalle, 'fecha': fecha_iso(f.creada_en), 'usuario_id': f.usuario_id} for f in filas]
+    filas = base.scalars(consulta.order_by(EventoSeguridad.id.desc()).limit(51)).all()
+    return {
+        'eventos': [{'id': f.id, 'accion': f.accion, 'detalle': f.detalle, 'fecha': fecha_iso(f.creada_en), 'usuario_id': f.usuario_id} for f in filas[:50]],
+        'hay_mas': len(filas) > 50,
+    }
 
 def alertas_qr(usuario=Depends(administrador), base: Session=Depends(obtener_base_datos)):
     sede = base.get(Persona, usuario.persona_id).sede_id

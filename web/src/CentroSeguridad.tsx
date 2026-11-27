@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { consultar } from "./servicio";
 import { CambiarClaveInicial } from "./CambiarClaveInicial";
 import { Dialogo } from "./componentesGestion";
+import { CampoClave } from "./CampoClave";
 import "./Seguridad.css";
 
 type Datos = Record<string, any>;
@@ -18,6 +19,11 @@ export function CentroSeguridad({
   const [actual, cambiarActual] = useState("");
   const [sesiones, cambiarSesiones] = useState<Datos[]>([]);
   const [eventos, cambiarEventos] = useState<Datos[]>([]);
+  const [pagina, cambiarPagina] = useState(0);
+  const [cursores, cambiarCursores] = useState<(number | null)[]>([null]);
+  const [hayMas, cambiarHayMas] = useState(false);
+  const [cargandoEventos, cambiarCargandoEventos] = useState(false);
+  const consultaEventos = useRef(false);
   const [alertas, cambiarAlertas] = useState<Datos[]>([]);
   const [personas, cambiarPersonas] = useState<Datos[]>([]);
   const [persona, cambiarPersona] = useState("");
@@ -30,12 +36,27 @@ export function CentroSeguridad({
     accion: "restablecer" | "renovar";
     persona: string;
   } | null>(null);
+  async function cargarPagina(indice: number, antes: number | null = null) {
+    if (consultaEventos.current) return;
+    consultaEventos.current = true;
+    cambiarCargandoEventos(true);
+    cambiarError("");
+    try {
+      const respuesta = await consultar(`/api/seguridad/auditoria${antes === null ? "" : `?antes=${antes}`}`);
+      cambiarEventos(respuesta.eventos);
+      cambiarHayMas(respuesta.hay_mas);
+      cambiarPagina(indice);
+      if (indice === 0) cambiarCursores([null]);
+      else cambiarCursores(actuales => [...actuales.slice(0, indice), antes]);
+    } catch (problema) { cambiarError((problema as Error).message); }
+    finally { consultaEventos.current = false; cambiarCargandoEventos(false); }
+  }
   async function cargar() {
     const datos = await consultar("/api/seguridad/estado");
     cambiarEstado(datos);
     cambiarSesiones(await consultar("/api/seguridad/sesiones"));
     if (datos.administrador) {
-      cambiarEventos(await consultar("/api/seguridad/auditoria"));
+      await cargarPagina(0);
       cambiarAlertas(await consultar("/api/seguridad/alertas-qr"));
       cambiarPersonas((await consultar("/api/gestion/catalogo")).personas);
     }
@@ -107,16 +128,10 @@ export function CentroSeguridad({
               <h2>Contraseña y sesiones</h2>
               <p>Para operaciones sensibles confirma tu contraseña actual.</p>
               <div className="formulario-seguridad">
-                <label>
-                  Contraseña actual
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    value={actual}
-                    maxLength={256}
-                    onChange={(e) => cambiarActual(e.target.value)}
-                  />
-                </label>
+                <div>
+                  <label htmlFor="clave-seguridad">Contraseña actual</label>
+                  <CampoClave id="clave-seguridad" nombre="clave-actual" etiqueta="contraseña actual" valor={actual} alCambiar={cambiarActual} autocompletar="current-password" deshabilitado={ocupado} />
+                </div>
               </div>
               <div className="acciones-seguridad">
                 <button onClick={() => mostrarClave(true)}>
@@ -156,13 +171,15 @@ export function CentroSeguridad({
                     }}
                   >
                     <option value="">Selecciona una persona</option>
-                    {personas.map((p) => (
+                    {personas.filter(p => p.activa).map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nombre} · {p.codigo}
                       </option>
                     ))}
                   </select>
                 </label>
+                {persona && personas.find(p => String(p.id) === persona)?.nombre_usuario === estado.usuario &&
+                  <p className="nota">Para tu propia cuenta, utiliza Cambiar mi contraseña. Puedes renovar tu carné aquí.</p>}
                 <p>
                   Usa la contraseña actual indicada arriba. El restablecimiento
                   cierra las sesiones de la cuenta. Renovar el carné invalida el
@@ -170,7 +187,7 @@ export function CentroSeguridad({
                 </p>
                 <div className="acciones-seguridad">
                   <button
-                    disabled={ocupado || !persona || !actual}
+                    disabled={ocupado || !persona || !actual || personas.find(p => String(p.id) === persona)?.nombre_usuario === estado.usuario}
                     onClick={() => {
                       cambiarConfirmacion({ accion: "restablecer", persona });
                     }}
@@ -236,6 +253,7 @@ export function CentroSeguridad({
                   Actualizar eventos y alertas
                 </button>
                 <p>Eventos recientes. No se guardan contraseñas ni QR.</p>
+                <p role="status">Página {pagina + 1}{cargandoEventos ? " · Cargando eventos…" : ` · ${eventos.length} eventos`}</p>
                 <ul className="lista-auditoria">
                   {eventos.map((e) => (
                     <li key={e.id}>
@@ -248,19 +266,13 @@ export function CentroSeguridad({
                     </li>
                   ))}
                 </ul>
-                {eventos.length >= 50 && (
-                  <button
-                    className="secundario"
-                    onClick={async () => {
-                      const mas = await consultar(
-                        `/api/seguridad/auditoria?antes=${eventos.at(-1)?.id}`,
-                      );
-                      cambiarEventos([...eventos, ...mas]);
-                    }}
-                  >
-                    Cargar eventos anteriores
-                  </button>
-                )}
+                {!eventos.length && !cargandoEventos && <p>No hay eventos en esta página.</p>}
+                <nav className="paginacion-auditoria" aria-label="Páginas de auditoría">
+                  <button type="button" className="secundario" disabled={cargandoEventos || pagina === 0}
+                    onClick={() => void cargarPagina(pagina - 1, cursores[pagina - 1])}>Anterior</button>
+                  <button type="button" className="secundario" disabled={cargandoEventos || !hayMas || !eventos.length}
+                    onClick={() => void cargarPagina(pagina + 1, eventos.at(-1)!.id)}>Siguiente</button>
+                </nav>
               </section>
             )}
           </>
@@ -278,8 +290,8 @@ export function CentroSeguridad({
           <div className="formulario-gestion">
             <p>
               {confirmacion.accion === "restablecer"
-                ? "Se cerrarán las sesiones de esta persona y se generará un acceso temporal."
-                : "El carné actual quedará invalidado de inmediato y se emitirá uno nuevo."}
+                ? `Se cerrarán las sesiones de ${personas.find(p => String(p.id) === confirmacion.persona)?.nombre || "esta persona"} y se generará un acceso temporal.`
+                : `El carné de ${personas.find(p => String(p.id) === confirmacion.persona)?.nombre || "esta persona"} quedará invalidado de inmediato y se emitirá uno nuevo.`}
             </p>
             <footer className="acciones-dialogo">
               <button
