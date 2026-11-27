@@ -2,7 +2,7 @@
 
 FyM Pass es el sistema web de control de asistencia de ingreso del Instituto de Educación Superior Técnica Finney Miller S.A.C. La versión 1.0.0 funciona en navegadores de escritorio y móviles y puede instalarse como aplicación web progresiva (PWA).
 
-Registra una entrada y una salida por jornada para docentes y personal administrativo de la sede principal. Admite varios puestos de asistencia simultáneos con QR dinámico y lectura del carnet por cámara. Incluye consulta de asistencias, horarios laborales, justificaciones, registro manual auditado, reportes y preplanilla estimada. Las bajas de personas y el retiro de horarios conservan el historial de asistencia. El ingreso al instituto se mantiene separado de la asistencia a clases.
+Registra una entrada y una salida por jornada para docentes y personal administrativo de la sede principal. Admite varios puestos de asistencia simultáneos con QR dinámico y lectura del carnet por cámara. Incluye consulta de asistencias, horarios laborales, justificaciones, registro manual auditado, reportes y preplanilla estimada. La administración dispone de protección de cuentas y carnets y de una auditoría de seguridad paginada. Las bajas de personas y el retiro de horarios conservan el historial de asistencia. El ingreso al instituto se mantiene separado de la asistencia a clases.
 
 ## Arquitectura
 
@@ -12,7 +12,7 @@ La aplicación sigue un monolito modular con tres partes:
 Navegador / PWA → API FastAPI → MySQL o MariaDB
 ```
 
-El frontend está construido con React, TypeScript y Vite. El backend usa FastAPI, SQLAlchemy y PyMySQL. Alembic administra las migraciones de la base de datos. Solo la API accede a la base; las reglas de permisos y las operaciones sensibles se aplican en el servidor.
+El frontend está construido con React, TypeScript y Vite. El backend usa FastAPI, SQLAlchemy y PyMySQL. Alembic administra las migraciones de la base de datos. Solo la API accede a la base; las reglas de permisos y las operaciones sensibles se aplican en el servidor. Para el diario y los reportes, el backend recupera las asignaciones y los tramos de horario en bloque por intervalo de consulta.
 
 La PWA permite instalar la interfaz y conservar recursos públicos para la pantalla sin conexión. El registro de asistencia requiere conexión con la API. Los códigos QR se validan en el backend.
 

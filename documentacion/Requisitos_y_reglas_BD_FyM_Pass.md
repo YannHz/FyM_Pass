@@ -1,6 +1,6 @@
 # Requisitos y reglas de base de datos de FyM Pass
 
-Listado para la documentación del proyecto. Los requerimientos describen las funciones y condiciones de uso del sistema. Las reglas de negocio se limitan a restricciones que el esquema de MariaDB aplica mediante claves, unicidad y comprobaciones.
+Listado de la versión 1.0.0 para la documentación del proyecto. Los requerimientos describen las funciones y condiciones de uso del sistema. Las reglas de negocio se limitan a restricciones que el esquema de MariaDB aplica mediante claves, unicidad y comprobaciones.
 
 El acceso administrativo a la protección de cuentas y carnets exige permiso de administrador y confirmación de la contraseña actual.
 
@@ -18,7 +18,7 @@ El acceso administrativo a la protección de cuentas y carnets exige permiso de 
 | RF-08 | Registrar entradas y salidas mediante lectura del QR dinámico desde el móvil. |
 | RF-09 | Mostrar los marcados efectuados en los puestos abiertos. |
 | RF-10 | Administrar perfiles de docentes y personal administrativo, incluida su baja lógica y reactivación sin borrar el historial. |
-| RF-11 | Crear, editar, asignar y retirar horarios semanales sin alterar la asistencia histórica. |
+| RF-11 | Crear, editar, asignar y retirar horarios semanales desde la fecha elegida, incluida la fecha actual cuando la persona no tenga marcados ese día, sin alterar la asistencia histórica. |
 | RF-12 | Configurar tolerancias por rol y reglas de asistencia de la sede. |
 | RF-13 | Consultar el resumen y el registro diario de asistencia. |
 | RF-14 | Registrar manualmente una entrada del día con motivo y responsable. |
@@ -30,8 +30,7 @@ El acceso administrativo a la protección de cuentas y carnets exige permiso de 
 | RF-20 | Administrar días no lectivos y dispositivos QR de la sede. |
 | RF-21 | Permitir al administrador restablecer el acceso temporal de una cuenta activa distinta de la propia y revocar sus sesiones. |
 | RF-22 | Permitir al administrador revocar y renovar el carnet QR de una persona activa. |
-| RF-23 | Consultar la auditoría de seguridad por páginas y revisar alertas de rechazos QR. |
-
+| RF-23 | Consultar la auditoría de seguridad en páginas de diez eventos, identificando al responsable y, cuando corresponda, a la persona afectada; revisar alertas de rechazos QR. |
 
 ## 2. Requerimientos no funcionales
 
@@ -49,8 +48,7 @@ El acceso administrativo a la protección de cuentas y carnets exige permiso de 
 | RNF-10 | El despliegue debe poder reproducirse en un servidor Linux con la configuración privada fuera del repositorio. |
 | RNF-11 | El diario y los reportes deben recuperar asignaciones y tramos de horario en bloque por intervalo, sin repetir consultas por cada persona y día. |
 | RNF-12 | Las acciones de protección de cuentas y carnets deben revalidar el permiso y la contraseña actual en el servidor, y registrar el responsable. |
-| RNF-13 | La auditoría de seguridad debe consultar páginas acotadas sin cargar el historial completo en el navegador. |
-
+| RNF-13 | La auditoría de seguridad debe consultar diez eventos por página, con navegación anterior y siguiente, sin cargar el historial completo en el navegador. |
 
 ## 3. Reglas de negocio de la base de datos
 
