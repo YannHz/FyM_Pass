@@ -16,8 +16,6 @@ from .models import (
     Usuario,
     Rol,
     Sede,
-    Carrera,
-    Grupo,
     Horario,
     TramoHorario,
     AsignacionHorario,
@@ -70,8 +68,7 @@ def reemplazar_personas(base):
     ):
         base.execute(delete(modelo))
     horarios_demo = select(Horario.id).where(Horario.nombre.like("DEMO -%"))
-    usados = select(Grupo.horario_id).where(Grupo.horario_id.is_not(None))
-    identificadores = list(base.scalars(horarios_demo.where(Horario.id.not_in(usados))))
+    identificadores = list(base.scalars(horarios_demo))
     if identificadores:
         base.execute(
             delete(TramoHorario).where(TramoHorario.horario_id.in_(identificadores))
@@ -136,14 +133,13 @@ def crear_personas_iniciales(base, inicio):
             base.add(ToleranciaRol(rol_id=rol, minutos=10, vigente_desde=inicio))
     cuentas = []
 
-    def agregar(nombres, apellidos, usuario, rol, permiso, codigo, horario, grupo=None):
+    def agregar(nombres, apellidos, usuario, rol, permiso, codigo, horario):
         persona = Persona(
             codigo=codigo,
             nombres=nombres,
             apellidos=apellidos,
             sede_id=sede.id,
             rol_id=roles[rol],
-            grupo_id=grupo,
         )
         base.add(persona)
         base.flush()

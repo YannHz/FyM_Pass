@@ -57,7 +57,7 @@ def cabecera(hoja, fila, valores):
 
 
 def tabla(hoja, filas, campos, etiquetas, periodo):
-    preparar_hoja(hoja, [38 if campo == "nombre" else 27 if campo in ("entrada", "salida") else 24 if campo in ("carrera", "grupo") else 18 for campo in campos])
+    preparar_hoja(hoja, [38 if campo == "nombre" else 27 if campo in ("entrada", "salida") else 24 if campo == "carrera" else 18 for campo in campos])
     hoja.page_setup.paperSize = hoja.PAPERSIZE_A4
     titulo(hoja, "Detalle de asistencia al instituto", periodo, len(campos))
     cabecera(hoja, 5, etiquetas)
@@ -73,7 +73,7 @@ def tabla(hoja, filas, campos, etiquetas, periodo):
             celda = hoja.cell(numero, indice, texto_seguro(valor))
             celda.font = Font(name="Calibri", size=11, color="1C1C1E")
             celda.fill = PatternFill("solid", fgColor="F4F7FC" if numero % 2 == 0 else "FFFFFF")
-            celda.alignment = Alignment(vertical="center", wrap_text=campo in ("nombre", "grupo", "carrera"))
+            celda.alignment = Alignment(vertical="center", wrap_text=campo in ("nombre", "carrera"))
             if campo == "fecha":
                 celda.number_format = "dd/mm/yyyy"
             elif campo in ("entrada", "salida"):

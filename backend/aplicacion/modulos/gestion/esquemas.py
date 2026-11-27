@@ -75,7 +75,6 @@ class DatosPersona(Formulario):
     apellidos: str = Field(min_length=1, max_length=100)
     documento: str | None = Field(default=None, max_length=20)
     rol_id: int
-    grupo_id: int | None = None
     horario_id: int | None = None
     activa: bool = True
     tarifa_hora: Decimal = Field(default=0, ge=0, le=100000)
@@ -100,13 +99,6 @@ class DatosPersona(Formulario):
         return self
 
 
-class DatosCarrera(Formulario):
-    id: int | None = None
-    nombre: str = Field(min_length=1, max_length=120)
-    codigo: str = Field(min_length=1, max_length=30)
-    activa: bool = True
-
-
 class DatosTramo(Formulario):
     dia_semana: int = Field(ge=0, le=6)
     hora_entrada: time
@@ -121,27 +113,9 @@ class DatosHorario(Formulario):
     tramos: list[DatosTramo] = Field(min_length=1, max_length=14)
 
 
-class DatosGrupo(Formulario):
-    id: int | None = None
-    carrera_id: int
-    horario_id: int | None = None
-    codigo: str = Field(min_length=1, max_length=30)
-    ciclo: str = Field(min_length=1, max_length=30)
-    turno: str = Field(min_length=1, max_length=30)
-    activo: bool = True
-    ingreso: DatosHorario | None = None
-    alcance: Literal["grupo"] = "grupo"
-
-
 class DatosSemanaLaboral(DatosHorario):
     horario_id: int | None = Field(default=None, gt=0)
     persona_ids: list[int] = Field(default_factory=list, max_length=500)
-    vigente_desde: date
-
-
-class DatosUsarHorarioGrupo(Formulario):
-    persona_ids: list[int] = Field(min_length=1, max_length=500)
-    horario_esperado: int = Field(gt=0)
     vigente_desde: date
 
 

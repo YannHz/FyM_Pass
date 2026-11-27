@@ -1,8 +1,8 @@
 # FyM Pass
 
-FyM Pass es el sistema web de control de asistencia de ingreso del Instituto de Educación Superior Tecnológico Finney y Miller. La versión 1.0.0 funciona en navegadores de escritorio y móviles y puede instalarse como aplicación web progresiva (PWA).
+FyM Pass es el sistema web de control de asistencia de ingreso del Instituto de Educación Superior Técnica Finney Miller S.A.C. La versión 1.0.0 funciona en navegadores de escritorio y móviles y puede instalarse como aplicación web progresiva (PWA).
 
-Registra una entrada y una salida por jornada para docentes y personal administrativo de la sede principal. Admite un puesto con QR dinámico y lectura del carné por cámara. Incluye consulta de asistencias, horarios laborales, justificaciones, registro manual auditado, reportes y preplanilla estimada. El ingreso al instituto se mantiene separado de la asistencia a clases.
+Registra una entrada y una salida por jornada para docentes y personal administrativo de la sede principal. Admite varios puestos de asistencia simultáneos con QR dinámico y lectura del carné por cámara. Incluye consulta de asistencias, horarios laborales, justificaciones, registro manual auditado, reportes y preplanilla estimada. El ingreso al instituto se mantiene separado de la asistencia a clases.
 
 ## Arquitectura
 
@@ -39,7 +39,7 @@ backend/
 └── .env.example                nombres de variables sin credenciales
 ```
 
-Las migraciones y los modelos son la definición publicable del esquema. Los datos operativos y los respaldos no forman parte del repositorio.
+Las migraciones y los modelos definen el esquema de la base de datos. Los datos operativos y los respaldos no forman parte del repositorio.
 
 ## 🎨 Estructura del frontend
 

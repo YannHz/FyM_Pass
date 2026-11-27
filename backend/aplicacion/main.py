@@ -13,7 +13,7 @@ from .modulos.acceso.rutas import rutas
 from .modulos.acceso.rutas_seguridad import rutas_seguridad
 from .modulos.asistencia.rutas import rutas_asistencia
 from .modulos.gestion.rutas import rutas_gestion
-from .modulos.diagnostico.rutas import rutas_salud, rutas_diagnostico
+from .modulos.diagnostico.rutas import rutas_salud
 
 avisos_registro = logging.getLogger("fym")
 
@@ -50,7 +50,6 @@ for enrutador in (
     rutas_seguridad,
     rutas_asistencia,
     rutas_gestion,
-    rutas_diagnostico,
 ):
     aplicacion.include_router(enrutador)
 

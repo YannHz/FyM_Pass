@@ -55,7 +55,23 @@ backend/archivos/
 *.p12
 *.pfx
 *.fernet
+*.zip
+*.7z
+*.tar
+*.tar.gz
 *.local.json
+*.secret.json
+*.secrets.json
+client_secret*.json
+credentials*.json
+token*.json
+rclone.conf
+.ssh/
+.aws/
+.config/rclone/
+id_rsa
+id_ed25519
+id_ecdsa
 
 # archivos temporales del editor y del sistema
 .DS_Store
@@ -68,5 +84,26 @@ Desktop.ini
 *.temp
 *~
 
-
 /.agents/
+/AGENTS.md
+/skills-lock.json
+
+# listados y documentos de trabajo fuera del codigo fuente
+/documentacion/
+*.csv
+*.tsv
+*.xls
+*.xlsx
+*.ods
+*.doc
+*.docx
+*.pdf
+
+# datos preparados para importacion y salidas con credenciales
+/datos/
+/importacion/
+/despliegue/*.json
+*personas*.json
+*usuarios*.json
+*credenciales*.csv
+*credenciales*.json

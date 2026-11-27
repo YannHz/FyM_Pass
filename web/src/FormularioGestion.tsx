@@ -175,9 +175,7 @@ export function FormularioGestion({
       nombres: 100,
       apellidos: 100,
       documento: 20,
-      nombre: formulario.ruta.endsWith("/carreras") ? 120 : 100,
-      ciclo: 30,
-      turno: 30,
+      nombre: 100,
       referencia: 200,
       motivo: formulario.ruta.endsWith("/justificaciones")
         ? 1000

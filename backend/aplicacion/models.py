@@ -35,7 +35,6 @@ class Persona(Base):
     codigo: Mapped[str] = mapped_column(String(30), unique=True)
     nombres: Mapped[str] = mapped_column(String(100))
     apellidos: Mapped[str] = mapped_column(String(100))
-    grupo_id: Mapped[int | None] = mapped_column(ForeignKey("grupos.id", ondelete="RESTRICT", name="fk_personas_grupo"))
     foto_ruta: Mapped[str | None] = mapped_column(String(255))
     version_carne: Mapped[str] = mapped_column(String(36), default=lambda: str(uuid4()))
     documento: Mapped[str | None] = mapped_column(String(20), unique=True)
@@ -181,28 +180,6 @@ class EventoPuesto(Base):
     resultado: Mapped[str] = mapped_column(String(200))
     aceptado: Mapped[bool] = mapped_column(Boolean)
     __table_args__ = (Index("ix_eventos_puesto_id", "puesto_id", "id"),)
-
-
-class Carrera(Base):
-    __tablename__ = "carreras"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    sede_id: Mapped[int] = mapped_column(ForeignKey("sedes.id", ondelete="RESTRICT"))
-    nombre: Mapped[str] = mapped_column(String(120))
-    codigo: Mapped[str] = mapped_column(String(30))
-    activa: Mapped[bool] = mapped_column(Boolean, default=True)
-    __table_args__ = (UniqueConstraint("sede_id", "codigo", name="uq_carreras_sede_codigo"),)
-
-
-class Grupo(Base):
-    __tablename__ = "grupos"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    carrera_id: Mapped[int] = mapped_column(ForeignKey("carreras.id", ondelete="RESTRICT"))
-    horario_id: Mapped[int | None] = mapped_column(ForeignKey("horarios.id", ondelete="RESTRICT"))
-    codigo: Mapped[str] = mapped_column(String(30))
-    ciclo: Mapped[str] = mapped_column(String(30))
-    turno: Mapped[str] = mapped_column(String(30))
-    activo: Mapped[bool] = mapped_column(Boolean, default=True)
-    __table_args__ = (UniqueConstraint("carrera_id", "codigo", name="uq_grupos_carrera_codigo"),)
 
 
 class Justificacion(Base):

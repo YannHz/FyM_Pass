@@ -618,7 +618,6 @@ export function PanelAdministrativo({
         apellidos: "",
         documento: "",
         rol_id: catalogo.roles[0].id,
-        grupo_id: null,
         activa: true,
         permiso: "personal",
         tarifa_hora: 0,
@@ -714,7 +713,6 @@ export function PanelAdministrativo({
       preparar: (valores) => ({
         ...valores,
         documento: valores.documento || null,
-        grupo_id: null,
         horario_id: persona?.horario_id || null,
         nombre_usuario: valores.nombre_usuario || null,
         clave: valores.clave || null,

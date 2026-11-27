@@ -13,8 +13,6 @@ from ..models import (
     SesionAcceso,
     PuestoAbierto,
     EventoPuesto,
-    Carrera,
-    Grupo,
     Justificacion,
     DiaNoLectivo,
     ReglaSede,
@@ -100,12 +98,6 @@ class RepositorioBase:
 
     def obtener_evento_puesto(self, identificador):
         return self._base.get(EventoPuesto, identificador)
-
-    def obtener_carrera(self, identificador):
-        return self._base.get(Carrera, identificador)
-
-    def obtener_grupo(self, identificador):
-        return self._base.get(Grupo, identificador)
 
     def obtener_justificacion(self, identificador):
         return self._base.get(Justificacion, identificador)

@@ -10,8 +10,6 @@ from ...models import (
     ToleranciaRol,
     PuntoAsistencia,
     Marcado,
-    Carrera,
-    Grupo,
     Justificacion,
     DiaNoLectivo,
     ReglaSede,
@@ -34,46 +32,24 @@ class RepositorioGestion(RepositorioBase):
         for sesion in sesiones:
             self._base.delete(sesion)
 
-    def bloquear_carrera(self, identificador):
-        return self._base.scalar(select(Carrera).where(Carrera.id == identificador).with_for_update())
-
-    def asignaciones_programadas(self, fecha, persona):
-        return self._base.scalars(select(AsignacionHorario).where(
-            AsignacionHorario.persona_id == persona.id,
-            AsignacionHorario.vigente_hasta.is_(None) | (AsignacionHorario.vigente_hasta >= fecha)
-        ).order_by(AsignacionHorario.vigente_desde)).all()
-
     def asignaciones_desde(self, fecha, persona):
         return self._base.scalars(select(AsignacionHorario).where(
             AsignacionHorario.persona_id == persona.id,
             AsignacionHorario.vigente_hasta.is_(None) | (AsignacionHorario.vigente_hasta >= fecha)
         ).with_for_update().execution_options(populate_existing=True)).all()
 
-    def bloquear_grupo(self, identificador):
-        return self._base.scalar(select(Grupo).where(Grupo.id == identificador).with_for_update().execution_options(populate_existing=True))
-
     def bloquear_horario(self, identificador):
         return self._base.scalar(select(Horario).where(Horario.id == identificador).with_for_update())
 
     def horario_tiene_asignaciones(self, identificador, bloquear=False):
-        grupos = select(Grupo.id).where(Grupo.horario_id == identificador).limit(1)
         personas = select(AsignacionHorario.id).where(AsignacionHorario.horario_id == identificador).limit(1)
-        grupo = self._base.scalar(grupos.with_for_update() if bloquear else grupos)
         persona = self._base.scalar(personas.with_for_update() if bloquear else personas)
-        return grupo is not None or persona is not None
+        return persona is not None
 
     def eliminar_tramos(self, identificador):
         for tramo in self._base.scalars(select(TramoHorario).where(TramoHorario.horario_id == identificador).with_for_update()).all():
             self.eliminar(tramo)
         self.sincronizar()
-
-    def personas_del_horario(self, identificador):
-        return self._base.execute(
-            select(AsignacionHorario, Persona)
-            .join(Persona, Persona.id == AsignacionHorario.persona_id)
-            .where(AsignacionHorario.horario_id == identificador)
-            .order_by(Persona.apellidos, Persona.nombres)
-        ).all()
 
     def regla_de_sede(self, sede):
         return self._base.scalar(select(ReglaSede).where(ReglaSede.sede_id == sede))
@@ -112,38 +88,39 @@ class RepositorioGestion(RepositorioBase):
             .order_by(ToleranciaRol.vigente_desde.desc())
         )
 
-    def personas_ordenadas(self, sede):
-        return self._base.scalars(
+    def datos_del_catalogo(self, sede):
+        personas = self._base.scalars(
             select(Persona).where(Persona.sede_id == sede).order_by(Persona.apellidos)
         ).all()
+        roles = self._base.scalars(select(Rol)).all()
+        cuentas = self._base.scalars(
+            select(Usuario).join(Persona).where(Persona.sede_id == sede)
+        ).all()
+        asignaciones = self._base.execute(
+            select(AsignacionHorario, Persona)
+            .join(Persona, Persona.id == AsignacionHorario.persona_id)
+            .where(Persona.sede_id == sede)
+            .order_by(Persona.apellidos, Persona.nombres, AsignacionHorario.vigente_desde)
+        ).all()
+        tarifas = self._base.scalars(
+            select(TarifaDocente).join(Persona).where(Persona.sede_id == sede)
+        ).all()
+        horarios = self._base.scalars(select(Horario).where(Horario.sede_id == sede)).all()
+        tramos = self._base.scalars(
+            select(TramoHorario).join(Horario).where(Horario.sede_id == sede)
+            .order_by(TramoHorario.dia_semana, TramoHorario.hora_entrada)
+        ).all()
+        return personas, roles, cuentas, asignaciones, tarifas, horarios, tramos
 
     def cuenta_de_persona(self, persona):
         return self._base.scalar(
             select(Usuario).where(Usuario.persona_id == persona.id)
         )
 
-    def asignacion_del_catalogo(self, hoy, persona):
-        return self._base.scalar(
-            select(AsignacionHorario)
-            .where(
-                AsignacionHorario.persona_id == persona.id,
-                AsignacionHorario.vigente_desde <= hoy,
-                AsignacionHorario.vigente_hasta.is_(None)
-                | (AsignacionHorario.vigente_hasta >= hoy),
-            )
-            .order_by(AsignacionHorario.vigente_desde.desc())
-        )
-
     def tarifa_de_persona(self, persona):
         return self._base.scalar(
             select(TarifaDocente).where(TarifaDocente.persona_id == persona.id)
         )
-
-    def horarios_de_sede(self, sede):
-        return self._base.scalars(select(Horario).where(Horario.sede_id == sede)).all()
-
-    def roles(self):
-        return self._base.scalars(select(Rol)).all()
 
     def tolerancia_del_catalogo(self, hoy, rol):
         return self._base.scalar(
@@ -156,14 +133,6 @@ class RepositorioGestion(RepositorioBase):
             )
             .order_by(ToleranciaRol.vigente_desde.desc())
         )
-
-    def carreras_de_sede(self, sede):
-        return self._base.scalars(select(Carrera).where(Carrera.sede_id == sede)).all()
-
-    def grupos_de_sede(self, sede):
-        return self._base.scalars(
-            select(Grupo).join(Carrera).where(Carrera.sede_id == sede)
-        ).all()
 
     def tramos_del_horario(self, horario):
         return self._base.scalars(

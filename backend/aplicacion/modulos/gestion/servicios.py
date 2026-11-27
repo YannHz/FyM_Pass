@@ -100,13 +100,17 @@ def regla_sede(repositorio, sede):
     )
 
 
-def tramos_para(repositorio, persona, fecha):
+def horario_y_tramos_para(repositorio, persona, fecha):
     asignacion = repositorio.asignacion_vigente(fecha, persona)
     horario_id = asignacion.horario_id if asignacion else None
     horario = repositorio.obtener_horario(horario_id) if horario_id else None
     if not horario or not horario.activo:
-        return []
-    return repositorio.tramos_del_dia(fecha, horario)
+        return None, []
+    return horario, repositorio.tramos_del_dia(fecha, horario)
+
+
+def tramos_para(repositorio, persona, fecha):
+    return horario_y_tramos_para(repositorio, persona, fecha)[1]
 
 
 def evaluar_manual(repositorio, persona, instante, tipo):
@@ -127,7 +131,18 @@ def evaluar_manual(repositorio, persona, instante, tipo):
 
 def consultar_catalogo(usuario: Usuario = None, repositorio: RepositorioGestion = None):
     sede = sede_usuario(repositorio, usuario)
-    personas = repositorio.personas_ordenadas(sede)
+    personas, roles_disponibles, cuentas, asignaciones, tarifas, horarios, tramos = repositorio.datos_del_catalogo(sede)
+    roles_por_id = {rol.id: rol for rol in roles_disponibles}
+    cuentas_por_persona = {cuenta.persona_id: cuenta for cuenta in cuentas}
+    tarifas_por_persona = {tarifa.persona_id: tarifa for tarifa in tarifas}
+    asignaciones_por_persona = {}
+    asignaciones_por_horario = {}
+    tramos_por_horario = {}
+    for asignacion, persona in asignaciones:
+        asignaciones_por_persona.setdefault(persona.id, []).append(asignacion)
+        asignaciones_por_horario.setdefault(asignacion.horario_id, []).append((asignacion, persona))
+    for tramo in tramos:
+        tramos_por_horario.setdefault(tramo.horario_id, []).append(tramo)
     lista = []
     hoy = (
         obtener_hora_utc()
@@ -136,37 +151,41 @@ def consultar_catalogo(usuario: Usuario = None, repositorio: RepositorioGestion 
         .date()
     )
     for persona in personas:
-        if repositorio.obtener_rol(persona.rol_id).codigo not in ("docente", "administrativo"):
+        rol = roles_por_id[persona.rol_id]
+        if rol.codigo not in ("docente", "administrativo"):
             continue
         datos = datos_objeto(persona)
         datos.pop("version_carne")
         datos.pop("foto_ruta", None)
-        cuenta = repositorio.cuenta_de_persona(persona)
+        cuenta = cuentas_por_persona.get(persona.id)
         datos.update(
             nombre=f"{persona.nombres} {persona.apellidos}",
             iniciales=iniciales_persona(persona),
-            rol=repositorio.obtener_rol(persona.rol_id).nombre,
-            rol_codigo=repositorio.obtener_rol(persona.rol_id).codigo,
+            rol=rol.nombre,
+            rol_codigo=rol.codigo,
             nombre_usuario=cuenta.nombre_usuario if cuenta else None,
             permiso=cuenta.permiso if cuenta else "personal",
         )
-        asignacion = repositorio.asignacion_del_catalogo(hoy, persona)
+        programadas = [
+            valor for valor in asignaciones_por_persona.get(persona.id, [])
+            if valor.vigente_hasta is None or valor.vigente_hasta >= hoy
+        ]
+        asignacion = next((valor for valor in reversed(programadas) if valor.vigente_desde <= hoy), None)
         datos["horario_id"] = asignacion.horario_id if asignacion else None
         datos["horario_desde"] = str(asignacion.vigente_desde) if asignacion else None
         datos["asignaciones"] = [{"horario_id": valor.horario_id, "desde": str(valor.vigente_desde),
             "hasta": str(valor.vigente_hasta) if valor.vigente_hasta else None}
-            for valor in repositorio.asignaciones_programadas(hoy, persona)]
-        tarifa = repositorio.tarifa_de_persona(persona)
+            for valor in programadas]
+        tarifa = tarifas_por_persona.get(persona.id)
         datos["tarifa_hora"] = (
             float(tarifa.tarifa_hora)
             if tarifa and usuario.permiso == "administrador"
             else 0
         )
         lista.append(datos)
-    horarios = repositorio.horarios_de_sede(sede)
     regla = regla_sede(repositorio, sede)
     tolerancias = {}
-    roles = [rol for rol in repositorio.roles() if rol.codigo in ("docente", "administrativo")]
+    roles = [rol for rol in roles_disponibles if rol.codigo in ("docente", "administrativo")]
     for rol in roles:
         margen = repositorio.tolerancia_del_catalogo(hoy, rol)
         tolerancias[rol.id] = margen.minutos if margen else 0
@@ -176,17 +195,17 @@ def consultar_catalogo(usuario: Usuario = None, repositorio: RepositorioGestion 
         "horarios": [
             {
                 **datos_objeto(horario),
-                "en_uso": repositorio.horario_tiene_asignaciones(horario.id),
+                "en_uso": bool(asignaciones_por_horario.get(horario.id)),
                 "asignaciones_individuales": [
                     {"persona_id": persona.id, "nombre": f"{persona.nombres} {persona.apellidos}",
                      "codigo": persona.codigo, "desde": str(asignacion.vigente_desde),
                      "hasta": str(asignacion.vigente_hasta) if asignacion.vigente_hasta else None,
                      "vigente": asignacion.vigente_desde <= hoy and (asignacion.vigente_hasta is None or asignacion.vigente_hasta >= hoy)}
-                    for asignacion, persona in repositorio.personas_del_horario(horario.id)
+                    for asignacion, persona in asignaciones_por_horario.get(horario.id, [])
                 ],
                 "tramos": [
                     datos_objeto(tramo)
-                    for tramo in repositorio.tramos_del_horario(horario)
+                    for tramo in tramos_por_horario.get(horario.id, [])
                 ],
             }
             for horario in horarios
@@ -221,8 +240,6 @@ def guardar_persona(
         datos.codigo = f"{'DOC' if rol.codigo == 'docente' else 'ADM'}-{datos.documento}"
     elif datos.id:
         datos.codigo = comprobar_persona(repositorio, usuario, datos.id).codigo
-    if datos.grupo_id:
-        raise ErrorAplicacion(422, "Los grupos académicos ya no forman parte del sistema de asistencia.")
     if datos.horario_id:
         comprobar_horario(repositorio, sede, datos.horario_id)
     persona = (
@@ -464,8 +481,6 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
     ahora = obtener_hora_utc().replace(tzinfo=timezone.utc).astimezone(zona)
     regla = regla_sede(repositorio, sede.id)
     roles = {}
-    grupos = {}
-    carreras = {}
 
     def rol_de(identificador):
         # evita repetir la misma consulta de rol en cada fila
@@ -485,7 +500,7 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
             )
             if rol.codigo not in ("docente", "administrativo"):
                 continue
-            tramos = tramos_para(repositorio, persona, fecha)
+            horario, tramos = horario_y_tramos_para(repositorio, persona, fecha)
             entrada = next(
                 (marcado for marcado in marcas_persona if marcado.tipo == "entrada"),
                 None,
@@ -551,19 +566,6 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
                 if entrada and salida
                 else 0
             )
-            grupo = None
-            if persona.grupo_id:
-                # el grupo y la carrera no cambian del dia a la fecha consultada
-                grupo = grupos.get(persona.grupo_id, False)
-                if grupo is False:
-                    grupo = repositorio.obtener_grupo(persona.grupo_id)
-                    grupos[persona.grupo_id] = grupo
-            carrera = None
-            if grupo:
-                carrera = carreras.get(grupo.carrera_id, False)
-                if carrera is False:
-                    carrera = repositorio.obtener_carrera(grupo.carrera_id)
-                    carreras[grupo.carrera_id] = carrera
             filas.append(
                 {
                     "persona_id": persona.id,
@@ -586,10 +588,8 @@ def filas_diarias(repositorio, usuario, desde, hasta, persona_id=None, solo_marc
                     "minutos_tardanza": minutos,
                     "horas_programadas": round(programadas, 2),
                     "horas_permanencia": round(horas, 2),
-                    "grupo": grupo.codigo if grupo else "",
-                    "ciclo": grupo.ciclo if grupo else "",
-                    "turno": grupo.turno if grupo else "",
-                    "carrera": carrera.nombre if carrera else "",
+                    "turno": horario.turno if horario else "",
+                    "carrera": (horario.carrera or "") if horario else "",
                     "modalidad": entrada.modalidad if entrada else "",
                     "requiere_salida": rol.requiere_salida,
                 }
@@ -1006,7 +1006,6 @@ def exportar(
     tarifa: Decimal | None = None,
     solo_marcados: bool = False,
     incluir_no_programados: bool = True,
-    ciclo: str = "",
     turno: str = "",
     usuario: Usuario = None,
     repositorio: RepositorioGestion = None,
@@ -1025,7 +1024,6 @@ def exportar(
             and (not estado or fila["estado"] == estado)
             and (not carrera or fila["carrera"] == carrera)
             and (incluir_no_programados or fila["estado"] != "No programado")
-            and (not ciclo or fila["ciclo"] == ciclo)
             and (not turno or fila["turno"] == turno)
             and (
                 not buscar
@@ -1044,7 +1042,6 @@ def exportar(
         f"Rol: {rol}" if rol else "",
         f"Estado: {estado}" if estado else "",
         f"Carrera: {carrera}" if carrera else "",
-        f"Ciclo: {ciclo}" if ciclo else "",
         f"Turno: {turno}" if turno else "",
         f"Busqueda: {buscar}" if buscar else "",
         "Incluye no programados" if incluir_no_programados else "Sin dias no programados",
